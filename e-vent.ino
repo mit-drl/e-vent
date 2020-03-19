@@ -1,20 +1,19 @@
-/* 
- *  Sneaky Ventilator Code ReSpin
- *  MIT Underground
- *  3/17/2020
- */
-
 #include <Encoder.h>
+#include <PID_v1.h>
 
+// Settings
+////////////
 
-/* ##########################################################################
- * ##########################################################################
- * Initializations
- * ##########################################################################
- * ##########################################################################
- */
-//Encoder input pins, use 2 and 3 for high performance
-Encoder motorEncoder(2, 3);
+bool DEBUG = false; // For logging
+int maxPwm = 255; // Maximum for PWM is 255 but this can be set lower
+int deadzone = 5; // The PMW deadzone to avoid squealing
+int loopPeriod = 25; // The period (ms) of the control loop delay
+int goalTol = 30; // The number of clicks near the goal that is considered as having arrived
+int rampThresh = 50; // The number of clicks near the goal to transition from velocity to position ramp
+int pauseTime = 1000; // Time in ms to pause after inhalation
+
+// Pins
+////////////
 
 //PWM pins for motor control
 int PWM_A_PIN = 6;
@@ -22,216 +21,205 @@ int PWM_B_PIN = 5;
 int PWM_A_OUT = 0;
 int PWM_B_OUT = 0;
 
-//Analog pin assignments
-int freqPin = A1;
-int dispPin = A0;
-int iePin = A2;
-int pressPin = A5;
+//Pot pin assignments
+int VOL_PIN = A0;
+int BPM_PIN = A1;
+int IE_PIN = A2;
 
-//Variables for position control loops
-long motorPosition = 0;
-int positionDeadband = 5;
-//This is the position feedback loop gain
-int kPos = 1;
-//This is timeout for reaching a position command before giving up (ms)
-int movementTimeout = 2000;
+// Tmp for communication with other board
+int ARDUINO_PIN = 10;
 
-//Variables for Velocity (pwm between 0 and 255)
-int maxPwmForward = 255;
-int maxPwmBackward = 255;
-int currentVelocity = 0;
-int deadBand = 0;
+Encoder motorEncoder(2, 3); //Encoder input pins, use 2 and 3 for high performance
+unsigned long lastEncoderUpdate;
 
-//Variables for acceleration
-int maxAcceleration = 10;
-//Delay (ms) between each velocity increase
-int rampUpDelay = 1;
-int rampStep = 20;
+// Initialize Vars
+////////////////////
 
-//Medical Variables
-//freq is breathing frequency in Hz
-int baseTime = 2;
-//disp is displacement (how far to squeeze)
-int disp = 1;
-int dispScale = 1;
-//ie is in/ex ratio, like duty cycle
-float ie = 1.0;
+//Define motor variables
+double goalPosition, motorPosition, goalVelocity, motorVelocity, cmdVelocity, cmdAccel, cmdVoltage;
 
-//Main loop variables
-int tStart = 0;
-int tStop = 0;
-int t = 0;
-int timeScale = 1;
+// Define waveform parameters
+double Vin, Vex, Tin, Tex, Volume;
 
-//Available states
-enum State {
-  STARTUP_STATE,
-  IDLE_STATE,
-  BREATHE_IN_STATE,
-  HOLD_IN_STATE,
-  BREATHE_OUT_STATE,
-  HOLD_OUT_STATE,
-};
+// Define pot mappings
+float BPM_MIN = 10;
+float BPM_MAX = 25;
+float IE_MIN = 1;
+float IE_MAX = 3;
+float VOL_MIN = 100;
+float VOL_MAX = 225;
 
-State STATE = STARTUP_STATE;
+//Create position and velocity PIDs
+double posKp=0.75, posKi=0.1, posKd=0.01;
+PID posPID(&motorPosition, &cmdVelocity, &goalPosition, posKp, posKi, posKd, DIRECT);
+double velKp=100, velKi=30.0, velKd=0.0;
+PID velPID(&motorVelocity, &cmdAccel, &goalVelocity, velKp, velKi, velKd, DIRECT);
 
+//Setup States
+enum States {DEBUG_STATE, PAUSE_STATE, EX_STATE, IN_STATE};
+States state;
+bool enteringState;
+unsigned long stateTimer;
 
+// Functions
+////////////
 
+// Set the current state in the state machine
+void setState(States newState){
+  enteringState = true;
+  state = newState;
+  stateTimer = millis();
+}
 
+// readEncoder reads the motor position from the encoder
+void readEncoder(){
+  int newPosition = motorEncoder.read(); //Units: Clicks
+  int deltaT = millis()-lastEncoderUpdate; //Units ms
+  motorVelocity = (newPosition - motorPosition)/deltaT; //Units: Clicks/ms (Future note: this may need filtering)
+  motorPosition = newPosition;
+  lastEncoderUpdate = millis();
+  if(DEBUG){
+    Serial.print("Pos\t");
+    Serial.print(motorPosition);
+    Serial.print("\tVel\t");
+    Serial.println(motorVelocity);
+  }
+}
 
-/*
- * ##########################################################################
- * ##########################################################################
- * Functions
- * ##########################################################################
- * ##########################################################################
- */
+// readPots reads the pot values and sets the waveform parameters
+void readPots(){
+  Volume = map(analogRead(VOL_PIN), 0, 1024, VOL_MIN, VOL_MAX);
+  float bpm = map(analogRead(BPM_PIN), 0, 1024, BPM_MIN, BPM_MAX);
+  float ie = map(analogRead(IE_PIN), 0, 1024, IE_MIN*10, IE_MAX*10)/10.0; // Carry one decimal place
 
-
-
-
-//Get pressure reading
-float pressurePSI() {
-  float Pmin = -100.0;        // pressure max in mbar
-  float Pmax = 100.0;         // pressure min in mbar
-  float vsupply = 5000.0;   // voltage in volts
-  // read the voltage
-  int val = analogRead(pressPin); 
-  // conver to millivolts
-  float mv = 4.88*val;
-  //Serial.println(mv);
-  // convert to pressure
-  float pres = (Pmax-Pmin)*(mv-0.1*vsupply)/(0.8*vsupply) + Pmin;
-  //float pres = Pmin + ((Pmax - Pmin) / 0.8*vsupply) * (mv - 0.1*vsupply);
-
-  //convert to cmH20
-  pres *= 1.01972;
-  // convert to psi
-  //pres /= 68.94757;
+  float period = 60.0/bpm; // seconds in each period
+  Tin = period / (1 + ie);
+  Tex = period - Tin;
+  Vin = Volume/(Tin*1000.0); // Velocity in clicks/ms
+  Vex = Volume/(Tex*1000.0); // Velocity in clicks/ms
   
-  return pres;
+  if(DEBUG){
+    Serial.print("Vol: ");
+    Serial.print(Volume);
+    Serial.print("\tBPM: ");
+    Serial.print(bpm);
+    Serial.print("\tIE: ");
+    Serial.print(ie);
+    Serial.print("\tTin: ");
+    Serial.print(Tin);
+    Serial.print("\tTex:");
+    Serial.print(Tex);
+    Serial.print("\tVin:");
+    Serial.print(Vin);
+    Serial.print("\tVex:");
+    Serial.println(Vex);
+  }
 }
 
-
- 
-
-//setVelocity takes a desiredVelocity between -255 and 255
-//The velocity will be constrained to fit between these values
-//this function does no acceleration control or checks, it only sets pwm
-void setVelocity(int desiredVelocity) {
-  int motorSpeed = constrain(desiredVelocity, -255, 255);
-  if (motorSpeed > deadBand) {
-    // Activate PWM_A; shut off PWM_B
-    // Map the motorSpeed command to between deadband and 512 over to 8 bit 0-255
-    PWM_A_OUT = map(motorSpeed, deadBand, 512, 0, maxPwmForward);
-    //Serial.print("Motor speed A pwm out: ");
-    //Serial.println(PWM_A_OUT);
-    analogWrite(PWM_A_PIN, PWM_A_OUT);
-    analogWrite(PWM_B_PIN, 0);
+// setPwmVoltage takes a desiredVoltage between -255 and 255 and sets the PWM pins, values less than deadzone go to 0
+void setVoltage(int desiredVoltage) {
+  cmdVoltage = constrain(desiredVoltage, -maxPwm, maxPwm);
+  if(abs(cmdVoltage) < deadzone) cmdVoltage = 0;
+  analogWrite(PWM_A_PIN, max(0, cmdVoltage));
+  analogWrite(PWM_B_PIN, max(0, -cmdVoltage)); 
+  if(DEBUG){
+    Serial.print("Cmd\t");
+    Serial.println(cmdVoltage);
   }
-  else if (motorSpeed < -deadBand) {
-    // Activate PWMB
-    // Make sure other PWM (PWM A) is 0
-    // Map the current sensor value
-    // Note that we want the minimum pot value to be the highest duty cycle
-    PWM_B_OUT = map(motorSpeed, -deadBand, -512, 0, maxPwmBackward);
-    //Serial.print("Motor speed B pwm out: ");
-    //Serial.println(PWM_B_OUT);
-    analogWrite(PWM_A_PIN, 0);
-    analogWrite(PWM_B_PIN, PWM_B_OUT);
-  }
-  else {
-    // ALL PWMS 0
-    analogWrite(PWM_A_PIN, 0);
-    analogWrite(PWM_B_PIN, 0);
-  } 
 }
 
-
-
-
-
-//setPosition is a blocking routine that tries to reach a desired position
-//It handles acceleration and deceleration
-void setPosition(long desiredPosition, int maxVelocity){
-  //Start by finding an error
-  motorPosition = motorEncoder.read();
-  int positionError = desiredPosition - motorPosition;
-
-  //If we need to move backwards, change vel and step to be neg
-  int dirRampStep = rampStep;
-  int dirMaxVelocity = maxVelocity;
-  if (positionError < 0) {
-    dirRampStep = -rampStep;
+// updatePositionPID sets a motor voltage based on the position PID
+void updatePositionPID(){
+  if(posPID.Compute()){
+    setVoltage(cmdVelocity);
   }
-
-  //Ramp up in velocity, see how far we go during it
-  int beforeRampPosition = motorEncoder.read();
-  //Do a velocity ramp-up
-  for (int j = 0; abs(j) < dirMaxVelocity; j=j+dirRampStep) {
-    setVelocity(j);
-    delay(rampUpDelay);
-    currentVelocity = j;
-  }
-  int afterRampPosition = motorEncoder.read();
-  int rampDistance = afterRampPosition - beforeRampPosition;
-
-  //Subtract the distance needed for deceleration
-  long predictedDecelPosition = desiredPosition - rampDistance;
-  
-  //Keep checking position until we reach our slow-down location
-  while (abs(motorPosition - predictedDecelPosition) > positionDeadband) {
-    //Serial.println(motorPosition);
-    motorPosition = motorEncoder.read();
-    //Sanity check to quit if error is getting worse
-    if (abs(desiredPosition - motorPosition) > abs(positionError)){break;}
-  }
-
-  //Velocity ramp down
-  for (int j = currentVelocity; abs(j) > 2*rampStep; j=j-dirRampStep) {
-    setVelocity(j);
-    delay(rampUpDelay);
-  }
-  setVelocity(0);
 }
 
+// updateVelocityPID sets a motor voltage based on the velocity PID
+void updateVelocityPID(){
+  if(velPID.Compute()){
+    setVoltage(cmdVoltage + cmdAccel);
+  }
+}
 
+// goToPosition goes to a desired position at the given speed, switching from velocity to position control at rampThresh
+void goToPosition(double pos, double vel, int rampThresh){
+  if(abs(motorPosition - pos) < rampThresh){
+    goalPosition = pos;
+    updatePositionPID();
+  }else{
+    if(motorPosition < pos){
+      goalVelocity = vel;
+    }
+    else {
+      goalVelocity = -vel;
+    }
+    updateVelocityPID();
+  }
+}
 
-
-
-/*
- * ##########################################################################
- * ##########################################################################
- * Setup and Main
- * ##########################################################################
- * ##########################################################################
- */
-
-
-//Setup runs once when the device starts
-void setup(){
-  Serial.begin(9600);
+void setup() {
   pinMode(PWM_A_PIN, OUTPUT);
   pinMode(PWM_B_PIN, OUTPUT);
+  pinMode(ARDUINO_PIN, OUTPUT);
+
+  //Initialize
+  motorEncoder.write(0);
+  lastEncoderUpdate = millis();
+  motorPosition = 0;
+  motorVelocity = 0;
+  goalPosition = 0;
+  posPID.SetOutputLimits(-maxPwm, maxPwm);
+  velPID.SetOutputLimits(-maxPwm, maxPwm);
+  posPID.SetMode(AUTOMATIC);
+  velPID.SetMode(AUTOMATIC);
+  setState(PAUSE_STATE);
+
+  if(DEBUG){
+    // setup serial coms
+    Serial.begin(115200);
+    setState(DEBUG_STATE);
+  }
 }
 
+void loop() {
+  if(DEBUG){
+    if(Serial.available() > 0){
+      setState(Serial.parseInt());
+      while(Serial.available() > 0) Serial.read();
+    }
+    Serial.print("State:\t");
+    Serial.println((int)state);
+  }
 
-
-
-//Loop runs continuously forever
-//Breathing control happens here
-void loop(){
-
-  timeScale = analogRead(freqPin);
-  ie = analogRead(iePin) / 128 ;
-  //breathe out
-  setPosition(0, 222);
-  //hold out
-  delay(baseTime*timeScale);
-
-  //breathe in
-  setPosition(disp*analogRead(dispPin), 222);
-  //hold in
-  delay(baseTime*timeScale*ie);
-  Serial.println(pressurePSI());
+  // All States
+  delay(loopPeriod);
+  readEncoder();
+  readPots();
+  
+  if(state == DEBUG_STATE){
+    setVoltage(0);
+  }
+  
+  else if(state == PAUSE_STATE){
+    //Entering
+    if(enteringState){
+      digitalWrite(ARDUINO_PIN, HIGH);
+      enteringState = false;
+    }
+    if(millis()-stateTimer > pauseTime){
+      digitalWrite(ARDUINO_PIN, LOW);
+      setState(EX_STATE);
+    }
+  }
+  
+  else if(state == EX_STATE){
+    goToPosition(Volume, Vex, rampThresh);
+    if(millis()-stateTimer > Tex && abs(motorPosition - Volume) < goalTol) setState(IN_STATE);
+  }
+  
+  else if(state == IN_STATE){
+    goToPosition(0, Vin, rampThresh);
+    if(millis()-stateTimer > Tin && abs(motorPosition) < goalTol) setState(PAUSE_STATE);
+  }
 }
