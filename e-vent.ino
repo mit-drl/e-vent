@@ -82,7 +82,9 @@ void readEncoder(){
   motorPosition = newPosition;
   lastEncoderUpdate = millis();
   if(DEBUG){
-    Serial.print("Pos\t");
+    Serial.print("State:\t");
+    Serial.print((int)state);
+    Serial.print("\tPos\t");
     Serial.print(motorPosition);
     Serial.print("\tVel\t");
     Serial.println(motorVelocity);
@@ -102,7 +104,7 @@ void readPots(){
   Vex = Volume/(Tex*1000.0); // Velocity in clicks/ms
   
   if(DEBUG){
-    Serial.print("Vol: ");
+    Serial.print("\t\t\t\t\t\t\t\tVol: ");
     Serial.print(Volume);
     Serial.print("\tBPM: ");
     Serial.print(bpm);
@@ -126,7 +128,7 @@ void setVoltage(int desiredVoltage) {
   analogWrite(PWM_A_PIN, max(0, cmdVoltage));
   analogWrite(PWM_B_PIN, max(0, -cmdVoltage)); 
   if(DEBUG){
-    Serial.print("Cmd\t");
+    Serial.print("\t\t\t\t\t\tCmd\t");
     Serial.println(cmdVoltage);
   }
 }
@@ -191,8 +193,8 @@ void loop() {
       setState(Serial.parseInt());
       while(Serial.available() > 0) Serial.read();
     }
-    Serial.print("State:\t");
-    Serial.println((int)state);
+//    Serial.print("State:\t");
+//    Serial.println((int)state);
   }
 
   // All States
