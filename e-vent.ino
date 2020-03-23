@@ -8,7 +8,7 @@ bool DEBUG = false; // For logging
 int maxPwm = 255; // Maximum for PWM is 255 but this can be set lower
 int deadzone = 5; // The PMW deadzone to avoid squealing
 int loopPeriod = 25; // The period (ms) of the control loop delay
-int goalTol = 30; // The number of clicks near the goal that is considered as having arrived
+int goalTol = 20; // The number of clicks near the goal that is considered as having arrived
 int rampThresh = 50; // The number of clicks near the goal to transition from velocity to position ramp
 int pauseTime = 1000; // Time in ms to pause after inhalation
 
