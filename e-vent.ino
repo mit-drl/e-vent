@@ -47,7 +47,7 @@ float BPM_MIN = 10;
 float BPM_MAX = 25;
 float IE_MIN = 1;
 float IE_MAX = 3;
-float VOL_MIN = 100;
+float VOL_MIN = 75;
 float VOL_MAX = 225;
 
 //Create position and velocity PIDs
