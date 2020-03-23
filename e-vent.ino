@@ -11,6 +11,7 @@ int loopPeriod = 25; // The period (ms) of the control loop delay
 int goalTol = 20; // The number of clicks near the goal that is considered as having arrived
 int rampThresh = 50; // The number of clicks near the goal to transition from velocity to position ramp
 int pauseTime = 250; // Time in ms to pause after inhalation
+int slackCompensator = 20; // How much below zero to drive in the inhalation to compensate for slack in the drivetrain
 
 // Pins
 ////////////
