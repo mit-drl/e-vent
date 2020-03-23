@@ -51,10 +51,12 @@ float VOL_MIN = 75;
 float VOL_MAX = 225;
 
 //Create position and velocity PIDs
-double posKp=0.75, posKi=0.1, posKd=0.01;
-PID posPID(&motorPosition, &cmdVelocity, &goalPosition, posKp, posKi, posKd, DIRECT);
-double velKp=100, velKi=30.0, velKd=0.0;
-PID velPID(&motorVelocity, &cmdAccel, &goalVelocity, velKp, velKi, velKd, DIRECT);
+double posKpX=0.3, posKiX=0.1, posKdX=0.01;
+double posKpI=1.5, posKiI=0.3, posKdI=0.01;
+PID posPID(&motorPosition, &cmdVelocity, &goalPosition, posKpX, posKiX, posKdX, DIRECT);
+double velKpX=50, velKiX=10.0, velKdX=0.0;
+double velKpI=75, velKiI=20.0, velKdI=0.0;
+PID velPID(&motorVelocity, &cmdAccel, &goalVelocity, velKpX, velKiX, velKdX, DIRECT);
 
 //Setup States
 enum States {DEBUG_STATE, PAUSE_STATE, EX_STATE, IN_STATE};
@@ -215,12 +217,30 @@ void loop() {
   }
   
   else if(state == EX_STATE){
-    goToPosition(Volume, Vex, rampThresh);
-    if(millis()-stateTimer > Tex && abs(motorPosition - Volume) < goalTol) setState(IN_STATE);
+    //Entering
+    if(enteringState){
+      posPID.SetTunings(posKpX, posKiX, posKdX);
+      velPID.SetTunings(velKpX, velKiX, velKdX);
+      posPID.AntiWindup();
+      velPID.AntiWindup();
+      enteringState = false;
+    }
+//    goToPosition(Volume, Vex, rampThresh);
+    goalPosition = Volume;
+    updatePositionPID();
+    if(millis()-stateTimer > Tex*1000 && abs(motorPosition - Volume) < goalTol) setState(IN_STATE);
   }
   
   else if(state == IN_STATE){
-    goToPosition(0, Vin, rampThresh);
-    if(millis()-stateTimer > Tin && abs(motorPosition) < goalTol) setState(PAUSE_STATE);
+    //Entering
+    if(enteringState){
+      posPID.SetTunings(posKpI, posKiI, posKdI);
+      velPID.SetTunings(velKpI, velKiI, velKdI);
+      posPID.AntiWindup();
+      velPID.AntiWindup();
+      enteringState = false;
+    }
+    goToPosition(-slackCompensator, Vin, rampThresh);
+    if(millis()-stateTimer > Tin*1000 && abs(motorPosition + slackCompensator) < goalTol) setState(PAUSE_STATE);
   }
 }
