@@ -1,237 +1,245 @@
-/* 
- *  Sneaky Ventilator Code ReSpin
- *  MIT Underground
- *  3/17/2020
- */
+#include <LiquidCrystal.h>
+#include <RoboClaw.h>
+#include "Display.h"
 
-#include <Encoder.h>
+// Settings
+////////////
 
+bool DEBUG = false; // For logging
+int maxPwm = 255; // Maximum for PWM is 255 but this can be set lower
+int loopPeriod = 25; // The period (ms) of the control loop delay
+int pauseTime = 250; // Time in ms to pause after inhalation
+double Vex = 600; //1000;  // Velocity to exhale
+double rampTime = 0.5; // The time (s) the velocity profile takes to ramp up and down
+double goalTol = 20;
 
-/* ##########################################################################
- * ##########################################################################
- * Initializations
- * ##########################################################################
- * ##########################################################################
- */
-//Encoder input pins, use 2 and 3 for high performance
-Encoder motorEncoder(2, 3);
+// Pins
+////////////
 
-//PWM pins for motor control
-int PWM_A_PIN = 6;
-int PWM_B_PIN = 5;
-int PWM_A_OUT = 0;
-int PWM_B_OUT = 0;
+int VOL_PIN = A0;
+int BPM_PIN = A1;
+int IE_PIN = A2;
+int PRESS_POT_PIN = A3;
+int PRESS_SENSE_PIN = A4;
+int ROBO_D0 = 2;
+int ROBO_D1 = 3;
 
-//Analog pin assignments
-int freqPin = A1;
-int dispPin = A0;
-int iePin = A2;
-int pressPin = A5;
+// Initialize Vars
+////////////////////
 
-//Variables for position control loops
-long motorPosition = 0;
-int positionDeadband = 5;
-//This is the position feedback loop gain
-int kPos = 1;
-//This is timeout for reaching a position command before giving up (ms)
-int movementTimeout = 2000;
+// Define waveform parameters
+double Vin, Tin, Tex, Volume;  // Vex is fixed in settings above
 
-//Variables for Velocity (pwm between 0 and 255)
-int maxPwmForward = 255;
-int maxPwmBackward = 255;
-int currentVelocity = 0;
-int deadBand = 0;
+// Define pot mappings
+float BPM_MIN = 10;
+float BPM_MAX = 30;
+float IE_MIN = 1;
+float IE_MAX = 4;
+float VOL_MIN = 100;
+float VOL_MAX = 600; // 900; // For full 
 
-//Variables for acceleration
-int maxAcceleration = 10;
-//Delay (ms) between each velocity increase
-int rampUpDelay = 1;
-int rampStep = 20;
+//Setup States
+enum States {DEBUG_STATE, IN_STATE, PAUSE_STATE, EX_STATE};
+States state;
+bool enteringState;
+unsigned long stateTimer;
 
-//Medical Variables
-//freq is breathing frequency in Hz
-int baseTime = 2;
-//disp is displacement (how far to squeeze)
-int disp = 1;
-int dispScale = 1;
-//ie is in/ex ratio, like duty cycle
-float ie = 1.0;
+// Roboclaw
+SoftwareSerial serial(ROBO_D0, ROBO_D1); 
+RoboClaw roboclaw(&serial,10000);
+#define address 0x80
+// auto-tuned PID values for PG188
+//#define Kp 6.03917
+//#define Ki 0.94777
+//#define Kd 0.0
+//#define qpps 3187
+#define Kp 6.38650
+#define Ki 1.07623
+#define Kd 0.0
+#define qpps 3000
+int motorPosition = 0;
 
-//Main loop variables
-int tStart = 0;
-int tStop = 0;
-int t = 0;
-int timeScale = 1;
+// LCD Screen
+double pressOffset = 0;
+const int rs = 12, en = 11, d4 = 10, d5 = 9, d6 = 8, d7 = 7;
+LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
+Display displ(&lcd);
 
-//Available states
-enum State {
-  STARTUP_STATE,
-  IDLE_STATE,
-  BREATHE_IN_STATE,
-  HOLD_IN_STATE,
-  BREATHE_OUT_STATE,
-  HOLD_OUT_STATE,
-};
+// Functions
+////////////
 
-State STATE = STARTUP_STATE;
+// Set the current state in the state machine
+void setState(States newState){
+  enteringState = true;
+  state = newState;
+  stateTimer = millis();
+}
 
+// readPots reads the pot values and sets the waveform parameters
+void readPots(){
+  Volume = map(analogRead(VOL_PIN), 0, 1024, VOL_MIN, VOL_MAX);
+  float bpm = map(analogRead(BPM_PIN), 0, 1024, BPM_MIN, BPM_MAX);
+  float ie = map(analogRead(IE_PIN), 0, 1024, IE_MIN*10, IE_MAX*10)/10.0; // Carry one decimal place
 
+  float period = 60.0/bpm; // seconds in each period
+  Tin = period / (1 + ie);
+  Tex = period - Tin;
+  Vin = Volume/Tin; // Velocity in clicks/s
 
-
-
-/*
- * ##########################################################################
- * ##########################################################################
- * Functions
- * ##########################################################################
- * ##########################################################################
- */
-
-
-
+  displ.writeVolume(100 * Volume/VOL_MAX);
+  displ.writeBPM(bpm);
+  displ.writeIEratio(ie);
+  if(DEBUG){
+    Serial.print("State: ");
+    Serial.print(state);
+    Serial.print("\tPos: ");
+    Serial.print(motorPosition);
+    Serial.print("\tVol: ");
+    Serial.print(Volume);
+    Serial.print("\tBPM: ");
+    Serial.print(bpm);
+    Serial.print("\tIE: ");
+    Serial.print(ie);
+    Serial.print("\tTin: ");
+    Serial.print(Tin);
+    Serial.print("\tTex:");
+    Serial.print(Tex);
+    Serial.print("\tVin:");
+    Serial.print(Vin);
+    Serial.print("\tVex:");
+    Serial.println(Vex);
+  }
+}
 
 //Get pressure reading
-float pressurePSI() {
+float readPressure() {
+  // read the voltage
+  int V = analogRead(PRESS_SENSE_PIN); 
+
   float Pmin = -100.0;        // pressure max in mbar
   float Pmax = 100.0;         // pressure min in mbar
-  float vsupply = 5000.0;   // voltage in volts
-  // read the voltage
-  int val = analogRead(pressPin); 
-  // conver to millivolts
-  float mv = 4.88*val;
-  //Serial.println(mv);
+  float Vmax = 1024;            // max voltage in range from analogRead
+  float R = 32./37;      // Internal 32K resistor and external 5K resistor ratio
   // convert to pressure
-  float pres = (Pmax-Pmin)*(mv-0.1*vsupply)/(0.8*vsupply) + Pmin;
-  //float pres = Pmin + ((Pmax - Pmin) / 0.8*vsupply) * (mv - 0.1*vsupply);
+  float pres = (10 * V/Vmax * R - 1) * (Pmax-Pmin)/8. + Pmin; //mmHg
 
   //convert to cmH20
   pres *= 1.01972;
-  // convert to psi
-  //pres /= 68.94757;
   
-  return pres;
+  return pres - pressOffset;
 }
 
-
- 
-
-//setVelocity takes a desiredVelocity between -255 and 255
-//The velocity will be constrained to fit between these values
-//this function does no acceleration control or checks, it only sets pwm
-void setVelocity(int desiredVelocity) {
-  int motorSpeed = constrain(desiredVelocity, -255, 255);
-  if (motorSpeed > deadBand) {
-    // Activate PWM_A; shut off PWM_B
-    // Map the motorSpeed command to between deadband and 512 over to 8 bit 0-255
-    PWM_A_OUT = map(motorSpeed, deadBand, 512, 0, maxPwmForward);
-    //Serial.print("Motor speed A pwm out: ");
-    //Serial.println(PWM_A_OUT);
-    analogWrite(PWM_A_PIN, PWM_A_OUT);
-    analogWrite(PWM_B_PIN, 0);
-  }
-  else if (motorSpeed < -deadBand) {
-    // Activate PWMB
-    // Make sure other PWM (PWM A) is 0
-    // Map the current sensor value
-    // Note that we want the minimum pot value to be the highest duty cycle
-    PWM_B_OUT = map(motorSpeed, -deadBand, -512, 0, maxPwmBackward);
-    //Serial.print("Motor speed B pwm out: ");
-    //Serial.println(PWM_B_OUT);
-    analogWrite(PWM_A_PIN, 0);
-    analogWrite(PWM_B_PIN, PWM_B_OUT);
-  }
-  else {
-    // ALL PWMS 0
-    analogWrite(PWM_A_PIN, 0);
-    analogWrite(PWM_B_PIN, 0);
-  } 
+int readEncoder() {
+  uint8_t robot_status;
+  bool valid;
+  motorPosition = roboclaw.ReadEncM1(address, &robot_status, &valid);
+  return valid;
 }
 
+// goToPosition goes to a desired position at the given speed,
+void goToPosition(int pos, int vel){
+  bool valid = readEncoder();
+  int diff = pos - motorPosition;
 
-
-
-
-//setPosition is a blocking routine that tries to reach a desired position
-//It handles acceleration and deceleration
-void setPosition(long desiredPosition, int maxVelocity){
-  //Start by finding an error
-  motorPosition = motorEncoder.read();
-  int positionError = desiredPosition - motorPosition;
-
-  //If we need to move backwards, change vel and step to be neg
-  int dirRampStep = rampStep;
-  int dirMaxVelocity = maxVelocity;
-  if (positionError < 0) {
-    dirRampStep = -rampStep;
+  if(diff < 0){
+    vel = -vel; //want to reverse vel if you need to go backwards
+    diff = abs(diff);
   }
-
-  //Ramp up in velocity, see how far we go during it
-  int beforeRampPosition = motorEncoder.read();
-  //Do a velocity ramp-up
-  for (int j = 0; abs(j) < dirMaxVelocity; j=j+dirRampStep) {
-    setVelocity(j);
-    delay(rampUpDelay);
-    currentVelocity = j;
-  }
-  int afterRampPosition = motorEncoder.read();
-  int rampDistance = afterRampPosition - beforeRampPosition;
-
-  //Subtract the distance needed for deceleration
-  long predictedDecelPosition = desiredPosition - rampDistance;
   
-  //Keep checking position until we reach our slow-down location
-  while (abs(motorPosition - predictedDecelPosition) > positionDeadband) {
-    //Serial.println(motorPosition);
-    motorPosition = motorEncoder.read();
-    //Sanity check to quit if error is getting worse
-    if (abs(desiredPosition - motorPosition) > abs(positionError)){break;}
+  if(valid){
+    roboclaw.SpeedDistanceM1(address,vel,diff, 1);
+    Serial.print("CmdVel: ");
+    Serial.print(vel);
+    Serial.print("\tCmdDiff: ");
+    Serial.println(diff);
   }
-
-  //Velocity ramp down
-  for (int j = currentVelocity; abs(j) > 2*rampStep; j=j-dirRampStep) {
-    setVelocity(j);
-    delay(rampUpDelay);
+  else{
+    Serial.println("encoder not valid; goToPosition command not sent");
   }
-  setVelocity(0);
 }
 
+void setup() {
 
+  // wait 1 sec for the roboclaw to boot up
+  delay(1000);
+  
+  //Initialize
+  analogReference(EXTERNAL); // For the pressure reading
+  displ.begin();
+  setState(IN_STATE); // Initial state
+  roboclaw.begin(38400); // Roboclaw
+  roboclaw.SetM1MaxCurrent(address, 10000); // Current limit is 10A
+  roboclaw.SetM1VelocityPID(address,Kd,Kp,Ki,qpps); // Set PID Coefficients
+  roboclaw.SetEncM1(address, 0); // Zero the encoder
 
-
-
-/*
- * ##########################################################################
- * ##########################################################################
- * Setup and Main
- * ##########################################################################
- * ##########################################################################
- */
-
-
-//Setup runs once when the device starts
-void setup(){
-  Serial.begin(9600);
-  pinMode(PWM_A_PIN, OUTPUT);
-  pinMode(PWM_B_PIN, OUTPUT);
+  // Calibrate pressure sensor
+  pressOffset = readPressure();
+  
+  if(DEBUG){
+    // setup serial coms
+    Serial.begin(115200);
+    setState(DEBUG_STATE);
+  }
 }
 
+void loop() {
+  if(DEBUG){
+    if(Serial.available() > 0){
+      setState(Serial.parseInt());
+      while(Serial.available() > 0) Serial.read();
+    }
+  }
 
+  // All States
+  delay(loopPeriod);
+  readPots();
+  readEncoder();
+  
+  if(state == DEBUG_STATE){
+    // Stop motor
+    roboclaw.ForwardM1(address,0);
+  }
+  
+  else if(state == IN_STATE){
+    //Entering
+    if(enteringState){
+      // Consider changing PID tunings
+      enteringState = false;
+      goToPosition(Volume, Vin);
+    }
+    
+    if(millis()-stateTimer > Tin*1000 || abs(motorPosition - Volume) < goalTol)
+      setState(PAUSE_STATE);
+  }
+  
+  else if(state == PAUSE_STATE){
+    // Entering
+    if(enteringState){
+      // Start the pressure averaging
+      enteringState = false;
+    }
+    if(millis()-stateTimer > pauseTime){
+      //Finish the pressure averaging
+      displ.writePeakP(round(readPressure()));
+      displ.writePlateauP(0);
+      displ.writePEEP(0);
+      
+      setState(EX_STATE);
+    }
+  }
+  
+  else if(state == EX_STATE){
+    //Entering
+    if(enteringState){
+      //consider changing PID tunings
+      enteringState = false;
+      goToPosition(0, Vex);
+    }
 
-
-//Loop runs continuously forever
-//Breathing control happens here
-void loop(){
-
-  timeScale = analogRead(freqPin);
-  ie = analogRead(iePin) / 128 ;
-  //breathe out
-  setPosition(0, 222);
-  //hold out
-  delay(baseTime*timeScale);
-
-  //breathe in
-  setPosition(disp*analogRead(dispPin), 222);
-  //hold in
-  delay(baseTime*timeScale*ie);
-  Serial.println(pressurePSI());
+    if(abs(motorPosition) < goalTol)
+      roboclaw.ForwardM1(address,0);
+      
+    if(millis()-stateTimer > Tex*1000)
+      setState(IN_STATE);
+  }
 }
