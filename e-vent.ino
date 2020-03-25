@@ -213,8 +213,10 @@ void loop() {
       goToPosition(Volume, Vin);
     }
     
-    if(millis()-stateTimer > Tin*1000 || abs(motorPosition - Volume) < goalTol)
+    if(millis()-stateTimer > Tin*1000 || abs(motorPosition - Volume) < goalTol){
+      displ.writePeakP(round(readPressure()));
       setState(PAUSE_STATE);
+    }
   }
   
   else if(state == PAUSE_STATE){
@@ -225,9 +227,7 @@ void loop() {
     }
     if(millis()-stateTimer > pauseTime){
       //Finish the pressure averaging
-      displ.writePeakP(0);
       displ.writePlateauP(round(readPressure()));
-      displ.writePEEP(0);
       
       setState(EX_STATE);
     }
@@ -244,7 +244,9 @@ void loop() {
     if(abs(motorPosition) < goalTol)
       roboclaw.ForwardM1(address,0);
       
-    if(millis()-stateTimer > Tex*1000)
+    if(millis()-stateTimer > Tex*1000){
+      displ.writePEEP(round(readPressure()));
       setState(IN_STATE);
+    }
   }
 }
