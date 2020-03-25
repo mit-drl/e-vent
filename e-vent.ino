@@ -126,7 +126,6 @@ void readPots(){
     // Writing data to the SD Card
     myFile = SD.open("ExpData.txt", FILE_WRITE);
     if (myFile) {
-      myFile.println("------ NEW CLINICAL TRIAL DATA STARTS HERE ------"); 
       myFile.print(millis()); myFile.print("\t");
       myFile.print(state); myFile.print("\t");
       myFile.print(motorPosition); myFile.print("\t");
