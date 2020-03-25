@@ -69,14 +69,12 @@ LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 Display displ(&lcd);
 
 /* Data logger -- SD Card (Adafruit Breakout Board)
+    Pin configurations per https://www.arduino.cc/en/reference/SPI
     CS  - pin 10
     DI  - pin 11
     DO  - pin 12
     CLK - pin 13
 */
-
-
-
 
 
 // Functions
