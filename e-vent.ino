@@ -125,6 +125,7 @@ void readPots(){
   }
 
   if(LOGGER){
+    // Writing data to the SD Card
     myFile = SD.open("ExpData.txt", FILE_WRITE);
     if (myFile) {
       myFile.println("------ NEW CLINICAL TRIAL DATA STARTS HERE ------"); 
