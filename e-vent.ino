@@ -148,10 +148,12 @@ void goToPosition(int pos, int vel){
   
   if(valid){
     roboclaw.SpeedDistanceM1(address,vel,diff, 1);
-    Serial.print("CmdVel: ");
-    Serial.print(vel);
-    Serial.print("\tCmdDiff: ");
-    Serial.println(diff);
+    if(DEBUG){
+      Serial.print("CmdVel: ");
+      Serial.print(vel);
+      Serial.print("\tCmdDiff: ");
+      Serial.println(diff);
+    }
   }
   else{
     Serial.println("encoder not valid; goToPosition command not sent");
@@ -220,8 +222,8 @@ void loop() {
     }
     if(millis()-stateTimer > pauseTime){
       //Finish the pressure averaging
-      displ.writePeakP(round(readPressure()));
-      displ.writePlateauP(0);
+      displ.writePeakP(0);
+      displ.writePlateauP(round(readPressure()));
       displ.writePEEP(0);
       
       setState(EX_STATE);
