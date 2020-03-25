@@ -1,10 +1,13 @@
 #include <LiquidCrystal.h>
 #include <RoboClaw.h>
 #include "Display.h"
+#include <SPI.h>
+#include <SD.h>
 
 // Settings
 ////////////
 
+bool LOGGER = true; // Data logger to a file on SD card
 bool DEBUG = false; // For logging
 int maxPwm = 255; // Maximum for PWM is 255 but this can be set lower
 int loopPeriod = 25; // The period (ms) of the control loop delay
@@ -61,9 +64,20 @@ int motorPosition = 0;
 
 // LCD Screen
 double pressOffset = 0;
-const int rs = 12, en = 11, d4 = 10, d5 = 9, d6 = 8, d7 = 7;
+const int rs = 9, en = 8, d4 = 7, d5 = 6, d6 = 5, d7 = 4;
 LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 Display displ(&lcd);
+
+/* Data logger -- SD Card (Adafruit Breakout Board)
+    CS  - pin 10
+    DI  - pin 11
+    DO  - pin 12
+    CLK - pin 13
+*/
+
+
+
+
 
 // Functions
 ////////////
@@ -108,6 +122,27 @@ void readPots(){
     Serial.print(Vin);
     Serial.print("\tVex:");
     Serial.println(Vex);
+  }
+
+  if(LOGGER){
+    myFile = SD.open("ExpData.txt", FILE_WRITE);
+    if (myFile) {
+      myFile.println("------ NEW CLINICAL TRIAL DATA STARTS HERE ------"); 
+      myFile.print(millis()); myFile.print("\t");
+      myFile.print(state); myFile.print("\t");
+      myFile.print(motorPosition); myFile.print("\t");
+      myFile.print(Volume); myFile.print("\t");
+      myFile.print(bpm); myFile.print("\t");
+      myFile.print(ie); myFile.print("\t");
+      myFile.print(Tin); myFile.print("\t");
+      myFile.print(Tex); myFile.print("\t");
+      myFile.print(Vin); myFile.print("\t");
+      myFile.print(Vex); myFile.println("\t");
+      myFile.close();
+    } else {
+      // if the file didn't open, print an error:
+      Serial.println("error opening ExpData.txt");
+    }
   }
 }
 
@@ -179,6 +214,27 @@ void setup() {
     // setup serial coms
     Serial.begin(115200);
     setState(DEBUG_STATE);
+  }
+
+  if(LOGGER){
+    // setup SD card data logger
+    pinMode(10, OUTPUT);
+    if (!SD.begin(10)) {
+      Serial.println("SD card initialization failed!");
+      return;
+    }
+    Serial.println("SD card initialization done.");
+    myFile = SD.open("ExpData.txt", FILE_WRITE);
+    if (myFile) {
+      Serial.print("Writing to ExpData.txt...");
+      myFile.println("------ NEW CLINICAL TRIAL DATA STARTS HERE ------");
+      myFile.println("millis \tState \tPos \tVol \tBPM \tIE \tTin \tTex \tVin \tVex");
+      myFile.close();
+      Serial.println("Writing to ExpData.txt... done.");
+    } else {
+      // if the file didn't open, print an error:
+      Serial.println("error opening ExpData.txt");
+    }
   }
 }
 
