@@ -75,7 +75,7 @@ Display displ(&lcd);
     DO  - pin 12
     CLK - pin 13
 */
-
+File myFile;
 
 // Functions
 ////////////
