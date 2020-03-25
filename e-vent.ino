@@ -135,7 +135,8 @@ void readPots(){
       myFile.print(Tin); myFile.print("\t");
       myFile.print(Tex); myFile.print("\t");
       myFile.print(Vin); myFile.print("\t");
-      myFile.print(Vex); myFile.println("\t");
+      myFile.print(Vex); myFile.print("\t");
+      myFile.print(readPressure()); myFile.println("\t");
       myFile.close();
     } else {
       // if the file didn't open, print an error:
@@ -226,7 +227,7 @@ void setup() {
     if (myFile) {
       Serial.print("Writing to ExpData.txt...");
       myFile.println("------ NEW CLINICAL TRIAL DATA STARTS HERE ------");
-      myFile.println("millis \tState \tPos \tVol \tBPM \tIE \tTin \tTex \tVin \tVex");
+      myFile.println("millis \tState \tPos \tVol \tBPM \tIE \tTin \tTex \tVin \tVex \tPressure");
       myFile.close();
       Serial.println("Writing to ExpData.txt... done.");
     } else {
