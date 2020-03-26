@@ -39,7 +39,7 @@ private:
   LiquidCrystal* lcd_;
 
   template <typename T>
-  void write(const int& row, const int& col, const T& printable, const int& width);
+  void write(const int& row, const int& col, const T& printable);
 };
 
 

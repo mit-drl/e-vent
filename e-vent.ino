@@ -235,6 +235,7 @@ void loop() {
       
     if(millis()-stateTimer > Tex*1000){
       pressure.set_peak_and_reset();
+      pressure.set_peep();
       displ.writePeakP(pressure.peak());
       displ.writePEEP(pressure.peep());
       displ.writePlateauP(pressure.plateau());
