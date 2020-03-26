@@ -36,7 +36,7 @@ float BPM_MAX = 30;
 float IE_MIN = 1;
 float IE_MAX = 4;
 float VOL_MIN = 100;
-float VOL_MAX = 600; // 900; // For full 
+float VOL_MAX = 450; // 900; // For full 
 
 //Setup States
 enum States {DEBUG_STATE, IN_STATE, PAUSE_STATE, EX_STATE};
