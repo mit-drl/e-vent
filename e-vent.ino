@@ -103,7 +103,7 @@ void setInhaleType(PastInhaleType aType){
 
 // Get the type of last inhale
 void getInhaleType(){
-  pastInhale = aType;
+  return pastInhale;
 }
 
 // readPots reads the pot values and sets the waveform parameters
