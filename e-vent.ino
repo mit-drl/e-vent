@@ -21,6 +21,7 @@ int BPM_PIN = A1;
 int IE_PIN = A2;
 int PRESS_POT_PIN = A3;
 int PRESS_SENSE_PIN = A4;
+int HOME_PIN = 4;
 int ROBO_D0 = 2;
 int ROBO_D1 = 3;
 
@@ -39,7 +40,7 @@ float VOL_MIN = 100;
 float VOL_MAX = 600; // 900; // For full 
 
 //Setup States
-enum States {DEBUG_STATE, IN_STATE, PAUSE_STATE, EX_STATE};
+enum States {DEBUG_STATE, IN_STATE, PAUSE_STATE, EX_STATE, PREHOME_STATE, HOMING_STATE, POSTHOME_STATE};
 States state;
 bool enteringState;
 unsigned long stateTimer;
@@ -165,8 +166,9 @@ void setup() {
   
   //Initialize
   analogReference(EXTERNAL); // For the pressure reading
+  pinMode(HOME_PIN, INPUT_PULLUP); // Pull up the limit switch
   displ.begin();
-  setState(IN_STATE); // Initial state
+  setState(PREHOME_STATE); // Initial state
   roboclaw.begin(38400); // Roboclaw
   roboclaw.SetM1MaxCurrent(address, 10000); // Current limit is 10A
   roboclaw.SetM1VelocityPID(address,Kd,Kp,Ki,qpps); // Set PID Coefficients
@@ -241,5 +243,56 @@ void loop() {
       
     if(millis()-stateTimer > Tex*1000)
       setState(IN_STATE);
+  }
+
+  else if(state == PREHOME_STATE){
+    //Entering
+    if(enteringState){
+      enteringState = false;
+      //Consider displaying homing status on the screen
+      roboclaw.BackwardM1(address, Vhome);
+    }
+
+    // Check status of limit switch
+    if(digitalRead(HOME_PIN) == LOW) {
+      setState(HOMING_STATE); 
+    }
+
+    // Consider a timeout to give up on homing
+  }
+
+  else if(state == HOMING_STATE){
+    //Entering
+    if(enteringState){
+      enteringState = false;
+      //Consider displaying homing status on the screen
+      roboclaw.ForwardM1(address, Vhome);
+    }
+    
+    if(digitalRead(HOME_PIN) == HIGH) {
+      // Stop motor
+      roboclaw.ForwardM1(address,0);
+      delay(pauseHome);
+      roboclaw.SetEncM1(address, 0); // Zero the encoder
+      setState(POSTHOME_STATE);
+      
+    }
+    // Consider a timeout to give up on homing
+  }
+  
+  else if(state == POSTHOME_STATE){
+    //Entering
+    if(enteringState){
+      enteringState = false;
+      roboclaw.ForwardM1(address,Vhome);
+    }
+
+    if(abs(motorPosition - bagHome) < goalTol){
+      // Stop the motor and home encoder
+      roboclaw.ForwardM1(address,0);
+      delay(pauseHome);
+      roboclaw.SetEncM1(address, 0); // Zero the encoder
+      setState(IN_STATE);
+    }
   }
 }
