@@ -196,6 +196,9 @@ void loop() {
   delay(loopPeriod);
   readPots();
   readEncoder();
+
+  // Update display header
+  displ.writeHeader();
   
   if(state == DEBUG_STATE){
     // Stop motor
