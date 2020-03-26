@@ -4,7 +4,7 @@
 #include <SPI.h>
 #include <SD.h>
 
-// Settings
+// General Settings
 ////////////
 
 bool LOGGER = true; // Data logger to a file on SD card
@@ -15,6 +15,13 @@ int pauseTime = 250; // Time in ms to pause after inhalation
 double Vex = 600; //1000;  // Velocity to exhale
 double rampTime = 0.5; // The time (s) the velocity profile takes to ramp up and down
 double goalTol = 20;
+double PEEP = 10; // cmH2O
+
+// Assist Control Flags and Settings
+bool ASSIST_CONTROL = false; // Enable assist control
+enum PastInhaleType {TIME_TRIGGERED, PATIENT_TRIGGERED};
+PastInhaleType pastInhale
+double triggeringPressure = 5;  // cmH2O - Tunable via a pot. This pressure should be 2 - 5 cmH2O from PEEP
 
 // Pins
 ////////////
@@ -40,6 +47,8 @@ float IE_MIN = 1;
 float IE_MAX = 4;
 float VOL_MIN = 100;
 float VOL_MAX = 600; // 900; // For full 
+float TRIGGERPRESSURE_MIN = 2;
+float TRIGGERPRESSURE_MAX = 5;
 
 //Setup States
 enum States {DEBUG_STATE, IN_STATE, PAUSE_STATE, EX_STATE};
@@ -87,11 +96,22 @@ void setState(States newState){
   stateTimer = millis();
 }
 
+// Set the type of last inhale
+void setInhaleType(PastInhaleType aType){
+  pastInhale = aType;
+}
+
+// Get the type of last inhale
+void getInhaleType(){
+  pastInhale = aType;
+}
+
 // readPots reads the pot values and sets the waveform parameters
 void readPots(){
   Volume = map(analogRead(VOL_PIN), 0, 1024, VOL_MIN, VOL_MAX);
   float bpm = map(analogRead(BPM_PIN), 0, 1024, BPM_MIN, BPM_MAX);
   float ie = map(analogRead(IE_PIN), 0, 1024, IE_MIN*10, IE_MAX*10)/10.0; // Carry one decimal place
+  float triggeringPressure = map(analogRead(PRESS_POT_PIN), 0, 1024, TRIGGERPRESSURE_MIN, TRIGGERPRESSURE_MAX);
 
   float period = 60.0/bpm; // seconds in each period
   Tin = period / (1 + ie);
@@ -284,6 +304,7 @@ void loop() {
   }
   
   else if(state == EX_STATE){
+
     //Entering
     if(enteringState){
       //consider changing PID tunings
@@ -293,8 +314,17 @@ void loop() {
 
     if(abs(motorPosition) < goalTol)
       roboclaw.ForwardM1(address,0);
-      
-    if(millis()-stateTimer > Tex*1000)
+    
+    // Time-triggered inhale
+    if(millis()-stateTimer > Tex*1000) {
       setState(IN_STATE);
+      setInhaleType(TIME_TRIGGERED);
+    }
+
+    // Patient-triggered inhale
+    if(readPressure() < (PEEP - triggeringPressure) && getInhaleType()==TIME_TRIGGERED) {
+      setState(IN_STATE);
+      setInhaleType(PATIENT_TRIGGERED);
+    }
   }
 }
