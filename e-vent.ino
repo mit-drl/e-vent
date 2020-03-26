@@ -86,7 +86,7 @@ void readPots(){
   Tex = period - Tin;
   Vin = Volume/Tin; // Velocity in clicks/s
 
-  displ.writeVolume(100 * Volume/VOL_MAX);
+  displ.writeVolume(map(Volume, VOL_MIN, VOL_MAX, 0, 100));
   displ.writeBPM(bpm);
   displ.writeIEratio(ie);
   if(DEBUG){
