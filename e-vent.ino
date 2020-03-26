@@ -9,9 +9,11 @@ bool DEBUG = false; // For logging
 int maxPwm = 255; // Maximum for PWM is 255 but this can be set lower
 int loopPeriod = 25; // The period (ms) of the control loop delay
 int pauseTime = 250; // Time in ms to pause after inhalation
-double Vex = 600; //1000;  // Velocity to exhale
-double rampTime = 0.5; // The time (s) the velocity profile takes to ramp up and down
-double goalTol = 20;
+double Vex = 600; // Velocity to exhale
+double Vhome = 30; //The speed to use during homing
+int goalTol = 20; // The tolerance to start stopping on reaching goal
+int bagHome = 100; // The bag-specific position of the bag edge
+int pauseHome = 250; // The pause time (ms) during homing to ensure stability
 
 // Pins
 ////////////
@@ -87,7 +89,6 @@ void readPots(){
   Tex = period - Tin;
   Vin = Volume/Tin; // Velocity in clicks/s
 
-  displ.writeVolume(100 * Volume/VOL_MAX);
   displ.writeBPM(bpm);
   displ.writeIEratio(ie);
   if(DEBUG){
