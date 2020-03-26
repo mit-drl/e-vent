@@ -5,14 +5,18 @@
 
 class Pressure {
 public:
-  Pressure(int pin): sense_pin_(pin), offset_(0.0), peak_(0.0) {}
+  Pressure(int pin): sense_pin_(pin), peak_(0.0), current_(0.0) {}
 
-  void calibrate() {
-    offset_= read();
+  void setPlateau() {
+    plateau_ = current_;
+  }
+
+  float getPlateau() {
+    return plateau_;
   }
 
   //Get pressure reading
-  float read() {
+  void read() {
     // read the voltage
     int V = analogRead(sense_pin_); 
 
@@ -25,13 +29,15 @@ public:
 
     // convert to cmH20
     pres *= 1.01972;
-    
-    float calibrated_pressure = pres - offset_;
 
     // update peak
-    peak_ = max(peak_, calibrated_pressure);
+    peak_ = max(peak_, pres);
 
-    return calibrated_pressure;
+    current_ = pres;
+  }
+
+  float get() {
+    return current_;
   }
 
   float get_peak_and_reset() {
@@ -42,8 +48,8 @@ public:
 
 private:
   int sense_pin_;
-  float offset_;
-  float peak_;
+  float peak_, plateau_, peep_;
+  float current_;
 };
 
 #endif

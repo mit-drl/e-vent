@@ -110,7 +110,10 @@ void readPots(){
     Serial.print("\tVin:");
     Serial.print(Vin);
     Serial.print("\tVex:");
-    Serial.println(Vex);
+    Serial.print(Vex);
+    Serial.print("\tPressure:");
+    Serial.print(pressure.get());
+    Serial.println();
   }
 }
 
@@ -158,9 +161,6 @@ void setup() {
   roboclaw.SetM1MaxCurrent(address, 10000); // Current limit is 10A
   roboclaw.SetM1VelocityPID(address,Kd,Kp,Ki,qpps); // Set PID Coefficients
   roboclaw.SetEncM1(address, 0); // Zero the encoder
-
-  // Calibrate pressure sensor
-  pressure.calibrate();
   
   if(DEBUG){
     // setup serial coms
@@ -186,7 +186,7 @@ void loop() {
   displ.writeHeader();
   
   // read pressure every cycle to keep track of peak
-  int current_pressure = round(pressure.read());
+  pressure.read();
   
   if(state == DEBUG_STATE){
     // Stop motor
@@ -212,7 +212,7 @@ void loop() {
       enteringState = false;
     }
     if(millis()-stateTimer > pauseTime){
-      displ.writePlateauP(current_pressure);
+      pressure.setPlateau();
       
       setState(EX_STATE);
     }
@@ -230,8 +230,11 @@ void loop() {
       roboclaw.ForwardM1(address,0);
       
     if(millis()-stateTimer > Tex*1000){
-      displ.writePeakP(round(pressure.get_peak_and_reset()));
-      displ.writePEEP(current_pressure);
+      float maxP = pressure.get_peak_and_reset();
+      Serial.println(maxP);
+      displ.writePeakP(round(maxP));
+      displ.writePEEP(pressure.get());
+      displ.writePlateauP(pressure.getPlateau());
       setState(IN_STATE);
     }
   }
