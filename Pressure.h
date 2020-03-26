@@ -5,15 +5,13 @@
 
 class Pressure {
 public:
-  Pressure(int pin): sense_pin_(pin), peak_(0.0), current_(0.0) {}
-
-  void setPlateau() {
-    plateau_ = current_;
-  }
-
-  float getPlateau() {
-    return plateau_;
-  }
+  Pressure(int pin): 
+    sense_pin_(pin),
+    current_(0.0),
+    current_peak_(0.0),
+    peak_(0.0),
+    plateau_(0.0),
+    peep_(0.0) {}
 
   //Get pressure reading
   void read() {
@@ -31,7 +29,7 @@ public:
     pres *= 1.01972;
 
     // update peak
-    peak_ = max(peak_, pres);
+    current_peak_ = max(current_peak_, pres);
 
     current_ = pres;
   }
@@ -40,16 +38,28 @@ public:
     return current_;
   }
 
-  float get_peak_and_reset() {
-    float peak = peak_;
-    peak_ = 0.0;
-    return peak;
+  void set_peak_and_reset() {
+    peak_ = current_peak_;
+    current_peak_ = 0.0;
   }
+
+  void set_plateau() {
+    plateau_ = get();
+  }
+
+  void set_peep() {
+    peep_ = get();
+  }
+
+  int peak() { return round(peak_); }
+  int plateau() { return round(plateau_); }
+  int peep() { return round(peep_); }
 
 private:
   int sense_pin_;
-  float peak_, plateau_, peep_;
   float current_;
+  float current_peak_;
+  float peak_, plateau_, peep_;
 };
 
 #endif

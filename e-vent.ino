@@ -212,7 +212,7 @@ void loop() {
       enteringState = false;
     }
     if(millis()-stateTimer > pauseTime){
-      pressure.setPlateau();
+      pressure.set_plateau();
       
       setState(EX_STATE);
     }
@@ -230,11 +230,10 @@ void loop() {
       roboclaw.ForwardM1(address,0);
       
     if(millis()-stateTimer > Tex*1000){
-      float maxP = pressure.get_peak_and_reset();
-      Serial.println(maxP);
-      displ.writePeakP(round(maxP));
-      displ.writePEEP(pressure.get());
-      displ.writePlateauP(pressure.getPlateau());
+      pressure.set_peak_and_reset();
+      displ.writePeakP(pressure.peak());
+      displ.writePEEP(pressure.peep());
+      displ.writePlateauP(pressure.plateau());
       setState(IN_STATE);
     }
   }
