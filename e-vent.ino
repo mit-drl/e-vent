@@ -1,6 +1,7 @@
 #include <LiquidCrystal.h>
 #include <RoboClaw.h>
 #include "Display.h"
+#include "Pressure.h"
 
 // Settings
 ////////////
@@ -60,10 +61,12 @@ RoboClaw roboclaw(&serial,10000);
 int motorPosition = 0;
 
 // LCD Screen
-double pressOffset = 0;
 const int rs = 12, en = 11, d4 = 10, d5 = 9, d6 = 8, d7 = 7;
 LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 Display displ(&lcd);
+
+// Pressure
+Pressure pressure(PRESS_SENSE_PIN);
 
 // Functions
 ////////////
@@ -111,24 +114,6 @@ void readPots(){
   }
 }
 
-//Get pressure reading
-float readPressure() {
-  // read the voltage
-  int V = analogRead(PRESS_SENSE_PIN); 
-
-  float Pmin = -100.0;        // pressure max in mbar
-  float Pmax = 100.0;         // pressure min in mbar
-  float Vmax = 1024;            // max voltage in range from analogRead
-  float R = 32./37;      // Internal 32K resistor and external 5K resistor ratio
-  // convert to pressure
-  float pres = (10 * V/Vmax * R - 1) * (Pmax-Pmin)/8. + Pmin; //mmHg
-
-  //convert to cmH20
-  pres *= 1.01972;
-  
-  return pres - pressOffset;
-}
-
 int readEncoder() {
   uint8_t robot_status;
   bool valid;
@@ -166,7 +151,7 @@ void setup() {
   delay(1000);
   
   //Initialize
-  analogReference(EXTERNAL); // For the pressure reading
+  analogReference(EXTERNAL); // For the pressure and pots reading
   displ.begin();
   setState(IN_STATE); // Initial state
   roboclaw.begin(38400); // Roboclaw
@@ -175,7 +160,7 @@ void setup() {
   roboclaw.SetEncM1(address, 0); // Zero the encoder
 
   // Calibrate pressure sensor
-  pressOffset = readPressure();
+  pressure.calibrate();
   
   if(DEBUG){
     // setup serial coms
@@ -200,6 +185,9 @@ void loop() {
   // Update display header
   displ.writeHeader();
   
+  // read pressure every cycle to keep track of peak
+  int current_pressure = round(pressure.read());
+  
   if(state == DEBUG_STATE){
     // Stop motor
     roboclaw.ForwardM1(address,0);
@@ -214,7 +202,6 @@ void loop() {
     }
     
     if(millis()-stateTimer > Tin*1000 || abs(motorPosition - Volume) < goalTol){
-      displ.writePeakP(round(readPressure()));
       setState(PAUSE_STATE);
     }
   }
@@ -222,12 +209,10 @@ void loop() {
   else if(state == PAUSE_STATE){
     // Entering
     if(enteringState){
-      // Start the pressure averaging
       enteringState = false;
     }
     if(millis()-stateTimer > pauseTime){
-      //Finish the pressure averaging
-      displ.writePlateauP(round(readPressure()));
+      displ.writePlateauP(current_pressure);
       
       setState(EX_STATE);
     }
@@ -245,7 +230,8 @@ void loop() {
       roboclaw.ForwardM1(address,0);
       
     if(millis()-stateTimer > Tex*1000){
-      displ.writePEEP(round(readPressure()));
+      displ.writePeakP(round(pressure.get_peak_and_reset()));
+      displ.writePEEP(current_pressure);
       setState(IN_STATE);
     }
   }
