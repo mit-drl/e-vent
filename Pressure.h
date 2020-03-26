@@ -27,7 +27,10 @@ public:
     pres *= 1.01972;
     
     float calibrated_pressure = pres - offset_;
+
+    // update peak
     peak_ = max(peak_, calibrated_pressure);
+
     return calibrated_pressure;
   }
 
