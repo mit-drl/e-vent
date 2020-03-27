@@ -23,7 +23,7 @@ enum PastInhaleType {TIME_TRIGGERED, PATIENT_TRIGGERED};
 PastInhaleType pastInhale;
 double TriggerSensitivity;  // Tunable via a potentiometer. Its range is [2 cmH2O to 5 cmH2O] lower than PEEP
 bool DetectionWindow;
-double DP; // Driving Pressure Plateau - PEEP
+double DP; // Driving Pressure = Plateau - PEEP
 
 // Pins
 ////////////
