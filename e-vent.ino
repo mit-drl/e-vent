@@ -16,14 +16,13 @@ int pauseTime = 250; // Time in ms to pause after inhalation
 double Vex = 600; //1000;  // Velocity to exhale
 double rampTime = 0.5; // The time (s) the velocity profile takes to ramp up and down
 double goalTol = 20;
-double PEEP = 10; // cmH2O
 
 // Assist Control Flags and Settings
 bool ASSIST_CONTROL = false; // Enable assist control
 enum PastInhaleType {TIME_TRIGGERED, PATIENT_TRIGGERED};
-PastInhaleType pastInhale
-double triggeringPressure = 5;  // cmH2O - Tunable via a pot. This pressure should be 2 - 5 cmH2O from PEEP
-
+PastInhaleType pastInhale;
+double TriggerSensitivity;  // Tunable via a potentiometer. Its range is [2 cmH2O to 5 cmH2O] lower than PEEP
+bool DetectionWindow;
 // Pins
 ////////////
 
@@ -48,8 +47,8 @@ float IE_MIN = 1;
 float IE_MAX = 4;
 float VOL_MIN = 100;
 float VOL_MAX = 450; // 900; // For full 
-float TRIGGERPRESSURE_MIN = 2;
-float TRIGGERPRESSURE_MAX = 5;
+float TRIGGERSENSITIVITY_MIN = 2;
+float TRIGGERSENSITIVITY_MAX = 5;
 
 //Setup States
 enum States {DEBUG_STATE, IN_STATE, PAUSE_STATE, EX_STATE};
@@ -114,7 +113,7 @@ void readPots(){
   Volume = map(analogRead(VOL_PIN), 0, 1024, VOL_MIN, VOL_MAX);
   float bpm = map(analogRead(BPM_PIN), 0, 1024, BPM_MIN, BPM_MAX);
   float ie = map(analogRead(IE_PIN), 0, 1024, IE_MIN*10, IE_MAX*10)/10.0; // Carry one decimal place
-  float triggeringPressure = map(analogRead(PRESS_POT_PIN), 0, 1024, TRIGGERPRESSURE_MIN, TRIGGERPRESSURE_MAX);
+  float TriggerSensitivity = map(analogRead(PRESS_POT_PIN), 0, 1024, TRIGGERSENSITIVITY_MIN, TRIGGERSENSITIVITY_MAX);
 
   float period = 60.0/bpm; // seconds in each period
   Tin = period / (1 + ie);
@@ -317,8 +316,16 @@ void loop() {
     }
 
     // Patient-triggered inhale
-    if(readPressure() < (PEEP - triggeringPressure) && getInhaleType()==TIME_TRIGGERED) {
+    double DP = pressure.plateau() - pressure.peep();
+    if ( pressure.get() < (pressure.peep() + 0.1*DP)) {
+      DetectionWindow = true;
+    } else {
+      DetectionWindow = false;
+    }
+    
+    if( (pressure.get() < (pressure.peep() - TriggerSensitivity)) && DetectionWindow ) {
       setState(IN_STATE);
       setInhaleType(PATIENT_TRIGGERED);
+    }
   }
 }
