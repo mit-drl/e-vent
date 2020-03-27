@@ -61,6 +61,15 @@ RoboClaw roboclaw(&serial,10000);
 #define qpps 3000
 int motorPosition = 0;
 
+// position PID values for PG188
+#define pKp 10.0
+#define pKi 0.0
+#define pKd 0.0
+#define kiMax 10.0
+#define deadzone 2
+#define minPos 0
+#define maxPos 1000
+
 // LCD Screen
 const int rs = 12, en = 11, d4 = 10, d5 = 9, d6 = 8, d7 = 7;
 LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
@@ -128,20 +137,17 @@ int readEncoder() {
 // goToPosition goes to a desired position at the given speed,
 void goToPosition(int pos, int vel){
   bool valid = readEncoder();
-  int diff = pos - motorPosition;
 
-  if(diff < 0){
-    vel = -vel; //want to reverse vel if you need to go backwards
-    diff = abs(diff);
-  }
+  int accel = 0;
+  int deccel = 0;
   
   if(valid){
-    roboclaw.SpeedDistanceM1(address,vel,diff, 1);
+    roboclaw.SpeedAccelDeccelPositionM1(address,accel,vel,deccel,pos,1);
     if(DEBUG){
       Serial.print("CmdVel: ");
       Serial.print(vel);
       Serial.print("\tCmdDiff: ");
-      Serial.println(diff);
+      Serial.println(pos);
     }
   }
   else{
@@ -160,7 +166,8 @@ void setup() {
   setState(IN_STATE); // Initial state
   roboclaw.begin(38400); // Roboclaw
   roboclaw.SetM1MaxCurrent(address, 10000); // Current limit is 10A
-  roboclaw.SetM1VelocityPID(address,Kd,Kp,Ki,qpps); // Set PID Coefficients
+  roboclaw.SetM1VelocityPID(address,Kd,Kp,Ki,qpps); // Set Velocity PID Coefficients
+  roboclaw.SetM1PositionPID(address,pKp,pKi,pKd,kiMax,deadzone,minPos,maxPos); // Set Position PID Coefficients
   roboclaw.SetEncM1(address, 0); // Zero the encoder
   
   if(DEBUG){
