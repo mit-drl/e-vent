@@ -14,6 +14,9 @@ public:
   // Call inside setup() instead of lcd.begin()
   void begin();
 
+  // Write the top of the display
+  void writeHeader();
+
   // Write volume as a percent of the max
   void writeVolume(const int& vol);
 
@@ -36,7 +39,7 @@ private:
   LiquidCrystal* lcd_;
 
   template <typename T>
-  void write(const int& row, const int& col, const T& printable, const int& width);
+  void write(const int& row, const int& col, const T& printable);
 };
 
 

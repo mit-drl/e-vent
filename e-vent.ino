@@ -3,6 +3,7 @@
 #include "Display.h"
 #include <SPI.h>
 #include <SD.h>
+#include "Pressure.h"
 
 // Settings
 ////////////
@@ -39,7 +40,7 @@ float BPM_MAX = 30;
 float IE_MIN = 1;
 float IE_MAX = 4;
 float VOL_MIN = 100;
-float VOL_MAX = 600; // 900; // For full 
+float VOL_MAX = 450; // 900; // For full 
 
 //Setup States
 enum States {DEBUG_STATE, IN_STATE, PAUSE_STATE, EX_STATE};
@@ -77,6 +78,9 @@ Display displ(&lcd);
 */
 File myFile;
 
+// Pressure
+Pressure pressure(PRESS_SENSE_PIN);
+
 // Functions
 ////////////
 
@@ -98,7 +102,7 @@ void readPots(){
   Tex = period - Tin;
   Vin = Volume/Tin; // Velocity in clicks/s
 
-  displ.writeVolume(100 * Volume/VOL_MAX);
+  displ.writeVolume(map(Volume, VOL_MIN, VOL_MAX, 0, 100));
   displ.writeBPM(bpm);
   displ.writeIEratio(ie);
   if(DEBUG){
@@ -119,7 +123,10 @@ void readPots(){
     Serial.print("\tVin:");
     Serial.print(Vin);
     Serial.print("\tVex:");
-    Serial.println(Vex);
+    Serial.print(Vex);
+    Serial.print("\tPressure:");
+    Serial.print(pressure.get());
+    Serial.println();
   }
 
   if(LOGGER){
@@ -145,24 +152,6 @@ void readPots(){
   }
 }
 
-//Get pressure reading
-float readPressure() {
-  // read the voltage
-  int V = analogRead(PRESS_SENSE_PIN); 
-
-  float Pmin = -100.0;        // pressure max in mbar
-  float Pmax = 100.0;         // pressure min in mbar
-  float Vmax = 1024;            // max voltage in range from analogRead
-  float R = 32./37;      // Internal 32K resistor and external 5K resistor ratio
-  // convert to pressure
-  float pres = (10 * V/Vmax * R - 1) * (Pmax-Pmin)/8. + Pmin; //mmHg
-
-  //convert to cmH20
-  pres *= 1.01972;
-  
-  return pres - pressOffset;
-}
-
 int readEncoder() {
   uint8_t robot_status;
   bool valid;
@@ -182,10 +171,12 @@ void goToPosition(int pos, int vel){
   
   if(valid){
     roboclaw.SpeedDistanceM1(address,vel,diff, 1);
-    Serial.print("CmdVel: ");
-    Serial.print(vel);
-    Serial.print("\tCmdDiff: ");
-    Serial.println(diff);
+    if(DEBUG){
+      Serial.print("CmdVel: ");
+      Serial.print(vel);
+      Serial.print("\tCmdDiff: ");
+      Serial.println(diff);
+    }
   }
   else{
     Serial.println("encoder not valid; goToPosition command not sent");
@@ -198,16 +189,13 @@ void setup() {
   delay(1000);
   
   //Initialize
-  analogReference(EXTERNAL); // For the pressure reading
+  analogReference(EXTERNAL); // For the pressure and pots reading
   displ.begin();
   setState(IN_STATE); // Initial state
   roboclaw.begin(38400); // Roboclaw
   roboclaw.SetM1MaxCurrent(address, 10000); // Current limit is 10A
   roboclaw.SetM1VelocityPID(address,Kd,Kp,Ki,qpps); // Set PID Coefficients
   roboclaw.SetEncM1(address, 0); // Zero the encoder
-
-  // Calibrate pressure sensor
-  pressOffset = readPressure();
   
   if(DEBUG){
     // setup serial coms
@@ -249,6 +237,12 @@ void loop() {
   delay(loopPeriod);
   readPots();
   readEncoder();
+
+  // Update display header
+  displ.writeHeader();
+  
+  // read pressure every cycle to keep track of peak
+  pressure.read();
   
   if(state == DEBUG_STATE){
     // Stop motor
@@ -263,21 +257,18 @@ void loop() {
       goToPosition(Volume, Vin);
     }
     
-    if(millis()-stateTimer > Tin*1000 || abs(motorPosition - Volume) < goalTol)
+    if(millis()-stateTimer > Tin*1000 || abs(motorPosition - Volume) < goalTol){
       setState(PAUSE_STATE);
+    }
   }
   
   else if(state == PAUSE_STATE){
     // Entering
     if(enteringState){
-      // Start the pressure averaging
       enteringState = false;
     }
     if(millis()-stateTimer > pauseTime){
-      //Finish the pressure averaging
-      displ.writePeakP(round(readPressure()));
-      displ.writePlateauP(0);
-      displ.writePEEP(0);
+      pressure.set_plateau();
       
       setState(EX_STATE);
     }
@@ -294,7 +285,13 @@ void loop() {
     if(abs(motorPosition) < goalTol)
       roboclaw.ForwardM1(address,0);
       
-    if(millis()-stateTimer > Tex*1000)
+    if(millis()-stateTimer > Tex*1000){
+      pressure.set_peak_and_reset();
+      pressure.set_peep();
+      displ.writePeakP(pressure.peak());
+      displ.writePEEP(pressure.peep());
+      displ.writePlateauP(pressure.plateau());
       setState(IN_STATE);
+    }
   }
 }
