@@ -13,8 +13,6 @@ int maxPwm = 255; // Maximum for PWM is 255 but this can be set lower
 int loopPeriod = 25; // The period (ms) of the control loop delay
 int pauseTime = 250; // Time in ms to pause after inhalation
 double Vex = 600; //1000;  // Velocity to exhale
-double rampTime = 0.5; // The time (s) the velocity profile takes to ramp up and down
-double goalTol = 20;
 
 // Pins
 ////////////
@@ -39,7 +37,7 @@ float BPM_MAX = 30;
 float IE_MIN = 1;
 float IE_MAX = 4;
 float VOL_MIN = 100;
-float VOL_MAX = 450; // 900; // For full 
+float VOL_MAX = 700; // 900; // For full 
 
 //Setup States
 States state;
@@ -62,11 +60,11 @@ RoboClaw roboclaw(&serial,10000);
 int motorPosition = 0;
 
 // position PID values for PG188
-#define pKp 10.0
+#define pKp 8.0
 #define pKi 0.0
 #define pKd 0.0
 #define kiMax 10.0
-#define deadzone 2
+#define deadzone 0
 #define minPos 0
 #define maxPos 1000
 
@@ -138,8 +136,8 @@ int readEncoder() {
 void goToPosition(int pos, int vel){
   bool valid = readEncoder();
 
-  int accel = 0;
-  int deccel = 0;
+  int accel = 10000;
+  int deccel = 10000;
   
   if(valid){
     roboclaw.SpeedAccelDeccelPositionM1(address,accel,vel,deccel,pos,1);
@@ -208,8 +206,9 @@ void loop() {
       enteringState = false;
       goToPosition(Volume, Vin);
     }
-    
-    if(millis()-stateTimer > Tin*1000 || abs(motorPosition - Volume) < goalTol){
+
+    // Consider checking we reached the destination for fault detection
+    if(millis()-stateTimer > Tin*1000){
       setState(PAUSE_STATE);
     }
   }
@@ -221,7 +220,6 @@ void loop() {
     }
     if(millis()-stateTimer > pauseTime){
       pressure.set_plateau();
-      
       setState(EX_STATE);
     }
   }
@@ -233,9 +231,6 @@ void loop() {
       enteringState = false;
       goToPosition(0, Vex);
     }
-
-    if(abs(motorPosition) < goalTol)
-      roboclaw.ForwardM1(address,0);
       
     if(millis()-stateTimer > Tex*1000){
       pressure.set_peak_and_reset();
