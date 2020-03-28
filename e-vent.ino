@@ -16,6 +16,7 @@ double Vex = 600; // Velocity to exhale
 double Vhome = 30; //The speed to use during homing
 int goalTol = 20; // The tolerance to start stopping on reaching goal
 int bagHome = 100; // The bag-specific position of the bag edge
+// int bagHome = 180; // Unit 2.2
 int pauseHome = 250; // The pause time (ms) during homing to ensure stability
 
 // Pins
@@ -43,6 +44,7 @@ float IE_MIN = 1;
 float IE_MAX = 4;
 float VOL_MIN = 100;
 float VOL_MAX = 700; // 900; // For full 
+// float VOL_MAX = 550; // Unit 2.2
 
 //Setup States
 States state;
@@ -76,7 +78,7 @@ int motorPosition = 0;
 // LCD Screen
 const int rs = 12, en = 11, d4 = 10, d5 = 9, d6 = 8, d7 = 7;
 LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
-Display displ(&lcd);
+display::Display displ(&lcd);
 
 // Pressure
 Pressure pressure(PRESS_SENSE_PIN);
@@ -195,7 +197,7 @@ void loop() {
   readEncoder();
 
   // Update display header
-  displ.writeHeader();
+  displ.update();
   
   // read pressure every cycle to keep track of peak
   pressure.read();
