@@ -1,4 +1,4 @@
-enum States {DEBUG_STATE, IN_STATE, PAUSE_STATE, EX_STATE};
+enum States {DEBUG_STATE, IN_STATE, PAUSE_STATE, EX_STATE, PREHOME_STATE, HOMING_STATE, POSTHOME_STATE};
 
 #include <LiquidCrystal.h>
 #include <RoboClaw.h>
@@ -12,9 +12,11 @@ bool DEBUG = false; // For logging
 int maxPwm = 255; // Maximum for PWM is 255 but this can be set lower
 int loopPeriod = 25; // The period (ms) of the control loop delay
 int pauseTime = 250; // Time in ms to pause after inhalation
-double Vex = 600; //1000;  // Velocity to exhale
-double rampTime = 0.5; // The time (s) the velocity profile takes to ramp up and down
-double goalTol = 20;
+double Vex = 600; // Velocity to exhale
+double Vhome = 30; //The speed to use during homing
+int goalTol = 20; // The tolerance to start stopping on reaching goal
+int bagHome = 100; // The bag-specific position of the bag edge
+int pauseHome = 250; // The pause time (ms) during homing to ensure stability
 
 // Pins
 ////////////
@@ -24,6 +26,7 @@ int BPM_PIN = A1;
 int IE_PIN = A2;
 int PRESS_POT_PIN = A3;
 int PRESS_SENSE_PIN = A4;
+int HOME_PIN = 4;
 int ROBO_D0 = 2;
 int ROBO_D1 = 3;
 
@@ -155,9 +158,10 @@ void setup() {
   delay(1000);
   
   //Initialize
+  pinMode(HOME_PIN, INPUT_PULLUP); // Pull up the limit switch
   analogReference(EXTERNAL); // For the pressure and pots reading
   displ.begin();
-  setState(IN_STATE); // Initial state
+  setState(PREHOME_STATE); // Initial state
   roboclaw.begin(38400); // Roboclaw
   roboclaw.SetM1MaxCurrent(address, 10000); // Current limit is 10A
   roboclaw.SetM1VelocityPID(address,Kd,Kp,Ki,qpps); // Set PID Coefficients
@@ -236,6 +240,57 @@ void loop() {
       displ.writePeakP(pressure.peak());
       displ.writePEEP(pressure.peep());
       displ.writePlateauP(pressure.plateau());
+      setState(IN_STATE);
+    }
+  }
+
+  else if(state == PREHOME_STATE){
+    //Entering
+    if(enteringState){
+      enteringState = false;
+      //Consider displaying homing status on the screen
+      roboclaw.BackwardM1(address, Vhome);
+    }
+
+    // Check status of limit switch
+    if(digitalRead(HOME_PIN) == LOW) {
+      setState(HOMING_STATE); 
+    }
+
+    // Consider a timeout to give up on homing
+  }
+
+  else if(state == HOMING_STATE){
+    //Entering
+    if(enteringState){
+      enteringState = false;
+      //Consider displaying homing status on the screen
+      roboclaw.ForwardM1(address, Vhome);
+    }
+    
+    if(digitalRead(HOME_PIN) == HIGH) {
+      // Stop motor
+      roboclaw.ForwardM1(address,0);
+      delay(pauseHome);
+      roboclaw.SetEncM1(address, 0); // Zero the encoder
+      setState(POSTHOME_STATE);
+      
+    }
+    // Consider a timeout to give up on homing
+  }
+  
+  else if(state == POSTHOME_STATE){
+    //Entering
+    if(enteringState){
+      enteringState = false;
+      roboclaw.ForwardM1(address,Vhome);
+    }
+
+    if(abs(motorPosition - bagHome) < goalTol){
+      // Stop the motor and home encoder
+      roboclaw.ForwardM1(address,0);
+      delay(pauseHome);
+      roboclaw.SetEncM1(address, 0); // Zero the encoder
       setState(IN_STATE);
     }
   }
