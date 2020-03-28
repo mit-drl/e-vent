@@ -1,3 +1,5 @@
+enum States {DEBUG_STATE, IN_STATE, PAUSE_STATE, EX_STATE, PREHOME_STATE, HOMING_STATE, POSTHOME_STATE};
+
 #include <LiquidCrystal.h>
 #include <RoboClaw.h>
 #include "Display.h"
@@ -43,7 +45,6 @@ float VOL_MIN = 100;
 float VOL_MAX = 450; // 900; // For full 
 
 //Setup States
-enum States {DEBUG_STATE, IN_STATE, PAUSE_STATE, EX_STATE, PREHOME_STATE, HOMING_STATE, POSTHOME_STATE};
 States state;
 bool enteringState;
 unsigned long stateTimer;
@@ -176,7 +177,7 @@ void setup() {
 void loop() {
   if(DEBUG){
     if(Serial.available() > 0){
-      setState(Serial.parseInt());
+      setState((States) Serial.parseInt());
       while(Serial.available() > 0) Serial.read();
     }
   }
