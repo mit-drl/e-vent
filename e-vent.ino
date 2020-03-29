@@ -1,3 +1,5 @@
+enum States {DEBUG_STATE, IN_STATE, PAUSE_STATE, EX_STATE, PREHOME_STATE, HOMING_STATE, POSTHOME_STATE};
+
 #include <LiquidCrystal.h>
 #include <RoboClaw.h>
 #include "Display.h"
@@ -13,9 +15,11 @@ bool DEBUG = false; // For logging
 int maxPwm = 255; // Maximum for PWM is 255 but this can be set lower
 int loopPeriod = 25; // The period (ms) of the control loop delay
 int pauseTime = 250; // Time in ms to pause after inhalation
-double Vex = 600; //1000;  // Velocity to exhale
-double rampTime = 0.5; // The time (s) the velocity profile takes to ramp up and down
-double goalTol = 20;
+double Vex = 600; // Velocity to exhale
+double Vhome = 30; //The speed to use during homing
+int goalTol = 20; // The tolerance to start stopping on reaching goal
+int bagHome = 100; // The bag-specific position of the bag edge
+int pauseHome = 250; // The pause time (ms) during homing to ensure stability
 
 // Assist Control Flags and Settings
 bool ASSIST_CONTROL = false; // Enable assist control
@@ -33,6 +37,7 @@ int BPM_PIN = A1;
 int IE_PIN = A2;
 int PRESS_POT_PIN = A3;
 int PRESS_SENSE_PIN = A4;
+int HOME_PIN = 4;
 int ROBO_D0 = 2;
 int ROBO_D1 = 3;
 
@@ -48,12 +53,11 @@ float BPM_MAX = 30;
 float IE_MIN = 1;
 float IE_MAX = 4;
 float VOL_MIN = 100;
-float VOL_MAX = 450; // 900; // For full 
+float VOL_MAX = 700; // 900; // For full 
 float TRIGGERSENSITIVITY_MIN = 2;
 float TRIGGERSENSITIVITY_MAX = 5;
 
 //Setup States
-enum States {DEBUG_STATE, IN_STATE, PAUSE_STATE, EX_STATE};
 States state;
 bool enteringState;
 unsigned long stateTimer;
@@ -72,6 +76,15 @@ RoboClaw roboclaw(&serial,10000);
 #define Kd 0.0
 #define qpps 3000
 int motorPosition = 0;
+
+// position PID values for PG188
+#define pKp 8.0
+#define pKi 0.0
+#define pKd 0.0
+#define kiMax 10.0
+#define deadzone 0
+#define minPos 0
+#define maxPos 1000
 
 // LCD Screen
 const int rs = 9, en = 8, d4 = 7, d5 = 6, d6 = 5, d7 = 4;
@@ -182,20 +195,17 @@ int readEncoder() {
 // goToPosition goes to a desired position at the given speed,
 void goToPosition(int pos, int vel){
   bool valid = readEncoder();
-  int diff = pos - motorPosition;
 
-  if(diff < 0){
-    vel = -vel; //want to reverse vel if you need to go backwards
-    diff = abs(diff);
-  }
+  int accel = 10000;
+  int deccel = 10000;
   
   if(valid){
-    roboclaw.SpeedDistanceM1(address,vel,diff, 1);
+    roboclaw.SpeedAccelDeccelPositionM1(address,accel,vel,deccel,pos,1);
     if(DEBUG){
       Serial.print("CmdVel: ");
       Serial.print(vel);
       Serial.print("\tCmdDiff: ");
-      Serial.println(diff);
+      Serial.println(pos);
     }
   }
   else{
@@ -209,12 +219,14 @@ void setup() {
   delay(1000);
   
   //Initialize
+  pinMode(HOME_PIN, INPUT_PULLUP); // Pull up the limit switch
   analogReference(EXTERNAL); // For the pressure and pots reading
   displ.begin();
-  setState(IN_STATE); // Initial state
+  setState(PREHOME_STATE); // Initial state
   roboclaw.begin(38400); // Roboclaw
   roboclaw.SetM1MaxCurrent(address, 10000); // Current limit is 10A
-  roboclaw.SetM1VelocityPID(address,Kd,Kp,Ki,qpps); // Set PID Coefficients
+  roboclaw.SetM1VelocityPID(address,Kd,Kp,Ki,qpps); // Set Velocity PID Coefficients
+  roboclaw.SetM1PositionPID(address,pKp,pKi,pKd,kiMax,deadzone,minPos,maxPos); // Set Position PID Coefficients
   roboclaw.SetEncM1(address, 0); // Zero the encoder
   
   if(DEBUG){
@@ -248,7 +260,7 @@ void setup() {
 void loop() {
   if(DEBUG){
     if(Serial.available() > 0){
-      setState(Serial.parseInt());
+      setState((States) Serial.parseInt());
       while(Serial.available() > 0) Serial.read();
     }
   }
@@ -276,8 +288,9 @@ void loop() {
       enteringState = false;
       goToPosition(Volume, Vin);
     }
-    
-    if(millis()-stateTimer > Tin*1000 || abs(motorPosition - Volume) < goalTol){
+
+    // Consider checking we reached the destination for fault detection
+    if(millis()-stateTimer > Tin*1000){
       setState(PAUSE_STATE);
     }
   }
@@ -289,7 +302,6 @@ void loop() {
     }
     if(millis()-stateTimer > pauseTime){
       pressure.set_plateau();
-      
       setState(EX_STATE);
     }
   }
@@ -302,12 +314,9 @@ void loop() {
       enteringState = false;
       goToPosition(0, Vex);
     }
-
-    if(abs(motorPosition) < goalTol)
-      roboclaw.ForwardM1(address,0);
     
     // Time-triggered inhale
-    if(millis()-stateTimer > Tex*1000) {
+    if(millis()-stateTimer > Tex*1000){
       pressure.set_peak_and_reset();
       pressure.set_peep();
       displ.writePeakP(pressure.peak());
@@ -328,6 +337,56 @@ void loop() {
     if( (pressure.get() < (pressure.peep() - TriggerSensitivity)) && DetectionWindow ) {
       setState(IN_STATE);
       setInhaleType(PATIENT_TRIGGERED);
+    }
+  }
+
+  else if(state == PREHOME_STATE){
+    //Entering
+    if(enteringState){
+      enteringState = false;
+      //Consider displaying homing status on the screen
+      roboclaw.BackwardM1(address, Vhome);
+    }
+
+    // Check status of limit switch
+    if(digitalRead(HOME_PIN) == LOW) {
+      setState(HOMING_STATE); 
+    }
+
+    // Consider a timeout to give up on homing
+  }
+
+  else if(state == HOMING_STATE){
+    //Entering
+    if(enteringState){
+      enteringState = false;
+      //Consider displaying homing status on the screen
+      roboclaw.ForwardM1(address, Vhome);
+    }
+    
+    if(digitalRead(HOME_PIN) == HIGH) {
+      delay(pauseHome); // Wait for things to settle
+      roboclaw.SetEncM1(address, 0); // Zero the encoder
+      setState(POSTHOME_STATE);
+      
+    }
+    // Consider a timeout to give up on homing
+  }
+  
+  else if(state == POSTHOME_STATE){
+    //Entering
+    if(enteringState){
+      enteringState = false;
+      goToPosition(bagHome, Vhome); // Stop motor
+    }
+
+    if(abs(motorPosition - bagHome) < goalTol){
+      // Stop the motor and home encoder
+      roboclaw.ForwardM1(address,0);
+      delay(pauseHome); // Wait for things to settle
+      roboclaw.SetEncM1(address, 0); // Zero the encoder
+      goToPosition(0, Vhome); // Stop motor
+      setState(IN_STATE);
     }
   }
 }
