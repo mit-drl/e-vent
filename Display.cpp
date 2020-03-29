@@ -1,5 +1,5 @@
 #include "Display.h"
-#ifndef UNO
+#ifndef __AVR__
 #include <avr/dtostrf.h>
 #endif
 
