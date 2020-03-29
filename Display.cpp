@@ -83,7 +83,7 @@ void Display::writeBPM(const int& bpm){
 }
 
 void Display::writeIEratio(const float& ie){
-  char buff[4];
+  char buff[12];
   sprintf(buff, " I:E=1:%3.1f ", (double)ie);
   write(3, 0, buff);
 }
