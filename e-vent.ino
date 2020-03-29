@@ -11,12 +11,12 @@ enum States {
 #include <LiquidCrystal.h>
 #include <RoboClaw.h>
 
-#include "Display.h"
-#include "Pressure.h"
-
 #ifdef __AVR__
 #define UNO
 #endif
+
+#include "Display.h"
+#include "Pressure.h"
 
 // Settings
 ////////////
