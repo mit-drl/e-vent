@@ -205,6 +205,7 @@ void setup() {
   if(DEBUG){
     // setup serial coms
     Serial.begin(115200);
+    while(!Serial);
     setState(DEBUG_STATE);
   }
 }
@@ -230,7 +231,7 @@ void loop() {
   
   if(state == DEBUG_STATE){
     // Stop motor
-    roboclaw.ForwardM1(address,0);
+    roboclaw.ForwardM1(address, 0);
   }
   
   else if(state == IN_STATE){
@@ -301,10 +302,8 @@ void loop() {
     }
     
     if(digitalRead(HOME_PIN) == HIGH) {
-      delay(pauseHome); // Wait for things to settle
-      roboclaw.SetEncM1(address, 0); // Zero the encoder
+      roboclaw.SetEncM1(address, 0);
       setState(POSTHOME_STATE);
-      
     }
     // Consider a timeout to give up on homing
   }
