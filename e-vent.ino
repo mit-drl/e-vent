@@ -1,7 +1,20 @@
-enum States {DEBUG_STATE, IN_STATE, PAUSE_STATE, EX_STATE, PREHOME_STATE, HOMING_STATE, POSTHOME_STATE};
+enum States {
+  DEBUG_STATE,    // 0
+  IN_STATE,       // 1
+  PAUSE_STATE,    // 2
+  EX_STATE,       // 3
+  PREHOME_STATE,  // 4
+  HOMING_STATE,   // 5
+  POSTHOME_STATE  // 6
+};
 
 #include <LiquidCrystal.h>
 #include <RoboClaw.h>
+
+#ifdef __AVR__
+#define UNO
+#endif
+
 #include "Display.h"
 #include <SPI.h>
 #include <SD.h>
@@ -37,9 +50,11 @@ int BPM_PIN = A1;
 int IE_PIN = A2;
 int PRESS_POT_PIN = A3;
 int PRESS_SENSE_PIN = A4;
+#ifdef UNO
 int HOME_PIN = 4;
-//int ROBO_D0 = 2; // No longer used in Arduino Due
-//int ROBO_D1 = 3; // No longer used in Arduino Due
+#else
+int HOME_PIN = 10;
+#endif
 
 // Initialize Vars
 ////////////////////
@@ -63,8 +78,15 @@ bool enteringState;
 unsigned long stateTimer;
 
 // Roboclaw
-//SoftwareSerial serial(ROBO_D0, ROBO_D1); (not applicable in Arduino Due)
-RoboClaw roboclaw(&Serial3,10000);  // This is going to pin 14, 15 (hardwired)
+#ifdef UNO
+int ROBO_D0 = 2;
+int ROBO_D1 = 3;
+SoftwareSerial serial(ROBO_D0, ROBO_D1); // UNO
+RoboClaw roboclaw(&serial, 10000);
+#else
+RoboClaw roboclaw(&Serial3, 10000);
+#endif
+
 #define address 0x80
 // auto-tuned PID values for PG188
 //#define Kp 6.03917
@@ -87,7 +109,11 @@ int motorPosition = 0;
 #define maxPos 1000
 
 // LCD Screen
+#ifdef UNO
+const int rs = 12, en = 11, d4 = 10, d5 = 9, d6 = 8, d7 = 7;
+#else
 const int rs = 9, en = 8, d4 = 7, d5 = 6, d6 = 5, d7 = 4;
+#endif
 LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 Display displ(&lcd);
 
@@ -221,7 +247,9 @@ void setup() {
   
   //Initialize
   pinMode(HOME_PIN, INPUT_PULLUP); // Pull up the limit switch
-  //analogReference(EXTERNAL); // For the pressure and pots reading (not relevant on Arduino Due)
+#ifdef UNO
+  analogReference(EXTERNAL); // For the pressure and pots reading
+#endif
   displ.begin();
   setState(PREHOME_STATE); // Initial state
   roboclaw.begin(38400); // Roboclaw
@@ -233,6 +261,7 @@ void setup() {
   if(DEBUG){
     // setup serial coms
     Serial.begin(115200);
+    while(!Serial);
     setState(DEBUG_STATE);
   }
 
@@ -279,7 +308,7 @@ void loop() {
   
   if(state == DEBUG_STATE){
     // Stop motor
-    roboclaw.ForwardM1(address,0);
+    roboclaw.ForwardM1(address, 0);
   }
   
   else if(state == IN_STATE){
@@ -366,10 +395,8 @@ void loop() {
     }
     
     if(digitalRead(HOME_PIN) == HIGH) {
-      delay(pauseHome); // Wait for things to settle
-      roboclaw.SetEncM1(address, 0); // Zero the encoder
+      roboclaw.SetEncM1(address, 0);
       setState(POSTHOME_STATE);
-      
     }
     // Consider a timeout to give up on homing
   }
