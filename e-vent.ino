@@ -30,8 +30,8 @@ int IE_PIN = A2;
 int PRESS_POT_PIN = A3;
 int PRESS_SENSE_PIN = A4;
 int HOME_PIN = 4;
-int ROBO_D0 = 2;
-int ROBO_D1 = 3;
+//int ROBO_D0 = 2; // No longer used in Arduino Due
+//int ROBO_D1 = 3; // No longer used in Arduino Due
 
 // Initialize Vars
 ////////////////////
@@ -53,8 +53,8 @@ bool enteringState;
 unsigned long stateTimer;
 
 // Roboclaw
-SoftwareSerial serial(ROBO_D0, ROBO_D1); 
-RoboClaw roboclaw(&serial,10000);
+//SoftwareSerial serial(ROBO_D0, ROBO_D1); (not applicable in Arduino Due)
+RoboClaw roboclaw(&Serial3,10000);  // This is going to pin 14, 15 (hardwired)
 #define address 0x80
 // auto-tuned PID values for PG188
 //#define Kp 6.03917
@@ -83,12 +83,13 @@ Display displ(&lcd);
 
 /* Data logger -- SD Card (Adafruit Breakout Board)
     Pin configurations per https://www.arduino.cc/en/reference/SPI
-    CS  - pin 10
-    DI  - pin 11
-    DO  - pin 12
-    CLK - pin 13
+    CS  - pin 53 (other pins are possible)
+    DI  - SPI-4
+    DO  - SPI-1
+    CLK - SPI-3
 */
 File myFile;
+const int chipSelect = 53; // Arduino Due
 
 // Pressure
 Pressure pressure(PRESS_SENSE_PIN);
@@ -155,7 +156,7 @@ void readPots(){
       myFile.print(Tex); myFile.print("\t");
       myFile.print(Vin); myFile.print("\t");
       myFile.print(Vex); myFile.print("\t");
-      myFile.print(readPressure()); myFile.println("\t");
+      myFile.print(pressure.get()); myFile.println("\t");
       myFile.close();
     } else {
       // if the file didn't open, print an error:
@@ -199,7 +200,7 @@ void setup() {
   
   //Initialize
   pinMode(HOME_PIN, INPUT_PULLUP); // Pull up the limit switch
-  analogReference(EXTERNAL); // For the pressure and pots reading
+  //analogReference(EXTERNAL); // For the pressure and pots reading (not relevant on Arduino Due)
   displ.begin();
   setState(PREHOME_STATE); // Initial state
   roboclaw.begin(38400); // Roboclaw
@@ -216,8 +217,8 @@ void setup() {
 
   if(LOGGER){
     // setup SD card data logger
-    pinMode(10, OUTPUT);
-    if (!SD.begin(10)) {
+    pinMode(chipSelect, OUTPUT);
+    if (!SD.begin(chipSelect)) {
       Serial.println("SD card initialization failed!");
       return;
     }
