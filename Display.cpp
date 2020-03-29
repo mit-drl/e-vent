@@ -25,10 +25,8 @@ void Display::writeBPM(const int& bpm){
 }
 
 void Display::writeIEratio(const float& ie){
-  char ie_buff[4];
-  dtostrf(ie, 3, 1, ie_buff);
-  char buff[12];
-  sprintf(buff, " I:E=1:%s ", ie_buff);
+  char buff[4];
+  sprintf(buff, " I:E=1:%3.1f ", (double)ie);
   write(3, 0, buff);
 }
 
