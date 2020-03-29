@@ -1,4 +1,5 @@
 #include "Display.h"
+#include <avr/dtostrf.h>
 
 Display::Display(LiquidCrystal* lcd): lcd_(lcd) {}
 
