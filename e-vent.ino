@@ -125,7 +125,11 @@ Display displ(&lcd);
     CLK - SPI-3
 */
 File myFile;
+#ifdef UNO
+LOGGER = false;
+#else
 const int chipSelect = 53; // Arduino Due
+#endif
 
 // Pressure
 Pressure pressure(PRESS_SENSE_PIN);
