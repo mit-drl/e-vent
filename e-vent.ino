@@ -8,6 +8,8 @@ enum States {
   POSTHOME_STATE  // 6
 };
 
+enum PastInhaleType {TIME_TRIGGERED, PATIENT_TRIGGERED};
+
 #include <LiquidCrystal.h>
 #include <RoboClaw.h>
 
@@ -24,7 +26,7 @@ enum States {
 ////////////
 
 //bool LOGGER = true; // Data logger to a file on SD card
-bool DEBUG = false; // For logging
+bool DEBUG = true; // For logging
 int maxPwm = 255; // Maximum for PWM is 255 but this can be set lower
 int loopPeriod = 25; // The period (ms) of the control loop delay
 int pauseTime = 250; // Time in ms to pause after inhalation
@@ -36,11 +38,10 @@ int pauseHome = 250; // The pause time (ms) during homing to ensure stability
 
 // Assist Control Flags and Settings
 bool ASSIST_CONTROL = false; // Enable assist control
-enum PastInhaleType {TIME_TRIGGERED, PATIENT_TRIGGERED};
 PastInhaleType pastInhale;
-double TriggerSensitivity;  // Tunable via a potentiometer. Its range is [2 cmH2O to 5 cmH2O] lower than PEEP
+float TriggerSensitivity;  // Tunable via a potentiometer. Its range is [2 cmH2O to 5 cmH2O] lower than PEEP
 bool DetectionWindow;
-double DP; // Driving Pressure = Plateau - PEEP
+float DP; // Driving Pressure = Plateau - PEEP
 
 // Pins
 ////////////
@@ -69,7 +70,7 @@ float IE_MIN = 1;
 float IE_MAX = 4;
 float VOL_MIN = 100;
 float VOL_MAX = 700; // 900; // For full 
-float TRIGGERSENSITIVITY_MIN = 2;
+float TRIGGERSENSITIVITY_MIN = -1;
 float TRIGGERSENSITIVITY_MAX = 5;
 
 //Setup States
@@ -160,7 +161,7 @@ void readPots(){
   Volume = map(analogRead(VOL_PIN), 0, 1024, VOL_MIN, VOL_MAX);
   float bpm = map(analogRead(BPM_PIN), 0, 1024, BPM_MIN, BPM_MAX);
   float ie = map(analogRead(IE_PIN), 0, 1024, IE_MIN*10, IE_MAX*10)/10.0; // Carry one decimal place
-  float TriggerSensitivity = map(analogRead(PRESS_POT_PIN), 0, 1024, TRIGGERSENSITIVITY_MIN, TRIGGERSENSITIVITY_MAX);
+  TriggerSensitivity = map(analogRead(PRESS_POT_PIN), 0, 1024, TRIGGERSENSITIVITY_MIN*100, TRIGGERSENSITIVITY_MAX*100)/100.0; //Carry two decimal places
 
   float period = 60.0/bpm; // seconds in each period
   Tin = period / (1 + ie);
@@ -189,6 +190,8 @@ void readPots(){
     Serial.print(Vin);
     Serial.print("\tVex:");
     Serial.print(Vex);
+    Serial.print("\tTrigSens:");
+    Serial.print(TriggerSensitivity);
     Serial.print("\tPressure:");
     Serial.print(pressure.get());
     Serial.println();
@@ -350,6 +353,7 @@ void loop() {
       //consider changing PID tunings
       enteringState = false;
       goToPosition(0, Vex);
+      setInhaleType(TIME_TRIGGERED);
     }
     
     // Time-triggered inhale
@@ -360,21 +364,45 @@ void loop() {
       displ.writePEEP(pressure.peep());
       displ.writePlateauP(pressure.plateau());
       setState(IN_STATE);
-      setInhaleType(TIME_TRIGGERED);
     }
 
     // Patient-triggered inhale
+    // if plateau pressure changes fast due to readjusting PEEP or other values
+    // it can get stuck in the detection window
     DP = pressure.plateau() - pressure.peep();
-    if ( pressure.get() < (pressure.peep() + 0.1*DP)) {
+    if ( pressure.get() < (pressure.peep() + 0.1*DP ) && motorPosition < goalTol) {
       DetectionWindow = true;
     } else {
       DetectionWindow = false;
     }
-    
+
+    // HOW TO SET PEEP WHEN PATIENT TRIGGERS ?
     if( (pressure.get() < (pressure.peep() - TriggerSensitivity)) && DetectionWindow ) {
+//      Serial.println("I AM HERE");
+      pressure.set_peak_and_reset();
+      pressure.set_peep();
+      displ.writePeakP(pressure.peak());
+      displ.writePEEP(pressure.peep());
+      displ.writePlateauP(pressure.plateau());
       setState(IN_STATE);
       setInhaleType(PATIENT_TRIGGERED);
     }
+
+//    Serial.print("inhale type: ");
+//    Serial.print((int) getInhaleType());
+//    Serial.print("\tDP: ");
+//    Serial.print(DP);
+//    Serial.print("\tPressure: ");
+//    Serial.print(pressure.get());
+//    Serial.print("\tPEEP: ");
+//    Serial.print(pressure.peep());
+//    Serial.print("\tTrigSens: ");
+//    Serial.print(TriggerSensitivity);
+//    Serial.print("\tDetWin: ");
+//    Serial.print(DetectionWindow);
+//    Serial.print("\tDiff: ");
+//    Serial.println((pressure.get() < (pressure.peep() - TriggerSensitivity)) && DetectionWindow);
+    
   }
 
   else if(state == PREHOME_STATE){
