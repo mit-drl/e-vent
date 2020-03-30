@@ -3,9 +3,11 @@ enum States {
   IN_STATE,       // 1
   PAUSE_STATE,    // 2
   EX_STATE,       // 3
-  PREHOME_STATE,  // 4
-  HOMING_STATE,   // 5
-  POSTHOME_STATE  // 6
+  EX_PAUSE_STATE, // 4
+  LISTEN_STATE,   // 5 (listen for inhalation to assist)
+  PREHOME_STATE,  // 6
+  HOMING_STATE,   // 7
+  POSTHOME_STATE  // 8
 };
 
 enum PastInhaleType {TIME_TRIGGERED, PATIENT_TRIGGERED};
@@ -30,7 +32,8 @@ bool DEBUG = true; // For logging
 int maxPwm = 255; // Maximum for PWM is 255 but this can be set lower
 int loopPeriod = 25; // The period (ms) of the control loop delay
 int pauseTime = 250; // Time in ms to pause after inhalation
-double Vex = 600; // Velocity to exhale
+int exPauseTime = 50; // Time in ms to pause after exhalation / before watching for an assisted inhalation
+double Vex = 1200; // Velocity to exhale
 double Vhome = 30; //The speed to use during homing
 int goalTol = 20; // The tolerance to start stopping on reaching goal
 int bagHome = 100; // The bag-specific position of the bag edge
@@ -174,6 +177,8 @@ void readPots(){
   if(DEBUG){
     Serial.print("State: ");
     Serial.print(state);
+    Serial.print("\tMode: "); // TIME or PATIENT triggered
+    Serial.print((int) getInhaleType());
     Serial.print("\tPos: ");
     Serial.print(motorPosition);
     Serial.print("\tVol: ");
@@ -330,6 +335,7 @@ void loop() {
     }
 
     // Consider checking we reached the destination for fault detection
+    // We need to figure out how to account for the PAUSE TIME
     if(millis()-stateTimer > Tin*1000){
       setState(PAUSE_STATE);
     }
@@ -347,7 +353,6 @@ void loop() {
   }
   
   else if(state == EX_STATE){
-
     //Entering
     if(enteringState){
       //consider changing PID tunings
@@ -355,8 +360,15 @@ void loop() {
       goToPosition(0, Vex);
       setInhaleType(TIME_TRIGGERED);
     }
-    
-    // TIME-triggered inhale
+
+    // go to LISTEN_STATE 
+    if(motorPosition < goalTol){
+      setState(EX_PAUSE_STATE);
+    }
+
+    // IF THERE IS A TIMEOUT for some reason
+    // (the motor is not able to reach the 0 position),
+    // just go straight to inhale?
     if(millis()-stateTimer > Tex*1000){
       pressure.set_peak_and_reset();
       pressure.set_peep();
@@ -365,60 +377,56 @@ void loop() {
       displ.writePlateauP(pressure.plateau());
       setState(IN_STATE);
     }
+  }
 
-    // PATIENT-triggered inhale
-
-    // Strategy is to have two windows (Window1 starts just after inhale to set PEEP) and Window2 that starts shortly after Window1 to listen to patient pressure.
-    // In the case the patient attempt to interfere with 
-
-    // Window1
-    // Detection Window needed that starts shortly after leaving the exhale state (shortly after plateau pressure reading).
-    // This detection window can be based on a positional info from the end of inhale position (once 70% off that position).
-    // This window remains active untill an inhale starts (regardless whether time or patient triggered).
-    // During this window, we measure pressure transducer picking the lower value for PEEP until we are with goalTol from rest position.
-    // During this window, if the patient attempts to inhale, the lower value and the PEEP value are same. Thus this cycle will not trigger
-    // a patient-triggered inhale, and will be instead a time-triggered one (that overrides the PEEP value as well).
-
-    // Window2
-    // During this window, we wait for patient-triggered dip below the PEEP setting. If detected, then we initialize a patient-triggered inhale
-    // If not detected, then we reach time out, and a time-triggered cycle happens (that overrides the PEEP value as well).
-
-
-
-
-
-    DP = pressure.plateau() - pressure.peep();
-    if ( pressure.get() < (pressure.peep() + 0.1*DP ) && motorPosition < goalTol) {
-      DetectionWindow = true;
-    } else {
-      DetectionWindow = false;
+  else if(state == EX_PAUSE_STATE){
+    // Entering
+    if(enteringState){
+      enteringState = false;
     }
+    
+    if(millis()-stateTimer > exPauseTime){
+      pressure.set_peep();
+      setState(LISTEN_STATE);
+    }
+  }
 
+  else if(state == LISTEN_STATE){
+    // Entering
+    if(enteringState){
+      enteringState = false;
+    }
 
     // Patient-triggered inhale
     // if plateau pressure changes fast due to readjusting PEEP or other values
     // it can get stuck in the detection window
-    DP = pressure.plateau() - pressure.peep();
-    if ( pressure.get() < (pressure.peep() + 0.1*DP ) && motorPosition < goalTol) {
-      DetectionWindow = true;
-    } else {
-      DetectionWindow = false;
+//    DP = pressure.plateau() - pressure.peep();
+//    if ( pressure.get() < (pressure.peep() + 0.1*DP ) && motorPosition < goalTol) {
+//      DetectionWindow = true;
+//    } else {
+//      DetectionWindow = false;
+//    }
+
+    // PATIENT-triggered inhale
+    if( pressure.get() < (pressure.peep() - TriggerSensitivity) ) {
+      pressure.set_peak_and_reset();
+      // note: PEEP is NOT set in this case;
+      // we use the PEEP recorded in EX_PAUSE_STATE instead
+      displ.writePeakP(pressure.peak());
+      displ.writePEEP(pressure.peep());
+      displ.writePlateauP(pressure.plateau());
+      setState(IN_STATE);
+      setInhaleType(PATIENT_TRIGGERED);
     }
-
-
-
-
-
-    // HOW TO SET PEEP WHEN PATIENT TRIGGERS ?
-    if( (pressure.get() < (pressure.peep() - TriggerSensitivity)) && DetectionWindow ) {
-//      Serial.println("I AM HERE");
+    
+    // TIME-triggered inhale
+    if(millis()-stateTimer > Tex*1000 - exPauseTime){
       pressure.set_peak_and_reset();
       pressure.set_peep();
       displ.writePeakP(pressure.peak());
       displ.writePEEP(pressure.peep());
       displ.writePlateauP(pressure.plateau());
       setState(IN_STATE);
-      setInhaleType(PATIENT_TRIGGERED);
     }
 
 //    Serial.print("inhale type: ");
