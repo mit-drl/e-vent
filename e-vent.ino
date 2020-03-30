@@ -356,7 +356,7 @@ void loop() {
       setInhaleType(TIME_TRIGGERED);
     }
     
-    // Time-triggered inhale
+    // TIME-triggered inhale
     if(millis()-stateTimer > Tex*1000){
       pressure.set_peak_and_reset();
       pressure.set_peep();
@@ -365,6 +365,35 @@ void loop() {
       displ.writePlateauP(pressure.plateau());
       setState(IN_STATE);
     }
+
+    // PATIENT-triggered inhale
+
+    // Strategy is to have two windows (Window1 starts just after inhale to set PEEP) and Window2 that starts shortly after Window1 to listen to patient pressure.
+    // In the case the patient attempt to interfere with 
+
+    // Window1
+    // Detection Window needed that starts shortly after leaving the exhale state (shortly after plateau pressure reading).
+    // This detection window can be based on a positional info from the end of inhale position (once 70% off that position).
+    // This window remains active untill an inhale starts (regardless whether time or patient triggered).
+    // During this window, we measure pressure transducer picking the lower value for PEEP until we are with goalTol from rest position.
+    // During this window, if the patient attempts to inhale, the lower value and the PEEP value are same. Thus this cycle will not trigger
+    // a patient-triggered inhale, and will be instead a time-triggered one (that overrides the PEEP value as well).
+
+    // Window2
+    // During this window, we wait for patient-triggered dip below the PEEP setting. If detected, then we initialize a patient-triggered inhale
+    // If not detected, then we reach time out, and a time-triggered cycle happens (that overrides the PEEP value as well).
+
+
+
+
+
+    DP = pressure.plateau() - pressure.peep();
+    if ( pressure.get() < (pressure.peep() + 0.1*DP ) && motorPosition < goalTol) {
+      DetectionWindow = true;
+    } else {
+      DetectionWindow = false;
+    }
+
 
     // Patient-triggered inhale
     // if plateau pressure changes fast due to readjusting PEEP or other values
@@ -375,6 +404,10 @@ void loop() {
     } else {
       DetectionWindow = false;
     }
+
+
+
+
 
     // HOW TO SET PEEP WHEN PATIENT TRIGGERS ?
     if( (pressure.get() < (pressure.peep() - TriggerSensitivity)) && DetectionWindow ) {
