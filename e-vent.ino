@@ -23,7 +23,7 @@ enum States {
 // General Settings
 ////////////
 
-bool LOGGER = true; // Data logger to a file on SD card
+//bool LOGGER = true; // Data logger to a file on SD card
 bool DEBUG = false; // For logging
 int maxPwm = 255; // Maximum for PWM is 255 but this can be set lower
 int loopPeriod = 25; // The period (ms) of the control loop delay
@@ -126,8 +126,9 @@ Display displ(&lcd);
 */
 File myFile;
 #ifdef UNO
-LOGGER = false;
+bool LOGGER = false;
 #else
+bool LOGGER = true; // Data logger to a file on SD card
 const int chipSelect = 53; // Arduino Due
 #endif
 
@@ -150,8 +151,8 @@ void setInhaleType(PastInhaleType aType){
 }
 
 // Get the type of last inhale
-void getInhaleType(){
-  return pastInhale;
+PastInhaleType getInhaleType(){
+  return (PastInhaleType) pastInhale;
 }
 
 // readPots reads the pot values and sets the waveform parameters
@@ -269,6 +270,7 @@ void setup() {
     setState(DEBUG_STATE);
   }
 
+#ifndef UNO
   if(LOGGER){
     // setup SD card data logger
     pinMode(chipSelect, OUTPUT);
@@ -289,6 +291,7 @@ void setup() {
       Serial.println("error opening ExpData.txt");
     }
   }
+#endif
 }
 
 void loop() {
