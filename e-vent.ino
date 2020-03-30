@@ -16,6 +16,7 @@ enum States {
 #endif
 
 #include "Display.h"
+#include "Alarms.h"
 #include "Pressure.h"
 
 // Settings
@@ -45,6 +46,7 @@ int HOME_PIN = 4;
 #else
 int HOME_PIN = 10;
 #endif
+const int BEEPER_PIN = 11;
 
 // Initialize Vars
 ////////////////////
@@ -105,6 +107,7 @@ const int rs = 9, en = 8, d4 = 7, d5 = 6, d6 = 5, d7 = 4;
 #endif
 LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 display::Display displ(&lcd);
+alarms::Alarm alarm(BEEPER_PIN, &displ);
 
 // Pressure
 Pressure pressure(PRESS_SENSE_PIN);
@@ -186,6 +189,10 @@ void goToPosition(int pos, int vel){
   }
 }
 
+///////////////////
+////// Setup //////
+///////////////////
+
 void setup() {
 
   // wait 1 sec for the roboclaw to boot up
@@ -212,6 +219,10 @@ void setup() {
   }
 }
 
+//////////////////
+////// Loop //////
+//////////////////
+
 void loop() {
   if(DEBUG){
     if(Serial.available() > 0){
@@ -224,12 +235,20 @@ void loop() {
   delay(loopPeriod);
   readPots();
   readEncoder();
-
-  // Update display header
-  displ.update();
   
   // read pressure every cycle to keep track of peak
   pressure.read();
+
+  if (millis()/1000 % 10 < 3) {
+    alarm.silent("testing alarm");
+  } else {
+    alarm.clear();
+  }
+  // Update alarm
+  alarm.update();
+
+  // Update display header
+  displ.update();
   
   if(state == DEBUG_STATE){
     // Stop motor
