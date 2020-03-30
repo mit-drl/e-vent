@@ -16,6 +16,7 @@ enum States {
 #endif
 
 #include "Display.h"
+#include "Alarms.h"
 #include "Pressure.h"
 
 // Settings
@@ -45,6 +46,8 @@ int HOME_PIN = 4;
 #else
 int HOME_PIN = 10;
 #endif
+const int BEEPER_PIN = 11;
+const int SNOOZE_PIN = 52;
 
 // Initialize Vars
 ////////////////////
@@ -105,6 +108,7 @@ const int rs = 9, en = 8, d4 = 7, d5 = 6, d6 = 5, d7 = 4;
 #endif
 LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 display::Display displ(&lcd);
+alarms::Alarm alarm(BEEPER_PIN, &displ);
 
 // Pressure
 Pressure pressure(PRESS_SENSE_PIN);
@@ -186,6 +190,30 @@ void goToPosition(int pos, int vel){
   }
 }
 
+// home switch
+bool homeSwitchPressed() {
+  return digitalRead(HOME_PIN) == LOW;
+}
+
+bool snoozeButtonPressed() {
+  return digitalRead(SNOOZE_PIN) == LOW;
+}
+
+// check for errors
+void checkErrors() {
+  // home switch should not be pressed
+  if (state < 4 && homeSwitchPressed()) {
+    alarm.loud("Check home switch");
+  } else {
+    alarm.clear();
+  }
+}
+
+
+///////////////////
+////// Setup //////
+///////////////////
+
 void setup() {
 
   // wait 1 sec for the roboclaw to boot up
@@ -193,6 +221,7 @@ void setup() {
   
   //Initialize
   pinMode(HOME_PIN, INPUT_PULLUP); // Pull up the limit switch
+  pinMode(SNOOZE_PIN, INPUT_PULLUP); // Pull up the snooze switch
 #ifdef UNO
   analogReference(EXTERNAL); // For the pressure and pots reading
 #endif
@@ -212,6 +241,10 @@ void setup() {
   }
 }
 
+//////////////////
+////// Loop //////
+//////////////////
+
 void loop() {
   if(DEBUG){
     if(Serial.available() > 0){
@@ -224,12 +257,20 @@ void loop() {
   delay(loopPeriod);
   readPots();
   readEncoder();
-
-  // Update display header
-  displ.update();
   
   // read pressure every cycle to keep track of peak
   pressure.read();
+
+  // Check errors and update alarm
+  checkErrors();
+  alarm.update();
+
+  if (snoozeButtonPressed()) {
+    alarm.snooze();
+  }
+
+  // Update display header
+  displ.update();
   
   if(state == DEBUG_STATE){
     // Stop motor
@@ -288,7 +329,7 @@ void loop() {
     }
 
     // Check status of limit switch
-    if(digitalRead(HOME_PIN) == LOW) {
+    if(homeSwitchPressed()) {
       setState(HOMING_STATE); 
     }
 
@@ -303,7 +344,7 @@ void loop() {
       roboclaw.ForwardM1(address, Vhome);
     }
     
-    if(digitalRead(HOME_PIN) == HIGH) {
+    if(!homeSwitchPressed()) {
       roboclaw.SetEncM1(address, 0);
       setState(POSTHOME_STATE);
     }
