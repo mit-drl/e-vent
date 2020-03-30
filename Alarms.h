@@ -37,8 +37,10 @@ public:
 private:
   const int beeper_pin_;
   Display* displ_;
-  String text_;
-  bool beep_;
+  String text_ = "";
+  bool beep_ = false;
+  unsigned long snooze_time_ = 0;
+  bool snoozed_ = false;
 
   inline void beeperON() { digitalWrite(beeper_pin_, HIGH); }
 

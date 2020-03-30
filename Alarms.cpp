@@ -6,13 +6,16 @@ namespace alarms {
 
 Alarm::Alarm(const int& beeper_pin, Display* displ): 
     beeper_pin_(beeper_pin), 
-    displ_(displ),
-    beep_(false) {
+    displ_(displ) {
   pinMode(beeper_pin, OUTPUT);
 }
 
 void Alarm::update() {
-  if (beep_) {
+  // check if snooze time is up
+  if (snoozed_ && millis() - snooze_time_ > SNOOZE_TIME) {
+    snoozed_ = false;
+  }
+  if (beep_ && !snoozed_) {
     beeperON();
   } else {
     beeperOFF();
@@ -21,6 +24,10 @@ void Alarm::update() {
 }
 
 void Alarm::loud(const String& alarm_message) {
+  // need to clear snooze if another alarm was already snoozed
+  if (alarm_message != text_){
+    snoozed_ = false;
+  }
   beep_ = true;
   text_ = alarm_message;
 }
@@ -36,7 +43,10 @@ void Alarm::clear() {
 }
 
 void Alarm::snooze() {
-  // TODO
+  if (!snoozed_) {
+    snoozed_ = true;
+    snooze_time_ = millis();
+  }
 }
 
 

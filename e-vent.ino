@@ -47,6 +47,7 @@ int HOME_PIN = 4;
 int HOME_PIN = 10;
 #endif
 const int BEEPER_PIN = 11;
+const int SNOOZE_PIN = 52;
 
 // Initialize Vars
 ////////////////////
@@ -189,6 +190,26 @@ void goToPosition(int pos, int vel){
   }
 }
 
+// home switch
+bool homeSwitchPressed() {
+  return digitalRead(HOME_PIN) == LOW;
+}
+
+bool snoozeButtonPressed() {
+  return digitalRead(SNOOZE_PIN) == LOW;
+}
+
+// check for errors
+void checkErrors() {
+  // home switch should not be pressed
+  if (state < 4 && homeSwitchPressed()) {
+    alarm.loud("Check home switch");
+  } else {
+    alarm.clear();
+  }
+}
+
+
 ///////////////////
 ////// Setup //////
 ///////////////////
@@ -200,6 +221,7 @@ void setup() {
   
   //Initialize
   pinMode(HOME_PIN, INPUT_PULLUP); // Pull up the limit switch
+  pinMode(SNOOZE_PIN, INPUT_PULLUP); // Pull up the snooze switch
 #ifdef UNO
   analogReference(EXTERNAL); // For the pressure and pots reading
 #endif
@@ -239,13 +261,13 @@ void loop() {
   // read pressure every cycle to keep track of peak
   pressure.read();
 
-  if (millis()/1000 % 10 < 3) {
-    alarm.silent("testing alarm");
-  } else {
-    alarm.clear();
-  }
-  // Update alarm
+  // Check errors and update alarm
+  checkErrors();
   alarm.update();
+
+  if (snoozeButtonPressed()) {
+    alarm.snooze();
+  }
 
   // Update display header
   displ.update();
@@ -307,7 +329,7 @@ void loop() {
     }
 
     // Check status of limit switch
-    if(digitalRead(HOME_PIN) == LOW) {
+    if(homeSwitchPressed()) {
       setState(HOMING_STATE); 
     }
 
@@ -322,7 +344,7 @@ void loop() {
       roboclaw.ForwardM1(address, Vhome);
     }
     
-    if(digitalRead(HOME_PIN) == HIGH) {
+    if(!homeSwitchPressed()) {
       roboclaw.SetEncM1(address, 0);
       setState(POSTHOME_STATE);
     }
