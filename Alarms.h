@@ -8,7 +8,7 @@
 
 namespace alarms {
 
-static const unsigned long SNOOZE_TIME = 1 * 60 * 1000;  // in milliseconds
+static const unsigned long SNOOZE_TIME = 1 * 60UL * 1000;  // in milliseconds
 
 
 using display::Display;

@@ -49,6 +49,11 @@ int HOME_PIN = 10;
 const int BEEPER_PIN = 11;
 const int SNOOZE_PIN = 52;
 
+// Safety settings
+////////////////////
+float MAX_PRESSURE = 40;
+float MIN_PLATEAU_PRESSURE = 5; // ?????
+
 // Initialize Vars
 ////////////////////
 
@@ -206,6 +211,43 @@ void checkErrors() {
     alarm.loud("Check home switch");
   } else {
     alarm.clear();
+  }
+
+  // pressure above max pressure
+  if (pressure.get() >= MAX_PRESSURE){
+    alarm.loud("ABOVE MAX PRESSURE");
+  } else {
+    alarm.clear();
+  }
+
+  // only worry about low pressure after homing
+  if (state < 4 && pressure.plateau() <= MIN_PLATEAU_PRESSURE){
+    alarm.loud("LOW PRESSURE");
+  } else {
+    alarm.clear();
+  }
+
+  // check for roboclaw errors
+  bool valid;
+  uint32_t error_state = roboclaw.ReadError(address, *valid);
+  if(valid){
+    if (error_state == 0x0001) { // M1 OverCurrent Warning
+      alarm.loud("TURN OFF DEVICE");
+    }
+    else if (error_state == 0x0008) { // Temperature Error
+      alarm.loud("OVERHEATED");
+    }
+    else if (error_state == 0x0100){ // M1 Driver Fault
+      alarm.loud("RESTART DEVICE");
+    }
+    else if (error_state == 0x1000) { // Temperature Warning
+      alarm.silent("TEMP HIGH");
+    }
+    else {
+      alarm.clear();
+    }
+  } else {
+    alarm.loud("RESTART DEVICE");
   }
 }
 
