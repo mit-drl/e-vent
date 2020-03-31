@@ -8,16 +8,21 @@
 
 namespace alarms {
 
-static const unsigned long SNOOZE_TIME = 1 * 60UL * 1000;  // in milliseconds
+static const unsigned long SNOOZE_TIME = 2 * 60UL * 1000;  // in milliseconds
 
 
 using display::Display;
 
 
+/// Alarm ///
+
 class Alarm {
 public:
-  // Construct from beeper pin and display
-  Alarm(const int& beeper_pin, Display* displ);
+  // Construct from pins and display
+  Alarm(Display* displ);
+
+  // Setup 
+  void begin();
 
   // Update alarm: meant to be called every loop
   void update();
@@ -35,8 +40,6 @@ public:
   void snooze(); 
 
 private:
-  const int beeper_pin_;
-  Display* displ_;
   String text_ = "";
   bool beep_ = false;
   unsigned long snooze_time_ = 0;
@@ -45,6 +48,28 @@ private:
   inline void beeperON() { digitalWrite(beeper_pin_, HIGH); }
 
   inline void beeperOFF() { digitalWrite(beeper_pin_, LOW); }
+};
+
+
+/// AlarmManager ///
+
+class AlarmManager {
+public:
+  AlarmManager(const int& beeper_pin, const int& snooze_pin, Display* displ);
+
+  void begin();
+
+  void update();
+
+  void high_pressure(bool value);
+
+  void low_pressure(bool value);
+
+  void bad_plateau(bool value);
+
+private:
+  const int beeper_pin_, snooze_pin_;
+  Display* displ_;
 };
 
 
