@@ -1,8 +1,4 @@
 #include "Display.h"
-#ifndef __AVR__
-#include <avr/dtostrf.h>
-#endif
-
 
 namespace display {
 
