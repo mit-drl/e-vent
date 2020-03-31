@@ -216,6 +216,7 @@ void readPots(){
       myFile.print(Tex); myFile.print("\t");
       myFile.print(Vin); myFile.print("\t");
       myFile.print(Vex); myFile.print("\t");
+      myFile.print(TriggerSensitivity); myFile.print("\t");
       myFile.print(pressure.get()); myFile.println("\t");
       myFile.close();
     } else {
@@ -291,7 +292,7 @@ void setup() {
     if (myFile) {
       Serial.print("Writing to ExpData.txt...");
       myFile.println("------ NEW CLINICAL TRIAL DATA STARTS HERE ------");
-      myFile.println("millis \tState \tPos \tVol \tBPM \tIE \tTin \tTex \tVin \tVex \tPressure");
+      myFile.println("millis \tState \tPos \tVol \tBPM \tIE \tTin \tTex \tVin \tVex \tTrigSens \tPressure");
       myFile.close();
       Serial.println("Writing to ExpData.txt... done.");
     } else {
