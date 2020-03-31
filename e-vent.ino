@@ -209,21 +209,24 @@ void checkErrors() {
   // home switch should not be pressed
   if (state < 4 && homeSwitchPressed()) {
     alarm.loud("Check home switch");
-  } else {
+  }
+  else {
     alarm.clear();
   }
 
   // pressure above max pressure
   if (pressure.get() >= MAX_PRESSURE){
     alarm.loud("ABOVE MAX PRESSURE");
-  } else {
+  }
+  else {
     alarm.clear();
   }
 
   // only worry about low pressure after homing
   if (state < 4 && pressure.plateau() <= MIN_PLATEAU_PRESSURE){
     alarm.loud("LOW PRESSURE");
-  } else {
+  }
+  else {
     alarm.clear();
   }
 
