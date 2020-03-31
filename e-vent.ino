@@ -11,7 +11,7 @@ enum States {
 #include <LiquidCrystal.h>
 #include <RoboClaw.h>
 
-#ifdef __AVR__
+#ifdef ARDUINO_AVR_UNO
 #define UNO
 #endif
 
@@ -209,36 +209,39 @@ void checkErrors() {
   // home switch should not be pressed
   if (state < 4 && homeSwitchPressed()) {
     alarm.loud("Check home switch");
-  } else {
+  }
+  else {
     alarm.clear();
   }
 
   // pressure above max pressure
   if (pressure.get() >= MAX_PRESSURE){
     alarm.loud("ABOVE MAX PRESSURE");
-  } else {
+  }
+  else {
     alarm.clear();
   }
 
   // only worry about low pressure after homing
   if (state < 4 && pressure.plateau() <= MIN_PLATEAU_PRESSURE){
     alarm.loud("LOW PRESSURE");
-  } else {
+  }
+  else {
     alarm.clear();
   }
 
   // check for roboclaw errors
   bool valid;
-  uint32_t error_state = roboclaw.ReadError(address, *valid);
+  uint32_t error_state = roboclaw.ReadError(address, &valid);
   if(valid){
     if (error_state == 0x0001) { // M1 OverCurrent Warning
-      alarm.loud("TURN OFF DEVICE");
+      alarm.silent("TURN OFF DEVICE");
     }
     else if (error_state == 0x0008) { // Temperature Error
-      alarm.loud("OVERHEATED");
+      alarm.silent("OVERHEATED");
     }
     else if (error_state == 0x0100){ // M1 Driver Fault
-      alarm.loud("RESTART DEVICE");
+      alarm.silent("RESTART DEVICE");
     }
     else if (error_state == 0x1000) { // Temperature Warning
       alarm.silent("TEMP HIGH");
@@ -247,7 +250,7 @@ void checkErrors() {
       alarm.clear();
     }
   } else {
-    alarm.loud("RESTART DEVICE");
+    alarm.silent("RESTART DEVICE");
   }
 }
 
@@ -264,9 +267,7 @@ void setup() {
   //Initialize
   pinMode(HOME_PIN, INPUT_PULLUP); // Pull up the limit switch
   pinMode(SNOOZE_PIN, INPUT_PULLUP); // Pull up the snooze switch
-#ifdef UNO
   analogReference(EXTERNAL); // For the pressure and pots reading
-#endif
   displ.begin();
   setState(PREHOME_STATE); // Initial state
   roboclaw.begin(38400); // Roboclaw
