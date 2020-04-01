@@ -28,7 +28,7 @@ enum PastInhaleType {TIME_TRIGGERED, PATIENT_TRIGGERED};
 ////////////
 
 //bool LOGGER = true; // Data logger to a file on SD card
-bool DEBUG = true; // For logging
+bool DEBUG = false; // For logging
 int maxPwm = 255; // Maximum for PWM is 255 but this can be set lower
 int loopPeriod = 25; // The period (ms) of the control loop delay
 int pauseTime = 250; // Time in ms to pause after inhalation
@@ -73,8 +73,10 @@ float IE_MIN = 1;
 float IE_MAX = 4;
 float VOL_MIN = 100;
 float VOL_MAX = 700; // 900; // For full 
-float TRIGGERSENSITIVITY_MIN = 2;
+float TRIGGERSENSITIVITY_MIN = 0;
 float TRIGGERSENSITIVITY_MAX = 5;
+
+float TRIGGER_LOWER_THRESHOLD = 2;
 
 //Setup States
 States state;
@@ -175,6 +177,7 @@ void readPots(){
   displ.writeVolume(map(Volume, VOL_MIN, VOL_MAX, 0, 100));
   displ.writeBPM(bpm);
   displ.writeIEratio(ie);
+  displ.writeACTrigger(TriggerSensitivity, TRIGGER_LOWER_THRESHOLD);
   if(DEBUG){
     Serial.print("State: ");
     Serial.print(state);
@@ -209,6 +212,7 @@ void readPots(){
     if (dataFile) {
       dataFile.print(millis()); dataFile.print("\t");
       dataFile.print(state); dataFile.print("\t");
+      dataFile.print((int) getInhaleType()); dataFile.print("\t");
       dataFile.print(motorPosition); dataFile.print("\t");
       dataFile.print(Volume); dataFile.print("\t");
       dataFile.print(bpm); dataFile.print("\t");
@@ -258,7 +262,7 @@ void goToPosition(int pos, int vel){
 
 void makeNewFile() {
   // setup SD card data logger
-//  pinMode(chipSelect, OUTPUT);
+  pinMode(chipSelect, OUTPUT);
   if (!SD.begin(chipSelect)) {
     Serial.println("SD card initialization failed!");
     return;
@@ -285,7 +289,7 @@ void makeNewFile() {
     number_file.close();
   }
 
-  sprintf(data_file_name, sizeof(data_file_name), "DATA%03d.TXT", num);
+  snprintf(data_file_name, sizeof(data_file_name), "DATA%03d.TXT", num);
 
   Serial.print("DATA FILE NAME: ");
   Serial.println(data_file_name);
@@ -295,8 +299,7 @@ void makeNewFile() {
     Serial.print("Writing to ");
     Serial.print(data_file_name);
     Serial.println("...");
-    dataFile.println("------ NEW CLINICAL TRIAL DATA STARTS HERE ------");
-    dataFile.println("millis \tState \tPos \tVol \tBPM \tIE \tTin \tTex \tVin \tVex \tTrigSens \tPressure");
+    dataFile.println("millis \tState \tMode \tPos \tVol \tBPM \tIE \tTin \tTex \tVin \tVex \tTrigSens \tPressure");
     dataFile.close();
     Serial.print("Writing to ");
     Serial.print(data_file_name);
@@ -433,7 +436,7 @@ void loop() {
     }
 
     // PATIENT-triggered inhale
-    if( pressure.get() < (pressure.peep() - TriggerSensitivity) ) {
+    if( pressure.get() < (pressure.peep() - TriggerSensitivity) && TriggerSensitivity > TRIGGER_LOWER_THRESHOLD ) {
       pressure.set_peak_and_reset();
       // note: PEEP is NOT set in this case;
       // we use the PEEP recorded in EX_PAUSE_STATE instead

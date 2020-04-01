@@ -26,6 +26,9 @@ public:
   // Inhale/exhale ratio in format 1:ie
   void writeIEratio(const float& ie);
 
+  // AC trigger pressure
+  void writeACTrigger(const float& ac_trigger, const float& lower_threshold);
+
   // Peak pressure in cm of H2O
   void writePeakP(const int& peak);
 

@@ -9,26 +9,38 @@ void Display::begin() {
 }
 
 void Display::writeHeader(){
-  write(0, 0, "Set:       P(cmH2O):");
+  write(0, 11, "P(cmH2O):");
 }
 
 void Display::writeVolume(const int& vol){
   char buff[12];
-  sprintf(buff, " V=%2d%% max ", vol);
-  write(1, 0, buff);
+  sprintf(buff, "V=%2d%% max ", vol);
+  write(0, 0, buff);
 }
 
 void Display::writeBPM(const int& bpm){
   char buff[12];
-  sprintf(buff, " RR=%2d/min ", bpm);
-  write(2, 0, buff);
+  sprintf(buff, "RR=%2d/min ", bpm);
+  write(1, 0, buff);
 }
 
 void Display::writeIEratio(const float& ie){
   char ie_buff[4];
   dtostrf(ie, 3, 1, ie_buff);
   char buff[12];
-  sprintf(buff, " I:E=1:%s ", ie_buff);
+  sprintf(buff, "I:E=1:%s ", ie_buff);
+  write(2, 0, buff);
+}
+
+void Display::writeACTrigger(const float& ac_trigger, const float& lower_threshold){
+  char buff[12];
+  if(ac_trigger > lower_threshold){
+    char ac_buff[4];
+    dtostrf(ac_trigger, 3, 1, ac_buff);
+    sprintf(buff, "AC=%scmH20 ", ac_buff);
+  } else {
+    sprintf(buff, "AC=OFF     ");
+  }
   write(3, 0, buff);
 }
 
