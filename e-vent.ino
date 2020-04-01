@@ -143,7 +143,9 @@ void readPots(){
   displ.writeBPM(bpm);
   displ.writeIEratio(ie);
   if(DEBUG){
-    Serial.print("State: ");
+    Serial.print("Time: ");
+    Serial.print(millis());
+    Serial.print("\tState: ");
     Serial.print(state);
     Serial.print("\tPos: ");
     Serial.print(motorPosition);
