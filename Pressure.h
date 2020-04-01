@@ -21,9 +21,8 @@ public:
     float Pmin = -100.0;   // pressure max in mbar
     float Pmax = 100.0;    // pressure min in mbar
     float Vmax = 1024;     // max voltage in range from analogRead
-    float R = 32./37;      // Internal 32K resistor and external 5K resistor ratio
     // convert to pressure
-    float pres = (10 * V/Vmax * R - 1) * (Pmax-Pmin)/8. + Pmin; //mmHg
+    float pres = (10 * V/Vmax - 1) * (Pmax-Pmin)/8. + Pmin; //mmHg
 
     // convert to cmH20
     pres *= 1.01972;
