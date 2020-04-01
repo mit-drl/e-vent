@@ -10,7 +10,6 @@ namespace display {
 
 static const int WIDTH = 20;
 static const int HEIGHT = 4;
-static const char* DEFAULT_HEADER = "Set:       P(cmH2O):";
 static const char* BLANK_LINE = "                    ";
 static const int BLINK_PERIOD = 1000;  // milliseconds
 static const float BLINK_ON_FRACTION = 0.5;
@@ -59,6 +58,9 @@ public:
 
   // Inhale/exhale ratio in format 1:ie
   void writeIEratio(const float& ie);
+
+  // AC trigger pressure
+  void writeACTrigger(const float& ac_trigger, const float& lower_threshold);
 
   // Peak pressure in cm of H2O
   void writePeakP(const int& peak);

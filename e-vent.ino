@@ -3,12 +3,18 @@ enum States {
   IN_STATE,       // 1
   PAUSE_STATE,    // 2
   EX_STATE,       // 3
-  PREHOME_STATE,  // 4
-  HOMING_STATE,   // 5
+  EX_PAUSE_STATE, // 4
+  LISTEN_STATE,   // 5 (listen for inhalation to assist)
+  PREHOME_STATE,  // 6
+  HOMING_STATE,   // 7
 };
+
+enum PastInhaleType {TIME_TRIGGERED, PATIENT_TRIGGERED};
 
 #include <LiquidCrystal.h>
 #include <RoboClaw.h>
+#include <SPI.h>
+#include <SD.h>
 
 #ifdef ARDUINO_AVR_UNO
 #define UNO
@@ -18,19 +24,27 @@ enum States {
 #include "Alarms.h"
 #include "Pressure.h"
 
-// Settings
+// General Settings
 ////////////
 
+//bool LOGGER = true; // Data logger to a file on SD card
 bool DEBUG = false; // For logging
 int maxPwm = 255; // Maximum for PWM is 255 but this can be set lower
 int loopPeriod = 25; // The period (ms) of the control loop delay
 int pauseTime = 250; // Time in ms to pause after inhalation
+int exPauseTime = 50; // Time in ms to pause after exhalation / before watching for an assisted inhalation
 double Vex = 600; // Velocity to exhale
 double Vhome = 30; //The speed (0-255) in volts to use during homing
 int goalTol = 20; // The tolerance to start stopping on reaching goal
 int bagHome = 100; // The bag-specific position of the bag edge
-// int bagHome = 180; // Unit 2.2
 int pauseHome = 500; // The pause time (ms) during homing to ensure stability
+
+// Assist Control Flags and Settings
+bool ASSIST_CONTROL = false; // Enable assist control
+PastInhaleType pastInhale;
+float TriggerSensitivity;  // Tunable via a potentiometer. Its range is [2 cmH2O to 5 cmH2O] lower than PEEP
+bool DetectionWindow;
+float DP; // Driving Pressure = Plateau - PEEP
 
 // Pins
 ////////////
@@ -66,7 +80,10 @@ float IE_MIN = 1;
 float IE_MAX = 4;
 float VOL_MIN = 150;
 float VOL_MAX = 700; // 900; // For full 
-// float VOL_MAX = 550; // Unit 2.2
+float TRIGGERSENSITIVITY_MIN = 0;
+float TRIGGERSENSITIVITY_MAX = 5;
+
+float TRIGGER_LOWER_THRESHOLD = 2;
 
 // Bag Calibration for AMBU Adult bag
 float VOL_SLOPE = 9.39;
@@ -118,6 +135,22 @@ LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 display::Display displ(&lcd);
 alarms::AlarmManager alarm(BEEPER_PIN, SNOOZE_PIN, &displ);
 
+/* Data logger -- SD Card (Adafruit Breakout Board)
+    Pin configurations per https://www.arduino.cc/en/reference/SPI
+    CS  - pin 53 (other pins are possible)
+    DI  - SPI-4
+    DO  - SPI-1
+    CLK - SPI-3
+*/
+File dataFile;
+char data_file_name[] = "DATA000.TXT";
+#ifdef UNO
+bool LOGGER = false;
+#else
+bool LOGGER = true; // Data logger to a file on SD card
+const int chipSelect = 53; // Arduino Due
+#endif
+
 // Pressure
 Pressure pressure(PRESS_SENSE_PIN);
 
@@ -131,11 +164,22 @@ void setState(States newState){
   stateTimer = millis();
 }
 
+// Set the type of last inhale
+void setInhaleType(PastInhaleType aType){
+  pastInhale = aType;
+}
+
+// Get the type of last inhale
+PastInhaleType getInhaleType(){
+  return (PastInhaleType) pastInhale;
+}
+
 // readPots reads the pot values and sets the waveform parameters
 void readPots(){
   Volume = map(analogRead(VOL_PIN), 0, 1024, VOL_MIN, VOL_MAX);
   float bpm = map(analogRead(BPM_PIN), 0, 1024, BPM_MIN, BPM_MAX);
   float ie = map(analogRead(IE_PIN), 0, 1024, IE_MIN*10, IE_MAX*10)/10.0; // Carry one decimal place
+  TriggerSensitivity = map(analogRead(PRESS_POT_PIN), 0, 1024, TRIGGERSENSITIVITY_MIN*100, TRIGGERSENSITIVITY_MAX*100)/100.0; //Carry two decimal places
 
   float period = 60.0/bpm; // seconds in each period
   Tin = period / (1 + ie);
@@ -145,9 +189,12 @@ void readPots(){
   displ.writeVolume(max(0,map(Volume, VOL_MIN, VOL_MAX, 0, 100) * VOL_SLOPE + VOL_INT));
   displ.writeBPM(bpm);
   displ.writeIEratio(ie);
+  displ.writeACTrigger(TriggerSensitivity, TRIGGER_LOWER_THRESHOLD);
   if(DEBUG){
     Serial.print("State: ");
     Serial.print(state);
+    Serial.print("\tMode: "); // TIME or PATIENT triggered
+    Serial.print((int) getInhaleType());
     Serial.print("\tPos: ");
     Serial.print(motorPosition);
     Serial.print("\tVol: ");
@@ -164,9 +211,36 @@ void readPots(){
     Serial.print(Vin);
     Serial.print("\tVex:");
     Serial.print(Vex);
+    Serial.print("\tTrigSens:");
+    Serial.print(TriggerSensitivity);
     Serial.print("\tPressure:");
     Serial.print(pressure.get());
     Serial.println();
+  }
+
+  if(LOGGER){
+    //Writing data to the SD Card
+    dataFile = SD.open(data_file_name, FILE_WRITE);
+    if (dataFile) {
+      dataFile.print(millis()); dataFile.print("\t");
+      dataFile.print(state); dataFile.print("\t");
+      dataFile.print((int) getInhaleType()); dataFile.print("\t");
+      dataFile.print(motorPosition); dataFile.print("\t");
+      dataFile.print(Volume); dataFile.print("\t");
+      dataFile.print(bpm); dataFile.print("\t");
+      dataFile.print(ie); dataFile.print("\t");
+      dataFile.print(Tin); dataFile.print("\t");
+      dataFile.print(Tex); dataFile.print("\t");
+      dataFile.print(Vin); dataFile.print("\t");
+      dataFile.print(Vex); dataFile.print("\t");
+      dataFile.print(TriggerSensitivity); dataFile.print("\t");
+      dataFile.print(pressure.get()); dataFile.println("\t");
+      dataFile.close();
+    } else {
+      // if the file didn't open, print an error:
+      Serial.print("error opening ");
+      Serial.println(data_file_name);
+    }
   }
 }
 
@@ -195,6 +269,57 @@ void goToPosition(int pos, int vel){
   }
   else{
     Serial.println("encoder not valid; goToPosition command not sent");
+  }
+}
+
+void makeNewFile() {
+  // setup SD card data logger
+  pinMode(chipSelect, OUTPUT);
+  if (!SD.begin(chipSelect)) {
+    Serial.println("SD card initialization failed!");
+    return;
+  }
+  
+  Serial.println("SD card initialization done.");
+
+  File number_file = SD.open("number.txt", FILE_READ);
+
+  int num;
+  if(number_file){
+    num = number_file.parseInt();  
+
+    number_file.close();
+  }
+
+  SD.remove("number.txt");
+  
+  number_file = SD.open("number.txt", FILE_WRITE);
+
+  if(number_file){
+    number_file.println(num+1);
+
+    number_file.close();
+  }
+
+  snprintf(data_file_name, sizeof(data_file_name), "DATA%03d.TXT", num);
+
+  Serial.print("DATA FILE NAME: ");
+  Serial.println(data_file_name);
+  
+  dataFile = SD.open(data_file_name, FILE_WRITE);
+  if (dataFile) {
+    Serial.print("Writing to ");
+    Serial.print(data_file_name);
+    Serial.println("...");
+    dataFile.println("millis \tState \tMode \tPos \tVol \tBPM \tIE \tTin \tTex \tVin \tVex \tTrigSens \tPressure");
+    dataFile.close();
+    Serial.print("Writing to ");
+    Serial.print(data_file_name);
+    Serial.println("... done.");
+  } else {
+    // if the file didn't open, print an error:
+    Serial.print("error opening ");
+    Serial.println(data_file_name);
   }
 }
 
@@ -260,6 +385,12 @@ void setup() {
     while(!Serial);
     setState(DEBUG_STATE);
   }
+
+#ifndef UNO
+  if(LOGGER){
+    makeNewFile();
+  }
+#endif
 }
 
 //////////////////
@@ -303,6 +434,7 @@ void loop() {
     }
 
     // Consider checking we reached the destination for fault detection
+    // We need to figure out how to account for the PAUSE TIME
     if(millis()-stateTimer > Tin*1000){
       setState(PAUSE_STATE);
     }
@@ -325,9 +457,59 @@ void loop() {
       //consider changing PID tunings
       enteringState = false;
       goToPosition(0, Vex);
+      setInhaleType(TIME_TRIGGERED);
     }
-      
+
+    // go to LISTEN_STATE 
+    if(motorPosition < goalTol){
+      setState(EX_PAUSE_STATE);
+    }
+
+    // IF THERE IS A TIMEOUT for some reason
+    // (the motor is not able to reach the 0 position),
+    // just go straight to inhale?
     if(millis()-stateTimer > Tex*1000){
+      pressure.set_peak_and_reset();
+      pressure.set_peep();
+      displ.writePeakP(pressure.peak());
+      displ.writePEEP(pressure.peep());
+      displ.writePlateauP(pressure.plateau());
+      setState(IN_STATE);
+    }
+  }
+
+  else if(state == EX_PAUSE_STATE){
+    // Entering
+    if(enteringState){
+      enteringState = false;
+    }
+    
+    if(millis()-stateTimer > exPauseTime){
+      pressure.set_peep();
+      setState(LISTEN_STATE);
+    }
+  }
+
+  else if(state == LISTEN_STATE){
+    // Entering
+    if(enteringState){
+      enteringState = false;
+    }
+
+    // PATIENT-triggered inhale
+    if( pressure.get() < (pressure.peep() - TriggerSensitivity) && TriggerSensitivity > TRIGGER_LOWER_THRESHOLD ) {
+      pressure.set_peak_and_reset();
+      // note: PEEP is NOT set in this case;
+      // we use the PEEP recorded in EX_PAUSE_STATE instead
+      displ.writePeakP(pressure.peak());
+      displ.writePEEP(pressure.peep());
+      displ.writePlateauP(pressure.plateau());
+      setState(IN_STATE);
+      setInhaleType(PATIENT_TRIGGERED);
+    }
+    
+    // TIME-triggered inhale
+    if(millis()-stateTimer > Tex*1000 - exPauseTime){
       pressure.set_peak_and_reset();
       pressure.set_peep();
       displ.writePeakP(pressure.peak());
