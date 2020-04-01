@@ -45,6 +45,7 @@ PastInhaleType pastInhale;
 float TriggerSensitivity;  // Tunable via a potentiometer. Its range is [2 cmH2O to 5 cmH2O] lower than PEEP
 bool DetectionWindow;
 float DP; // Driving Pressure = Plateau - PEEP
+unsigned long exhale_time;
 
 // Pins
 ////////////
@@ -483,6 +484,7 @@ void loop() {
 
     // go to LISTEN_STATE 
     if(motorPosition < goalTol){
+      exhale_time = stateTimer;
       setState(EX_PAUSE_STATE);
     }
 
@@ -530,7 +532,7 @@ void loop() {
     }
     
     // TIME-triggered inhale
-    if(millis()-stateTimer > Tex*1000 - exPauseTime){
+    if(millis()-stateTimer > Tex*1000 - exPauseTime - exhale_time){
       pressure.set_peak_and_reset();
       pressure.set_peep();
       displ.writePeakP(pressure.peak());
