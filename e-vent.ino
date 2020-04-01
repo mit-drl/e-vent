@@ -44,6 +44,10 @@ float IE_MAX = 4;
 float VOL_MIN = 100;
 float VOL_MAX = 700; // 900; // For full 
 
+// Bag Calibration for AMBU Adult bag
+float VOL_SLOPE = 9.39;
+float VOL_INT = -202.2;
+
 //Setup States
 States state;
 bool enteringState;
@@ -102,7 +106,7 @@ void readPots(){
   Tex = period - Tin;
   Vin = Volume/Tin; // Velocity in clicks/s
 
-  displ.writeVolume(map(Volume, VOL_MIN, VOL_MAX, 0, 100));
+  displ.writeVolume(max(0,map(Volume, VOL_MIN, VOL_MAX, 0, 100) * VOL_SLOPE + VOL_INT));
   displ.writeBPM(bpm);
   displ.writeIEratio(ie);
   if(DEBUG){
