@@ -14,7 +14,7 @@ void Display::writeHeader(){
 
 void Display::writeVolume(const int& vol){
   char buff[12];
-  sprintf(buff, " V=%2d%% max ", vol);
+  sprintf(buff, " V=%3d cc ", vol);
   write(1, 0, buff);
 }
 
