@@ -269,7 +269,7 @@ void setup() {
   //Initialize
   pinMode(HOME_PIN, INPUT_PULLUP); // Pull up the limit switch
   pinMode(SNOOZE_PIN, INPUT_PULLUP); // Pull up the snooze switch
-  analogReference(EXTERNAL); // For the pressure and pots reading
+//  analogReference(EXTERNAL); // For the pressure and pots reading
   displ.begin();
   setState(PREHOME_STATE); // Initial state
   roboclaw.begin(38400); // Roboclaw
