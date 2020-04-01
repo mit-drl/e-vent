@@ -148,7 +148,7 @@ char data_file_name[] = "DATA000.TXT";
 #ifdef UNO
 bool LOGGER = false;
 #else
-bool LOGGER = false; // Data logger to a file on SD card
+bool LOGGER = true; // Data logger to a file on SD card
 const int chipSelect = 53; // Arduino Due
 #endif
 
@@ -428,9 +428,9 @@ void loop() {
   }
 
   // All States
-  delay(loopPeriod);
   readPots();
   readEncoder();
+  delay(loopPeriod);
   
   // read pressure every cycle to keep track of peak
   pressure.read();
@@ -484,7 +484,7 @@ void loop() {
 
     // go to LISTEN_STATE 
     if(motorPosition < goalTol){
-      exhale_time = stateTimer;
+      exhale_time = millis() - stateTimer;
       setState(EX_PAUSE_STATE);
     }
 
