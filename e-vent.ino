@@ -116,7 +116,7 @@ const int rs = 9, en = 8, d4 = 7, d5 = 6, d6 = 5, d7 = 4;
 #endif
 LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 display::Display displ(&lcd);
-alarms::Alarm alarm(BEEPER_PIN, &displ);
+alarms::AlarmManager alarm(BEEPER_PIN, SNOOZE_PIN, &displ);
 
 // Pressure
 Pressure pressure(PRESS_SENSE_PIN);
@@ -203,57 +203,33 @@ bool homeSwitchPressed() {
   return digitalRead(HOME_PIN) == LOW;
 }
 
-bool snoozeButtonPressed() {
-  return digitalRead(SNOOZE_PIN) == LOW;
-}
-
 // check for errors
 void checkErrors() {
-  // home switch should not be pressed
-  if (state < 4 && homeSwitchPressed()) {
-    alarm.loud("Check home switch");
-  }
-  else {
-    alarm.clear();
-  }
-
   // pressure above max pressure
-  if (pressure.get() >= MAX_PRESSURE){
-    alarm.loud("ABOVE MAX PRESSURE");
-  }
-  else {
-    alarm.clear();
-  }
+  alarm.high_pressure(pressure.get() >= MAX_PRESSURE);
 
   // only worry about low pressure after homing
-  if (state < 4 && pressure.plateau() <= MIN_PLATEAU_PRESSURE){
-    alarm.loud("LOW PRESSURE");
-  }
-  else {
-    alarm.clear();
-  }
+  alarm.low_pressure(state < 4 && pressure.plateau() <= MIN_PLATEAU_PRESSURE);
 
+  // TODO what to do with these alarms
   // check for roboclaw errors
   bool valid;
   uint32_t error_state = roboclaw.ReadError(address, &valid);
   if(valid){
     if (error_state == 0x0001) { // M1 OverCurrent Warning
-      alarm.silent("TURN OFF DEVICE");
+      Serial.println("TURN OFF DEVICE");
     }
     else if (error_state == 0x0008) { // Temperature Error
-      alarm.silent("OVERHEATED");
+      Serial.println("OVERHEATED");
     }
     else if (error_state == 0x0100){ // M1 Driver Fault
-      alarm.silent("RESTART DEVICE");
+      Serial.println("RESTART DEVICE");
     }
     else if (error_state == 0x1000) { // Temperature Warning
-      alarm.silent("TEMP HIGH");
-    }
-    else {
-      alarm.clear();
+      Serial.println("TEMP HIGH");
     }
   } else {
-    alarm.silent("RESTART DEVICE");
+    Serial.println("RESTART DEVICE");
   }
 }
 
@@ -268,8 +244,8 @@ void setup() {
   delay(1000);
   
   //Initialize
+  alarm.begin();
   pinMode(HOME_PIN, INPUT_PULLUP); // Pull up the limit switch
-  pinMode(SNOOZE_PIN, INPUT_PULLUP); // Pull up the snooze switch
   displ.begin();
   setState(PREHOME_STATE); // Initial state
   roboclaw.begin(38400); // Roboclaw
@@ -309,10 +285,6 @@ void loop() {
   // Check errors and update alarm
   checkErrors();
   alarm.update();
-
-  if (snoozeButtonPressed()) {
-    alarm.snooze();
-  }
 
   // Update display header
   displ.update();
