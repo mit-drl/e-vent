@@ -47,11 +47,11 @@ void Beeper::toggleSnooze() {
 }
 
 void Beeper::beeperPlay(){
-  unsigned long now = millis();
+  unsigned long current = millis();
   if (tone_step_ == notes_len_) return; // The tone has completed
-  if(now > tone_timer_){
+  if(current > tone_timer_){
     tone(beeper_pin_, notes_[tone_step_], note_durations_[tone_step_]);
-    tone_timer_ = now + note_durations_[tone_step_] + note_pauses_[tone_step_];
+    tone_timer_ = current + note_durations_[tone_step_] + note_pauses_[tone_step_];
     tone_step_ ++;
   }
 }
