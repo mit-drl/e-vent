@@ -21,29 +21,28 @@ using display::Display;
 /// DebouncedButton ///
 
 class DebouncedButton {
-  const unsigned long DEBOUNCE_DELAY = 50;
+  const unsigned long DEBOUNCE_DELAY = 100;
 
 public:
   DebouncedButton(const int& pin): pin_(pin) {}
 
-  int read() {
+  bool is_LOW() {
     int reading = digitalRead(pin_);
-
-    if (reading != last_button_state_) {
-      last_debounce_time_ = millis();
+    
+    bool low_value = false;
+    const unsigned long time_now = millis();
+    if (reading == LOW) {
+      if ((time_now - last_low_time_) > DEBOUNCE_DELAY) {
+        low_value = true;
+      }
+      last_low_time_ = time_now;
     }
-    if ((millis() - last_debounce_time_) > DEBOUNCE_DELAY) {
-      button_state_ = reading;
-    }
-    last_button_state_ = reading;
-    return button_state_;
+    return low_value;
   }
 
 private:
   int pin_;
-  int last_button_state_ = LOW;
-  int button_state_ = LOW;
-  unsigned long last_debounce_time_ = 0;
+  unsigned long last_low_time_ = 0;
 };
 
 

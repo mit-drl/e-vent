@@ -33,7 +33,7 @@ void Beeper::update() {
 }
 
 bool Beeper::snoozeButtonPressed() const {
-  return snooze_button_.read() != HIGH;
+  return snooze_button_.is_LOW();
 }
 
 void Beeper::toggleSnooze() {
