@@ -147,7 +147,7 @@ char data_file_name[] = "DATA000.TXT";
 #ifdef UNO
 bool LOGGER = false;
 #else
-bool LOGGER = true; // Data logger to a file on SD card
+bool LOGGER = false; // Data logger to a file on SD card
 const int chipSelect = 53; // Arduino Due
 #endif
 
