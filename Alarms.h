@@ -4,7 +4,7 @@
 #include "Arduino.h"
 
 #include "Display.h"
-
+#include "pitches.h"
 
 namespace alarms {
 
@@ -40,6 +40,14 @@ private:
   bool alarms_on_ = false;
   unsigned long snooze_time_ = 0;
   bool snoozed_ = false;
+  unsigned long tone_timer_ = 0;
+  int tone_step_ = notes_len_;
+
+  // notes in the emergency alarm defines the pattern:
+  static const int notes_len_ = 5;
+  int notes_[notes_len_] = {NOTE_G4, NOTE_G4, NOTE_G4, NOTE_G4, NOTE_G5};
+  int note_durations_[notes_len_] = {300, 300, 300, 200, 200};
+  int note_pauses_[notes_len_] = {200, 200, 400, 100, 1500};
 
   const int beeper_pin_, snooze_pin_;
 
@@ -47,9 +55,7 @@ private:
 
   void toggleSnooze();
 
-  inline void beeperON() { digitalWrite(beeper_pin_, HIGH); }
-
-  inline void beeperOFF() { digitalWrite(beeper_pin_, LOW); }
+  inline void beeperPlay();
 };
 
 

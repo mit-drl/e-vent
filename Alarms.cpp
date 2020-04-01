@@ -24,9 +24,10 @@ void Beeper::update() {
     snoozed_ = false;
   }
   if (alarms_on_ && !snoozed_) {
-    beeperON();
+    if(tone_step_ == notes_len_) tone_step_ = 0; // Start again if tone finished
+    beeperPlay();
   } else {
-    beeperOFF();
+    tone_step_ = notes_len_;
   }
 }
 
@@ -40,6 +41,16 @@ void Beeper::toggleSnooze() {
   } else {
     snoozed_ = true;
     snooze_time_ = millis();
+  }
+}
+
+void Beeper::beeperPlay(){
+  unsigned long now = millis();
+  if (tone_step_ == notes_len_) return; // The tone has completed
+  if(now > tone_timer_){
+    tone(beeper_pin_, notes_[tone_step_], note_durations_[tone_step_]);
+    tone_timer_ = now + note_durations_[tone_step_] + note_pauses_[tone_step_];
+    tone_step_ ++;
   }
 }
 
@@ -96,4 +107,3 @@ const String AlarmManager::getText() const {
 
 
 } // namespace alarms
-
