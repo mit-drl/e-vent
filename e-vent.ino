@@ -34,7 +34,7 @@ int loopPeriod = 25; // The period (ms) of the control loop delay
 int pauseTime = 250; // Time in ms to pause after inhalation
 int exPauseTime = 50; // Time in ms to pause after exhalation / before watching for an assisted inhalation
 double Vex = 1200; // Velocity to exhale
-double Vhome = 30; //The speed to use during homing
+double Vhome = 60; //The speed to use during homing
 int goalTol = 20; // The tolerance to start stopping on reaching goal
 int bagHome = 100; // The bag-specific position of the bag edge
 int pauseHome = 250; // The pause time (ms) during homing to ensure stability
@@ -128,7 +128,8 @@ Display displ(&lcd);
     DO  - SPI-1
     CLK - SPI-3
 */
-File myFile;
+File dataFile;
+char data_file_name[] = "DATA000.TXT";
 #ifdef UNO
 bool LOGGER = false;
 #else
@@ -203,25 +204,26 @@ void readPots(){
   }
 
   if(LOGGER){
-    // Writing data to the SD Card
-    myFile = SD.open("ExpData.txt", FILE_WRITE);
-    if (myFile) {
-      myFile.print(millis()); myFile.print("\t");
-      myFile.print(state); myFile.print("\t");
-      myFile.print(motorPosition); myFile.print("\t");
-      myFile.print(Volume); myFile.print("\t");
-      myFile.print(bpm); myFile.print("\t");
-      myFile.print(ie); myFile.print("\t");
-      myFile.print(Tin); myFile.print("\t");
-      myFile.print(Tex); myFile.print("\t");
-      myFile.print(Vin); myFile.print("\t");
-      myFile.print(Vex); myFile.print("\t");
-      myFile.print(TriggerSensitivity); myFile.print("\t");
-      myFile.print(pressure.get()); myFile.println("\t");
-      myFile.close();
+    //Writing data to the SD Card
+    dataFile = SD.open(data_file_name, FILE_WRITE);
+    if (dataFile) {
+      dataFile.print(millis()); dataFile.print("\t");
+      dataFile.print(state); dataFile.print("\t");
+      dataFile.print(motorPosition); dataFile.print("\t");
+      dataFile.print(Volume); dataFile.print("\t");
+      dataFile.print(bpm); dataFile.print("\t");
+      dataFile.print(ie); dataFile.print("\t");
+      dataFile.print(Tin); dataFile.print("\t");
+      dataFile.print(Tex); dataFile.print("\t");
+      dataFile.print(Vin); dataFile.print("\t");
+      dataFile.print(Vex); dataFile.print("\t");
+      dataFile.print(TriggerSensitivity); dataFile.print("\t");
+      dataFile.print(pressure.get()); dataFile.println("\t");
+      dataFile.close();
     } else {
       // if the file didn't open, print an error:
-      Serial.println("error opening ExpData.txt");
+      Serial.print("error opening ");
+      Serial.println(data_file_name);
     }
   }
 }
@@ -254,6 +256,58 @@ void goToPosition(int pos, int vel){
   }
 }
 
+void makeNewFile() {
+  // setup SD card data logger
+//  pinMode(chipSelect, OUTPUT);
+  if (!SD.begin(chipSelect)) {
+    Serial.println("SD card initialization failed!");
+    return;
+  }
+  
+  Serial.println("SD card initialization done.");
+
+  File number_file = SD.open("number.txt", FILE_READ);
+
+  int num;
+  if(number_file){
+    num = number_file.parseInt();  
+
+    number_file.close();
+  }
+
+  SD.remove("number.txt");
+  
+  number_file = SD.open("number.txt", FILE_WRITE);
+
+  if(number_file){
+    number_file.println(num+1);
+
+    number_file.close();
+  }
+
+  sprintf(data_file_name, sizeof(data_file_name), "DATA%03d.TXT", num);
+
+  Serial.print("DATA FILE NAME: ");
+  Serial.println(data_file_name);
+  
+  dataFile = SD.open(data_file_name, FILE_WRITE);
+  if (dataFile) {
+    Serial.print("Writing to ");
+    Serial.print(data_file_name);
+    Serial.println("...");
+    dataFile.println("------ NEW CLINICAL TRIAL DATA STARTS HERE ------");
+    dataFile.println("millis \tState \tPos \tVol \tBPM \tIE \tTin \tTex \tVin \tVex \tTrigSens \tPressure");
+    dataFile.close();
+    Serial.print("Writing to ");
+    Serial.print(data_file_name);
+    Serial.println("... done.");
+  } else {
+    // if the file didn't open, print an error:
+    Serial.print("error opening ");
+    Serial.println(data_file_name);
+  }
+}
+
 void setup() {
 
   // wait 1 sec for the roboclaw to boot up
@@ -278,24 +332,7 @@ void setup() {
 
 #ifndef UNO
   if(LOGGER){
-    // setup SD card data logger
-    pinMode(chipSelect, OUTPUT);
-    if (!SD.begin(chipSelect)) {
-      Serial.println("SD card initialization failed!");
-      return;
-    }
-    Serial.println("SD card initialization done.");
-    myFile = SD.open("ExpData.txt", FILE_WRITE);
-    if (myFile) {
-      Serial.print("Writing to ExpData.txt...");
-      myFile.println("------ NEW CLINICAL TRIAL DATA STARTS HERE ------");
-      myFile.println("millis \tState \tPos \tVol \tBPM \tIE \tTin \tTex \tVin \tVex \tTrigSens \tPressure");
-      myFile.close();
-      Serial.println("Writing to ExpData.txt... done.");
-    } else {
-      // if the file didn't open, print an error:
-      Serial.println("error opening ExpData.txt");
-    }
+    makeNewFile();
   }
 #endif
 }
