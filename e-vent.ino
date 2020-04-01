@@ -238,8 +238,11 @@ void readPots(){
       dataFile.close();
     } else {
       // if the file didn't open, print an error:
-      Serial.print("error opening ");
-      Serial.println(data_file_name);
+      if(DEBUG){
+        Serial.print("error opening ");
+        Serial.println(data_file_name);
+      }
+      // else we need to THROW AN SD ALARM
     }
   }
 }
@@ -268,7 +271,10 @@ void goToPosition(int pos, int vel){
     }
   }
   else{
-    Serial.println("encoder not valid; goToPosition command not sent");
+    if(DEBUG) {
+      Serial.println("encoder not valid; goToPosition command not sent");
+    }
+    // ELSE THROW AN ALARM
   }
 }
 
@@ -276,11 +282,15 @@ void makeNewFile() {
   // setup SD card data logger
   pinMode(chipSelect, OUTPUT);
   if (!SD.begin(chipSelect)) {
-    Serial.println("SD card initialization failed!");
+    if(DEBUG) {
+      Serial.println("SD card initialization failed!");
+    }
     return;
   }
-  
-  Serial.println("SD card initialization done.");
+
+  if(DEBUG) {
+    Serial.println("SD card initialization done.");
+  }
 
   File number_file = SD.open("number.txt", FILE_READ);
 
@@ -303,23 +313,32 @@ void makeNewFile() {
 
   snprintf(data_file_name, sizeof(data_file_name), "DATA%03d.TXT", num);
 
-  Serial.print("DATA FILE NAME: ");
-  Serial.println(data_file_name);
+  if(DEBUG) {
+    Serial.print("DATA FILE NAME: ");
+    Serial.println(data_file_name);
+  }
   
   dataFile = SD.open(data_file_name, FILE_WRITE);
   if (dataFile) {
-    Serial.print("Writing to ");
-    Serial.print(data_file_name);
-    Serial.println("...");
+    if(DEBUG) {
+      Serial.print("Writing to ");
+      Serial.print(data_file_name);
+      Serial.println("...");
+    }
     dataFile.println("millis \tState \tMode \tPos \tVol \tBPM \tIE \tTin \tTex \tVin \tVex \tTrigSens \tPressure");
     dataFile.close();
-    Serial.print("Writing to ");
-    Serial.print(data_file_name);
-    Serial.println("... done.");
+    if(DEBUG) {
+      Serial.print("Writing to ");
+      Serial.print(data_file_name);
+      Serial.println("... done.");
+    }
   } else {
-    // if the file didn't open, print an error:
-    Serial.print("error opening ");
-    Serial.println(data_file_name);
+    if(DEBUG) {
+      // if the file didn't open, print an error:
+      Serial.print("error opening ");
+      Serial.println(data_file_name);
+    }
+    // else throw an SD card error!
   }
 }
 
