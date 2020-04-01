@@ -1,4 +1,4 @@
-enum States {DEBUG_STATE, IN_STATE, PAUSE_STATE, EX_STATE, PREHOME_STATE, HOMING_STATE, POSTHOME_STATE};
+enum States {DEBUG_STATE, IN_STATE, PAUSE_STATE, EX_STATE, PREHOME_STATE, HOMING_STATE};
 
 #include <LiquidCrystal.h>
 #include <RoboClaw.h>
@@ -13,10 +13,10 @@ int maxPwm = 255; // Maximum for PWM is 255 but this can be set lower
 int loopPeriod = 25; // The period (ms) of the control loop delay
 int pauseTime = 250; // Time in ms to pause after inhalation
 double Vex = 600; // Velocity to exhale
-double Vhome = 30; //The speed to use during homing
+double Vhome = 30; //The speed (0-255) in volts to use during homing
 int goalTol = 20; // The tolerance to start stopping on reaching goal
 int bagHome = 100; // The bag-specific position of the bag edge
-int pauseHome = 250; // The pause time (ms) during homing to ensure stability
+int pauseHome = 500; // The pause time (ms) during homing to ensure stability
 
 // Pins
 ////////////
@@ -41,7 +41,7 @@ float BPM_MIN = 10;
 float BPM_MAX = 30;
 float IE_MIN = 1;
 float IE_MAX = 4;
-float VOL_MIN = 100;
+float VOL_MIN = 150;
 float VOL_MAX = 700; // 900; // For full 
 
 // Bag Calibration for AMBU Adult bag
@@ -69,7 +69,7 @@ RoboClaw roboclaw(&serial,10000);
 int motorPosition = 0;
 
 // position PID values for PG188
-#define pKp 8.0
+#define pKp 9.0
 #define pKi 0.0
 #define pKd 0.0
 #define kiMax 10.0
@@ -276,28 +276,14 @@ void loop() {
     }
     
     if(digitalRead(HOME_PIN) == HIGH) {
+      roboclaw.ForwardM1(address, 0);
+      roboclaw.SetEncM1(address, 0); // Zero the encoder
+      delay(pauseHome); // Wait for things to settle
+      goToPosition(bagHome, 300); // Stop motor
       delay(pauseHome); // Wait for things to settle
       roboclaw.SetEncM1(address, 0); // Zero the encoder
-      setState(POSTHOME_STATE);
-      
+      setState(IN_STATE); 
     }
     // Consider a timeout to give up on homing
-  }
-  
-  else if(state == POSTHOME_STATE){
-    //Entering
-    if(enteringState){
-      enteringState = false;
-      goToPosition(bagHome, Vhome); // Stop motor
-    }
-
-    if(abs(motorPosition - bagHome) < goalTol){
-      // Stop the motor and home encoder
-      roboclaw.ForwardM1(address,0);
-      delay(pauseHome); // Wait for things to settle
-      roboclaw.SetEncM1(address, 0); // Zero the encoder
-      goToPosition(0, Vhome); // Stop motor
-      setState(IN_STATE);
-    }
   }
 }
