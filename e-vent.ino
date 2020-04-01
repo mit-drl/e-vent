@@ -5,7 +5,6 @@ enum States {
   EX_STATE,       // 3
   PREHOME_STATE,  // 4
   HOMING_STATE,   // 5
-  POSTHOME_STATE  // 6
 };
 
 #include <LiquidCrystal.h>
@@ -27,11 +26,11 @@ int maxPwm = 255; // Maximum for PWM is 255 but this can be set lower
 int loopPeriod = 25; // The period (ms) of the control loop delay
 int pauseTime = 250; // Time in ms to pause after inhalation
 double Vex = 600; // Velocity to exhale
-double Vhome = 30; //The speed to use during homing
+double Vhome = 30; //The speed (0-255) in volts to use during homing
 int goalTol = 20; // The tolerance to start stopping on reaching goal
 int bagHome = 100; // The bag-specific position of the bag edge
 // int bagHome = 180; // Unit 2.2
-int pauseHome = 250; // The pause time (ms) during homing to ensure stability
+int pauseHome = 500; // The pause time (ms) during homing to ensure stability
 
 // Pins
 ////////////
@@ -65,9 +64,13 @@ float BPM_MIN = 10;
 float BPM_MAX = 30;
 float IE_MIN = 1;
 float IE_MAX = 4;
-float VOL_MIN = 100;
+float VOL_MIN = 150;
 float VOL_MAX = 700; // 900; // For full 
 // float VOL_MAX = 550; // Unit 2.2
+
+// Bag Calibration for AMBU Adult bag
+float VOL_SLOPE = 9.39;
+float VOL_INT = -202.2;
 
 //Setup States
 States state;
@@ -97,7 +100,7 @@ RoboClaw roboclaw(&Serial3, 10000);
 int motorPosition = 0;
 
 // position PID values for PG188
-#define pKp 8.0
+#define pKp 9.0
 #define pKi 0.0
 #define pKd 0.0
 #define kiMax 10.0
@@ -139,13 +142,11 @@ void readPots(){
   Tex = period - Tin;
   Vin = Volume/Tin; // Velocity in clicks/s
 
-  displ.writeVolume(map(Volume, VOL_MIN, VOL_MAX, 0, 100));
+  displ.writeVolume(max(0,map(Volume, VOL_MIN, VOL_MAX, 0, 100) * VOL_SLOPE + VOL_INT));
   displ.writeBPM(bpm);
   displ.writeIEratio(ie);
   if(DEBUG){
-    Serial.print("Time: ");
-    Serial.print(millis());
-    Serial.print("\tState: ");
+    Serial.print("State: ");
     Serial.print(state);
     Serial.print("\tPos: ");
     Serial.print(motorPosition);
@@ -269,7 +270,6 @@ void setup() {
   //Initialize
   pinMode(HOME_PIN, INPUT_PULLUP); // Pull up the limit switch
   pinMode(SNOOZE_PIN, INPUT_PULLUP); // Pull up the snooze switch
-//  analogReference(EXTERNAL); // For the pressure and pots reading
   displ.begin();
   setState(PREHOME_STATE); // Initial state
   roboclaw.begin(38400); // Roboclaw
@@ -390,26 +390,14 @@ void loop() {
     }
     
     if(!homeSwitchPressed()) {
-      roboclaw.SetEncM1(address, 0);
-      setState(POSTHOME_STATE);
-    }
-    // Consider a timeout to give up on homing
-  }
-  
-  else if(state == POSTHOME_STATE){
-    //Entering
-    if(enteringState){
-      enteringState = false;
-      goToPosition(bagHome, Vhome); // Stop motor
-    }
-
-    if(abs(motorPosition - bagHome) < goalTol){
-      // Stop the motor and home encoder
-      roboclaw.ForwardM1(address,0);
+      roboclaw.ForwardM1(address, 0);
+      roboclaw.SetEncM1(address, 0); // Zero the encoder
+      delay(pauseHome); // Wait for things to settle
+      goToPosition(bagHome, 300); // Stop motor
       delay(pauseHome); // Wait for things to settle
       roboclaw.SetEncM1(address, 0); // Zero the encoder
-      goToPosition(0, Vhome); // Stop motor
-      setState(IN_STATE);
+      setState(IN_STATE); 
     }
+    // Consider a timeout to give up on homing
   }
 }
