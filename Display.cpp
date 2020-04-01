@@ -1,26 +1,85 @@
 #include "Display.h"
 
+namespace display {
+
+
+/// TextAntimation ///
+
+void TextAnimation::reset(const String& text){
+  reset_time_ = millis();
+  text_ = text;
+}
+
+bool TextAnimation::empty(){
+  return text_.length() == 0;
+}
+
+const String& TextAnimation::text(){
+  return text_;
+}
+
+const String TextAnimation::getLine(){
+  String new_text;
+  unsigned long time_now = millis();
+  if(time_now - reset_time_ < BLINK_ON_FRACTION * BLINK_PERIOD){
+    new_text = text_;
+    while(new_text.length() < WIDTH){
+      new_text += " ";
+    }
+    if(new_text.length() > WIDTH){
+      new_text = new_text.substring(0, 20);
+    }
+  }
+  else if(time_now - reset_time_ < BLINK_PERIOD){
+    new_text = BLANK_LINE;
+  }
+  else {
+    reset_time_ = time_now;
+  }
+  return new_text;
+}
+
+
+/// Display ///
+
 Display::Display(LiquidCrystal* lcd): lcd_(lcd) {}
 
 void Display::begin() {
-  lcd_->begin(20, 4);
+  lcd_->begin(WIDTH, HEIGHT);
   lcd_->noCursor(); 
-  writeHeader();
+  update();
 }
 
-void Display::writeHeader(){
-  write(0, 11, "P(cmH2O):");
+void Display::update(){
+  if(animation_.empty()){
+    write(0, 10, " P(cmH2O):");
+  } 
+  else {
+    write(0, 0, animation_.getLine());
+  }
+}
+
+void Display::setAlarm(const String& alarm){
+  if(animation_.text() != alarm){
+    animation_.reset(alarm);
+  }
+}
+
+void Display::clearAlarm(){
+  animation_.reset();
 }
 
 void Display::writeVolume(const int& vol){
-  char buff[12];
-  sprintf(buff, "V=%2d%% max ", vol);
-  write(0, 0, buff);
+  if(animation_.empty()){
+    char buff[11];
+    sprintf(buff, "V=%3d cc  ", vol);
+    write(0, 0, buff);
+  }
 }
 
 void Display::writeBPM(const int& bpm){
   char buff[12];
-  sprintf(buff, "RR=%2d/min ", bpm);
+  sprintf(buff, "RR=%2d/min  ", bpm);
   write(1, 0, buff);
 }
 
@@ -28,12 +87,12 @@ void Display::writeIEratio(const float& ie){
   char ie_buff[4];
   dtostrf(ie, 3, 1, ie_buff);
   char buff[12];
-  sprintf(buff, "I:E=1:%s ", ie_buff);
+  sprintf(buff, "I:E=1:%s  ", ie_buff);
   write(2, 0, buff);
 }
 
 void Display::writeACTrigger(const float& ac_trigger, const float& lower_threshold){
-  char buff[12];
+  char buff[13];
   if(ac_trigger > lower_threshold){
     char ac_buff[4];
     dtostrf(ac_trigger, 3, 1, ac_buff);
@@ -67,3 +126,6 @@ void Display::write(const int& row, const int& col, const T& printable){
   lcd_->setCursor(col, row);
   lcd_->print(printable);
 }
+
+
+}  // namespace display

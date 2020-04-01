@@ -7,21 +7,21 @@ enum States {
   LISTEN_STATE,   // 5 (listen for inhalation to assist)
   PREHOME_STATE,  // 6
   HOMING_STATE,   // 7
-  POSTHOME_STATE  // 8
 };
 
 enum PastInhaleType {TIME_TRIGGERED, PATIENT_TRIGGERED};
 
 #include <LiquidCrystal.h>
 #include <RoboClaw.h>
+#include <SPI.h>
+#include <SD.h>
 
 #ifdef ARDUINO_AVR_UNO
 #define UNO
 #endif
 
 #include "Display.h"
-#include <SPI.h>
-#include <SD.h>
+#include "Alarms.h"
 #include "Pressure.h"
 
 // General Settings
@@ -33,11 +33,11 @@ int maxPwm = 255; // Maximum for PWM is 255 but this can be set lower
 int loopPeriod = 25; // The period (ms) of the control loop delay
 int pauseTime = 250; // Time in ms to pause after inhalation
 int exPauseTime = 50; // Time in ms to pause after exhalation / before watching for an assisted inhalation
-double Vex = 1200; // Velocity to exhale
-double Vhome = 60; //The speed to use during homing
+double Vex = 600; // Velocity to exhale
+double Vhome = 30; //The speed (0-255) in volts to use during homing
 int goalTol = 20; // The tolerance to start stopping on reaching goal
 int bagHome = 100; // The bag-specific position of the bag edge
-int pauseHome = 250; // The pause time (ms) during homing to ensure stability
+int pauseHome = 500; // The pause time (ms) during homing to ensure stability
 
 // Assist Control Flags and Settings
 bool ASSIST_CONTROL = false; // Enable assist control
@@ -59,6 +59,13 @@ int HOME_PIN = 4;
 #else
 int HOME_PIN = 10;
 #endif
+const int BEEPER_PIN = 11;
+const int SNOOZE_PIN = 52;
+
+// Safety settings
+////////////////////
+float MAX_PRESSURE = 40;
+float MIN_PLATEAU_PRESSURE = 5; // ?????
 
 // Initialize Vars
 ////////////////////
@@ -71,12 +78,16 @@ float BPM_MIN = 10;
 float BPM_MAX = 30;
 float IE_MIN = 1;
 float IE_MAX = 4;
-float VOL_MIN = 100;
+float VOL_MIN = 150;
 float VOL_MAX = 700; // 900; // For full 
 float TRIGGERSENSITIVITY_MIN = 0;
 float TRIGGERSENSITIVITY_MAX = 5;
 
 float TRIGGER_LOWER_THRESHOLD = 2;
+
+// Bag Calibration for AMBU Adult bag
+float VOL_SLOPE = 9.39;
+float VOL_INT = -202.2;
 
 //Setup States
 States state;
@@ -106,7 +117,7 @@ RoboClaw roboclaw(&Serial3, 10000);
 int motorPosition = 0;
 
 // position PID values for PG188
-#define pKp 8.0
+#define pKp 9.0
 #define pKi 0.0
 #define pKd 0.0
 #define kiMax 10.0
@@ -121,7 +132,8 @@ const int rs = 12, en = 11, d4 = 10, d5 = 9, d6 = 8, d7 = 7;
 const int rs = 9, en = 8, d4 = 7, d5 = 6, d6 = 5, d7 = 4;
 #endif
 LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
-Display displ(&lcd);
+display::Display displ(&lcd);
+alarms::AlarmManager alarm(BEEPER_PIN, SNOOZE_PIN, &displ);
 
 /* Data logger -- SD Card (Adafruit Breakout Board)
     Pin configurations per https://www.arduino.cc/en/reference/SPI
@@ -174,7 +186,7 @@ void readPots(){
   Tex = period - Tin;
   Vin = Volume/Tin; // Velocity in clicks/s
 
-  displ.writeVolume(map(Volume, VOL_MIN, VOL_MAX, 0, 100));
+  displ.writeVolume(max(0,map(Volume, VOL_MIN, VOL_MAX, 0, 100) * VOL_SLOPE + VOL_INT));
   displ.writeBPM(bpm);
   displ.writeIEratio(ie);
   displ.writeACTrigger(TriggerSensitivity, TRIGGER_LOWER_THRESHOLD);
@@ -311,12 +323,53 @@ void makeNewFile() {
   }
 }
 
+// home switch
+bool homeSwitchPressed() {
+  return digitalRead(HOME_PIN) == LOW;
+}
+
+// check for errors
+void checkErrors() {
+  // pressure above max pressure
+  alarm.high_pressure(pressure.get() >= MAX_PRESSURE);
+
+  // only worry about low pressure after homing
+  alarm.low_pressure(state < 4 && pressure.plateau() <= MIN_PLATEAU_PRESSURE);
+
+  // TODO what to do with these alarms
+  // check for roboclaw errors
+  bool valid;
+  uint32_t error_state = roboclaw.ReadError(address, &valid);
+  if(valid){
+    if (error_state == 0x0001) { // M1 OverCurrent Warning
+      Serial.println("TURN OFF DEVICE");
+    }
+    else if (error_state == 0x0008) { // Temperature Error
+      Serial.println("OVERHEATED");
+    }
+    else if (error_state == 0x0100){ // M1 Driver Fault
+      Serial.println("RESTART DEVICE");
+    }
+    else if (error_state == 0x1000) { // Temperature Warning
+      Serial.println("TEMP HIGH");
+    }
+  } else {
+    Serial.println("RESTART DEVICE");
+  }
+}
+
+
+///////////////////
+////// Setup //////
+///////////////////
+
 void setup() {
 
   // wait 1 sec for the roboclaw to boot up
   delay(1000);
   
   //Initialize
+  alarm.begin();
   pinMode(HOME_PIN, INPUT_PULLUP); // Pull up the limit switch
   displ.begin();
   setState(PREHOME_STATE); // Initial state
@@ -340,6 +393,10 @@ void setup() {
 #endif
 }
 
+//////////////////
+////// Loop //////
+//////////////////
+
 void loop() {
   if(DEBUG){
     if(Serial.available() > 0){
@@ -352,12 +409,16 @@ void loop() {
   delay(loopPeriod);
   readPots();
   readEncoder();
-
-  // Update display header
-  displ.writeHeader();
   
   // read pressure every cycle to keep track of peak
   pressure.read();
+
+  // Check errors and update alarm
+  checkErrors();
+  alarm.update();
+
+  // Update display header
+  displ.update();
   
   if(state == DEBUG_STATE){
     // Stop motor
@@ -456,22 +517,6 @@ void loop() {
       displ.writePlateauP(pressure.plateau());
       setState(IN_STATE);
     }
-
-//    Serial.print("inhale type: ");
-//    Serial.print((int) getInhaleType());
-//    Serial.print("\tDP: ");
-//    Serial.print(DP);
-//    Serial.print("\tPressure: ");
-//    Serial.print(pressure.get());
-//    Serial.print("\tPEEP: ");
-//    Serial.print(pressure.peep());
-//    Serial.print("\tTrigSens: ");
-//    Serial.print(TriggerSensitivity);
-//    Serial.print("\tDetWin: ");
-//    Serial.print(DetectionWindow);
-//    Serial.print("\tDiff: ");
-//    Serial.println((pressure.get() < (pressure.peep() - TriggerSensitivity)) && DetectionWindow);
-    
   }
 
   else if(state == PREHOME_STATE){
@@ -483,7 +528,7 @@ void loop() {
     }
 
     // Check status of limit switch
-    if(digitalRead(HOME_PIN) == LOW) {
+    if(homeSwitchPressed()) {
       setState(HOMING_STATE); 
     }
 
@@ -498,27 +543,15 @@ void loop() {
       roboclaw.ForwardM1(address, Vhome);
     }
     
-    if(digitalRead(HOME_PIN) == HIGH) {
-      roboclaw.SetEncM1(address, 0);
-      setState(POSTHOME_STATE);
-    }
-    // Consider a timeout to give up on homing
-  }
-  
-  else if(state == POSTHOME_STATE){
-    //Entering
-    if(enteringState){
-      enteringState = false;
-      goToPosition(bagHome, Vhome); // Stop motor
-    }
-
-    if(abs(motorPosition - bagHome) < goalTol){
-      // Stop the motor and home encoder
-      roboclaw.ForwardM1(address,0);
+    if(!homeSwitchPressed()) {
+      roboclaw.ForwardM1(address, 0);
+      roboclaw.SetEncM1(address, 0); // Zero the encoder
+      delay(pauseHome); // Wait for things to settle
+      goToPosition(bagHome, 300); // Stop motor
       delay(pauseHome); // Wait for things to settle
       roboclaw.SetEncM1(address, 0); // Zero the encoder
-      goToPosition(0, Vhome); // Stop motor
-      setState(IN_STATE);
+      setState(IN_STATE); 
     }
+    // Consider a timeout to give up on homing
   }
 }
