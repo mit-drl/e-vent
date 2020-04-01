@@ -336,25 +336,27 @@ void checkErrors() {
   // only worry about low pressure after homing
   alarm.low_pressure(state < 4 && pressure.plateau() <= MIN_PLATEAU_PRESSURE);
 
-  // TODO what to do with these alarms
-  // check for roboclaw errors
-  bool valid;
-  uint32_t error_state = roboclaw.ReadError(address, &valid);
-  if(valid){
-    if (error_state == 0x0001) { // M1 OverCurrent Warning
-      Serial.println("TURN OFF DEVICE");
-    }
-    else if (error_state == 0x0008) { // Temperature Error
-      Serial.println("OVERHEATED");
-    }
-    else if (error_state == 0x0100){ // M1 Driver Fault
+  if(DEBUG){ //TODO integrate these into the alarm system
+    // TODO what to do with these alarms
+    // check for roboclaw errors
+    bool valid;
+    uint32_t error_state = roboclaw.ReadError(address, &valid);
+    if(valid){
+      if (error_state == 0x0001) { // M1 OverCurrent Warning
+        Serial.println("TURN OFF DEVICE");
+      }
+      else if (error_state == 0x0008) { // Temperature Error
+        Serial.println("OVERHEATED");
+      }
+      else if (error_state == 0x0100){ // M1 Driver Fault
+        Serial.println("RESTART DEVICE");
+      }
+      else if (error_state == 0x1000) { // Temperature Warning
+        Serial.println("TEMP HIGH");
+      }
+    } else {
       Serial.println("RESTART DEVICE");
     }
-    else if (error_state == 0x1000) { // Temperature Warning
-      Serial.println("TEMP HIGH");
-    }
-  } else {
-    Serial.println("RESTART DEVICE");
   }
 }
 

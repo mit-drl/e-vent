@@ -8,7 +8,9 @@ namespace alarms {
 
 Beeper::Beeper(const int& beeper_pin, const int& snooze_pin):
     beeper_pin_(beeper_pin), 
-    snooze_pin_(snooze_pin) {}
+    snooze_pin_(snooze_pin),
+    snooze_button_(snooze_pin) {}
+
 
 void Beeper::begin() {
   pinMode(beeper_pin_, OUTPUT);
@@ -32,7 +34,7 @@ void Beeper::update() {
 }
 
 bool Beeper::snoozeButtonPressed() const {
-  return digitalRead(snooze_pin_) == LOW;
+  return snooze_button_.is_LOW();
 }
 
 void Beeper::toggleSnooze() {

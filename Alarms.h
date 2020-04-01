@@ -18,6 +18,34 @@ static const unsigned long DISPLAY_TIME_EACH = 2 * 1000UL;
 using display::Display;
 
 
+/// DebouncedButton ///
+
+class DebouncedButton {
+  const unsigned long DEBOUNCE_DELAY = 100;
+
+public:
+  DebouncedButton(const int& pin): pin_(pin) {}
+
+  bool is_LOW() {
+    int reading = digitalRead(pin_);
+    
+    bool low_value = false;
+    const unsigned long time_now = millis();
+    if (reading == LOW) {
+      if ((time_now - last_low_time_) > DEBOUNCE_DELAY) {
+        low_value = true;
+      }
+      last_low_time_ = time_now;
+    }
+    return low_value;
+  }
+
+private:
+  int pin_;
+  unsigned long last_low_time_ = 0;
+};
+
+
 /// Beeper ///
 
 class Beeper {
@@ -50,6 +78,7 @@ private:
   int note_pauses_[notes_len_] = {200, 200, 400, 100, 1500};
 
   const int beeper_pin_, snooze_pin_;
+  DebouncedButton snooze_button_;
 
   bool snoozeButtonPressed() const;
 
