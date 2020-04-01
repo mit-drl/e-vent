@@ -65,7 +65,7 @@ RoboClaw roboclaw(&serial,10000);
 int motorPosition = 0;
 
 // position PID values for PG188
-#define pKp 8.0
+#define pKp 9.0
 #define pKi 0.0
 #define pKd 0.0
 #define kiMax 10.0
