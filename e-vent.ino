@@ -15,7 +15,7 @@ enum PastInhaleType {TIME_TRIGGERED, PATIENT_TRIGGERED};
 #include <LiquidCrystal.h>
 #include <RoboClaw.h>
 
-#ifdef __AVR__
+#ifdef ARDUINO_AVR_UNO
 #define UNO
 #endif
 
@@ -73,7 +73,7 @@ float IE_MIN = 1;
 float IE_MAX = 4;
 float VOL_MIN = 100;
 float VOL_MAX = 700; // 900; // For full 
-float TRIGGERSENSITIVITY_MIN = -1;
+float TRIGGERSENSITIVITY_MIN = 2;
 float TRIGGERSENSITIVITY_MAX = 5;
 
 //Setup States
@@ -260,9 +260,6 @@ void setup() {
   
   //Initialize
   pinMode(HOME_PIN, INPUT_PULLUP); // Pull up the limit switch
-#ifdef UNO
-  analogReference(EXTERNAL); // For the pressure and pots reading
-#endif
   displ.begin();
   setState(PREHOME_STATE); // Initial state
   roboclaw.begin(38400); // Roboclaw
@@ -396,16 +393,6 @@ void loop() {
     if(enteringState){
       enteringState = false;
     }
-
-    // Patient-triggered inhale
-    // if plateau pressure changes fast due to readjusting PEEP or other values
-    // it can get stuck in the detection window
-//    DP = pressure.plateau() - pressure.peep();
-//    if ( pressure.get() < (pressure.peep() + 0.1*DP ) && motorPosition < goalTol) {
-//      DetectionWindow = true;
-//    } else {
-//      DetectionWindow = false;
-//    }
 
     // PATIENT-triggered inhale
     if( pressure.get() < (pressure.peep() - TriggerSensitivity) ) {
