@@ -484,7 +484,7 @@ void loop() {
 
     // go to LISTEN_STATE 
     if(motorPosition < goalTol){
-      exhale_time = stateTimer;
+      exhale_time = millis() - stateTimer;
       setState(EX_PAUSE_STATE);
     }
 
