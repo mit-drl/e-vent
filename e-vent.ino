@@ -138,7 +138,8 @@ alarms::AlarmManager alarm(BEEPER_PIN, SNOOZE_PIN, &displ);
 
 /* Data logger -- SD Card (Adafruit Breakout Board)
     Pin configurations per https://www.arduino.cc/en/reference/SPI
-    CS  - pin 53 (other pins are possible)
+    The below applies to Arduino Mega1280 or Mega2560
+    CS  - pin 53
     DI  - ICSP-4 same as (pin #51)
     DO  - ICSP-1 same as (pin #50)
     CLK - ICSP-3 same as (pin #52)
