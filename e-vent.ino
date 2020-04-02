@@ -45,6 +45,7 @@ PastInhaleType pastInhale;
 float TriggerSensitivity;  // Tunable via a potentiometer. Its range is [2 cmH2O to 5 cmH2O] lower than PEEP
 bool DetectionWindow;
 float DP; // Driving Pressure = Plateau - PEEP
+unsigned long exhale_time;
 
 // Pins
 ////////////
@@ -60,7 +61,7 @@ int HOME_PIN = 4;
 int HOME_PIN = 10;
 #endif
 const int BEEPER_PIN = 11;
-const int SNOOZE_PIN = 52;
+const int SNOOZE_PIN = 42;
 
 // Safety settings
 ////////////////////
@@ -137,17 +138,18 @@ alarms::AlarmManager alarm(BEEPER_PIN, SNOOZE_PIN, &displ);
 
 /* Data logger -- SD Card (Adafruit Breakout Board)
     Pin configurations per https://www.arduino.cc/en/reference/SPI
-    CS  - pin 53 (other pins are possible)
-    DI  - SPI-4
-    DO  - SPI-1
-    CLK - SPI-3
+    The below applies to Arduino Mega1280 or Mega2560
+    CS  - pin 53
+    DI  - ICSP-4 same as (pin #51)
+    DO  - ICSP-1 same as (pin #50)
+    CLK - ICSP-3 same as (pin #52)
 */
 File dataFile;
 char data_file_name[] = "DATA000.TXT";
 #ifdef UNO
 bool LOGGER = false;
 #else
-bool LOGGER = false; // Data logger to a file on SD card
+bool LOGGER = true; // Data logger to a file on SD card
 const int chipSelect = 53; // Arduino Due
 #endif
 
@@ -238,8 +240,11 @@ void readPots(){
       dataFile.close();
     } else {
       // if the file didn't open, print an error:
-      Serial.print("error opening ");
-      Serial.println(data_file_name);
+      if(DEBUG){
+        Serial.print("error opening ");
+        Serial.println(data_file_name);
+      }
+      // else we need to THROW AN SD ALARM
     }
   }
 }
@@ -268,7 +273,10 @@ void goToPosition(int pos, int vel){
     }
   }
   else{
-    Serial.println("encoder not valid; goToPosition command not sent");
+    if(DEBUG) {
+      Serial.println("encoder not valid; goToPosition command not sent");
+    }
+    // ELSE THROW AN ALARM
   }
 }
 
@@ -276,11 +284,15 @@ void makeNewFile() {
   // setup SD card data logger
   pinMode(chipSelect, OUTPUT);
   if (!SD.begin(chipSelect)) {
-    Serial.println("SD card initialization failed!");
+    if(DEBUG) {
+      Serial.println("SD card initialization failed!");
+    }
     return;
   }
-  
-  Serial.println("SD card initialization done.");
+
+  if(DEBUG) {
+    Serial.println("SD card initialization done.");
+  }
 
   File number_file = SD.open("number.txt", FILE_READ);
 
@@ -303,23 +315,32 @@ void makeNewFile() {
 
   snprintf(data_file_name, sizeof(data_file_name), "DATA%03d.TXT", num);
 
-  Serial.print("DATA FILE NAME: ");
-  Serial.println(data_file_name);
+  if(DEBUG) {
+    Serial.print("DATA FILE NAME: ");
+    Serial.println(data_file_name);
+  }
   
   dataFile = SD.open(data_file_name, FILE_WRITE);
   if (dataFile) {
-    Serial.print("Writing to ");
-    Serial.print(data_file_name);
-    Serial.println("...");
+    if(DEBUG) {
+      Serial.print("Writing to ");
+      Serial.print(data_file_name);
+      Serial.println("...");
+    }
     dataFile.println("millis \tState \tMode \tPos \tVol \tBPM \tIE \tTin \tTex \tVin \tVex \tTrigSens \tPressure");
     dataFile.close();
-    Serial.print("Writing to ");
-    Serial.print(data_file_name);
-    Serial.println("... done.");
+    if(DEBUG) {
+      Serial.print("Writing to ");
+      Serial.print(data_file_name);
+      Serial.println("... done.");
+    }
   } else {
-    // if the file didn't open, print an error:
-    Serial.print("error opening ");
-    Serial.println(data_file_name);
+    if(DEBUG) {
+      // if the file didn't open, print an error:
+      Serial.print("error opening ");
+      Serial.println(data_file_name);
+    }
+    // else throw an SD card error!
   }
 }
 
@@ -408,9 +429,9 @@ void loop() {
   }
 
   // All States
-  delay(loopPeriod);
   readPots();
   readEncoder();
+  delay(loopPeriod);
   
   // read pressure every cycle to keep track of peak
   pressure.read();
@@ -464,6 +485,7 @@ void loop() {
 
     // go to LISTEN_STATE 
     if(motorPosition < goalTol){
+      exhale_time = millis() - stateTimer;
       setState(EX_PAUSE_STATE);
     }
 
@@ -511,7 +533,7 @@ void loop() {
     }
     
     // TIME-triggered inhale
-    if(millis()-stateTimer > Tex*1000 - exPauseTime){
+    if(millis()-stateTimer > Tex*1000 - exPauseTime - exhale_time){
       pressure.set_peak_and_reset();
       pressure.set_peep();
       displ.writePeakP(pressure.peak());
