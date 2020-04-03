@@ -4,17 +4,38 @@
 namespace alarms {
 
 
+/// DebouncedButton ///
+
+DebouncedButton::DebouncedButton(const int& pin): pin_(pin) {}
+
+void DebouncedButton::begin() {
+  pinMode(pin_, INPUT_PULLUP);
+}
+
+bool DebouncedButton::is_LOW() {
+  int reading = digitalRead(pin_);
+
+  bool low_value = false;
+  const unsigned long time_now = millis();
+  if (reading == LOW) {
+    if ((time_now - last_low_time_) > kDebounceDelay) {
+      low_value = true;
+    }
+    last_low_time_ = time_now;
+  }
+  return low_value;
+}
+
+
 /// Beeper ///
 
 Beeper::Beeper(const int& beeper_pin, const int& snooze_pin):
     beeper_pin_(beeper_pin), 
-    snooze_pin_(snooze_pin),
     snooze_button_(snooze_pin) {}
 
-
 void Beeper::begin() {
+  snooze_button_.begin();
   pinMode(beeper_pin_, OUTPUT);
-  pinMode(snooze_pin_, INPUT_PULLUP);
 }
 
 void Beeper::update() {
@@ -22,14 +43,14 @@ void Beeper::update() {
     toggleSnooze();
   }
   // check if snooze time is up
-  if (snoozed_ && millis() - snooze_time_ > SNOOZE_TIME) {
+  if (snoozed_ && millis() - snooze_time_ > kSnoozeTime) {
     snoozed_ = false;
   }
   if (alarms_on_ && !snoozed_) {
-    if(tone_step_ == notes_len_) tone_step_ = 0; // Start again if tone finished
-    beeperPlay();
+    if(tone_step_ == kNotesLen) tone_step_ = 0; // Start again if tone finished
+    play();
   } else {
-    tone_step_ = notes_len_;
+    tone_step_ = kNotesLen;
   }
 }
 
@@ -46,12 +67,12 @@ void Beeper::toggleSnooze() {
   }
 }
 
-void Beeper::beeperPlay(){
+void Beeper::play(){
   unsigned long current = millis();
-  if (tone_step_ == notes_len_) return; // The tone has completed
+  if (tone_step_ == kNotesLen) return; // The tone has completed
   if(current > tone_timer_){
-    tone(beeper_pin_, notes_[tone_step_], note_durations_[tone_step_]);
-    tone_timer_ = current + note_durations_[tone_step_] + note_pauses_[tone_step_];
+    tone(beeper_pin_, kNotes[tone_step_], kNoteDurations[tone_step_]);
+    tone_timer_ = current + kNoteDurations[tone_step_] + kNotePauses[tone_step_];
     tone_step_ ++;
   }
 }
@@ -90,16 +111,16 @@ int AlarmManager::numON() const {
 }
 
 const String AlarmManager::getText() const {
-  int num_on = numON();
+  const int num_on = numON();
   String text = "";
   if (num_on > 0) {
-    // determine which alarm to display
-    int index = millis() % (numON() * DISPLAY_TIME_EACH) / DISPLAY_TIME_EACH;
-    int count = 0;
+    // determine which of the on alarms to display
+    const int index = millis() % (num_on * kDisplayTime) / kDisplayTime;
+    int count_on = 0;
     int i;
     for (i = 0; i < NUM_ALARMS; i++) {
       if (alarms_[i].is_ON()) {
-        if (count++ == index) break;
+        if (count_on++ == index) break;
       }
     }
     text = alarms_[i].text();

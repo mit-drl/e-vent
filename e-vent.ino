@@ -352,10 +352,10 @@ bool homeSwitchPressed() {
 // check for errors
 void checkErrors() {
   // pressure above max pressure
-  alarm.high_pressure(pressure.get() >= MAX_PRESSURE);
+  alarm.highPressure(pressure.get() >= MAX_PRESSURE);
 
   // only worry about low pressure after homing
-  alarm.low_pressure(state < 4 && pressure.plateau() <= MIN_PLATEAU_PRESSURE);
+  alarm.lowPressure(state < 4 && pressure.plateau() <= MIN_PLATEAU_PRESSURE);
 
   if(DEBUG){ //TODO integrate these into the alarm system
     // TODO what to do with these alarms
