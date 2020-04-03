@@ -37,7 +37,7 @@ double Vex = 600; // Velocity to exhale
 double Vhome = 30; //The speed (0-255) in volts to use during homing
 int goalTol = 20; // The tolerance to start stopping on reaching goal
 int bagHome = 100; // The bag-specific position of the bag edge
-int pauseHome = 500; // The pause time (ms) during homing to ensure stability
+int pauseHome = 2000*bagHome/Vhome; // The pause time (ms) during homing to ensure stability
 
 // Assist Control Flags and Settings
 bool ASSIST_CONTROL = false; // Enable assist control
@@ -80,7 +80,7 @@ float BPM_MAX = 30;
 float IE_MIN = 1;
 float IE_MAX = 4;
 float VOL_MIN = 150;
-float VOL_MAX = 700; // 900; // For full 
+float VOL_MAX = 630; // 900; // For full 
 float TRIGGERSENSITIVITY_MIN = 0;
 float TRIGGERSENSITIVITY_MAX = 5;
 
@@ -88,7 +88,7 @@ float TRIGGER_LOWER_THRESHOLD = 2;
 
 // Bag Calibration for AMBU Adult bag
 float VOL_SLOPE = 9.39;
-float VOL_INT = -202.2;
+float VOL_INT = -102.2;
 
 //Setup States
 States state;
@@ -548,7 +548,7 @@ void loop() {
     if(enteringState){
       enteringState = false;
       //Consider displaying homing status on the screen
-      roboclaw.BackwardM1(address, Vhome);
+      roboclaw.BackwardM1(address, voltHome);
     }
 
     // Check status of limit switch
@@ -564,14 +564,14 @@ void loop() {
     if(enteringState){
       enteringState = false;
       //Consider displaying homing status on the screen
-      roboclaw.ForwardM1(address, Vhome);
+      roboclaw.ForwardM1(address, voltHome);
     }
     
     if(!homeSwitchPressed()) {
       roboclaw.ForwardM1(address, 0);
       roboclaw.SetEncM1(address, 0); // Zero the encoder
       delay(pauseHome); // Wait for things to settle
-      goToPosition(bagHome, 300); // Stop motor
+      goToPosition(bagHome, Vhome); // Stop motor
       delay(pauseHome); // Wait for things to settle
       roboclaw.SetEncM1(address, 0); // Zero the encoder
       setState(IN_STATE); 
