@@ -9,8 +9,6 @@ enum States {
   HOMING_STATE,   // 7
 };
 
-enum PastInhaleType {TIME_TRIGGERED, PATIENT_TRIGGERED};
-
 #include <LiquidCrystal.h>
 #include <RoboClaw.h>
 #include <SPI.h>
@@ -38,7 +36,7 @@ int pauseHome = 2000*bagHome/Vhome; // The pause time (ms) during homing to ensu
 
 // Assist Control Flags and Settings
 bool ASSIST_CONTROL = false; // Enable assist control
-PastInhaleType pastInhale;
+bool patientTriggered;
 float TriggerSensitivity;  // Tunable via a potentiometer. Its range is [2 cmH2O to 5 cmH2O] lower than PEEP
 bool DetectionWindow;
 float DP; // Driving Pressure = Plateau - PEEP
@@ -131,16 +129,6 @@ void setState(States newState){
   stateTimer = millis();
 }
 
-// Set the type of last inhale
-void setInhaleType(PastInhaleType aType){
-  pastInhale = aType;
-}
-
-// Get the type of last inhale
-PastInhaleType getInhaleType(){
-  return (PastInhaleType) pastInhale;
-}
-
 // readPots reads the pot values and sets the waveform parameters
 void readPots(){
   Volume = map(analogRead(VOL_PIN), 0, 1024, VOL_MIN, VOL_MAX);
@@ -161,7 +149,7 @@ void readPots(){
     Serial.print("State: ");
     Serial.print(state);
     Serial.print("\tMode: "); // TIME or PATIENT triggered
-    Serial.print((int) getInhaleType());
+    Serial.print((int) patientTriggered);
     Serial.print("\tPos: ");
     Serial.print(motorPosition);
     Serial.print("\tVol: ");
@@ -191,7 +179,7 @@ void readPots(){
     if (dataFile) {
       dataFile.print(millis()); dataFile.print("\t");
       dataFile.print(state); dataFile.print("\t");
-      dataFile.print((int) getInhaleType()); dataFile.print("\t");
+      dataFile.print((int) patientTriggered); dataFile.print("\t");
       dataFile.print(motorPosition); dataFile.print("\t");
       dataFile.print(Volume); dataFile.print("\t");
       dataFile.print(bpm); dataFile.print("\t");
@@ -443,7 +431,7 @@ void loop() {
       //consider changing PID tunings
       enteringState = false;
       goToPosition(0, Vex);
-      setInhaleType(TIME_TRIGGERED);
+      patientTriggered = false;
     }
 
     // go to LISTEN_STATE 
@@ -492,7 +480,7 @@ void loop() {
       displ.writePEEP(pressure.peep());
       displ.writePlateauP(pressure.plateau());
       setState(IN_STATE);
-      setInhaleType(PATIENT_TRIGGERED);
+      patientTriggered = true;
     }
     
     // TIME-triggered inhale
