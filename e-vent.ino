@@ -16,10 +16,6 @@ enum PastInhaleType {TIME_TRIGGERED, PATIENT_TRIGGERED};
 #include <SPI.h>
 #include <SD.h>
 
-#ifdef ARDUINO_AVR_UNO
-#define UNO
-#endif
-
 #include "Display.h"
 #include "Alarms.h"
 #include "Pressure.h"
@@ -27,8 +23,8 @@ enum PastInhaleType {TIME_TRIGGERED, PATIENT_TRIGGERED};
 // General Settings
 ////////////
 
-//bool LOGGER = true; // Data logger to a file on SD card
-bool DEBUG = false; // For logging
+bool LOGGER = true; // Data logger to a file on SD card
+bool DEBUG = false; // For controlling and displaying via serial
 int maxPwm = 255; // Maximum for PWM is 255 but this can be set lower
 int loopPeriod = 25; // The period (ms) of the control loop delay
 int pauseTime = 250; // Time in ms to pause after inhalation
@@ -56,11 +52,7 @@ int BPM_PIN = A1;
 int IE_PIN = A2;
 int PRESS_POT_PIN = A3;
 int PRESS_SENSE_PIN = A4;
-#ifdef UNO
-int HOME_PIN = 4;
-#else
 int HOME_PIN = 10;
-#endif
 const int BEEPER_PIN = 11;
 const int SNOOZE_PIN = 42;
 
@@ -97,21 +89,10 @@ bool enteringState;
 unsigned long stateTimer;
 
 // Roboclaw
-#ifdef UNO
-int ROBO_D0 = 2;
-int ROBO_D1 = 3;
-SoftwareSerial serial(ROBO_D0, ROBO_D1); // UNO
-RoboClaw roboclaw(&serial, 10000);
-#else
 RoboClaw roboclaw(&Serial3, 10000);
-#endif
-
 #define address 0x80
+
 // auto-tuned PID values for PG188
-//#define Kp 6.03917
-//#define Ki 0.94777
-//#define Kd 0.0
-//#define qpps 3187
 #define Kp 6.38650
 #define Ki 1.07623
 #define Kd 0.0
@@ -128,31 +109,14 @@ int motorPosition = 0;
 #define maxPos 1000
 
 // LCD Screen
-#ifdef UNO
-const int rs = 12, en = 11, d4 = 10, d5 = 9, d6 = 8, d7 = 7;
-#else
 const int rs = 9, en = 8, d4 = 7, d5 = 6, d6 = 5, d7 = 4;
-#endif
 LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 display::Display displ(&lcd);
 alarms::AlarmManager alarm(BEEPER_PIN, SNOOZE_PIN, &displ);
 
-/* Data logger -- SD Card (Adafruit Breakout Board)
-    Pin configurations per https://www.arduino.cc/en/reference/SPI
-    The below applies to Arduino Mega1280 or Mega2560
-    CS  - pin 53
-    DI  - ICSP-4 same as (pin #51)
-    DO  - ICSP-1 same as (pin #50)
-    CLK - ICSP-3 same as (pin #52)
-*/
 File dataFile;
 char data_file_name[] = "DATA000.TXT";
-#ifdef UNO
-bool LOGGER = false;
-#else
-bool LOGGER = true; // Data logger to a file on SD card
-const int chipSelect = 53; // Arduino Due
-#endif
+const int chipSelect = 53;
 
 // Pressure
 Pressure pressure(PRESS_SENSE_PIN);
@@ -410,11 +374,9 @@ void setup() {
     setState(DEBUG_STATE);
   }
 
-#ifndef UNO
   if(LOGGER){
     makeNewFile();
   }
-#endif
 }
 
 //////////////////
