@@ -21,7 +21,7 @@ const String& TextAnimation::text(){
 const String TextAnimation::getLine(){
   String new_text;
   unsigned long time_now = millis();
-  if(time_now - reset_time_ < BLINK_ON_FRACTION * BLINK_PERIOD){
+  if(time_now - reset_time_ < kBlinkOnFraction * kBlinkPeriod){
     new_text = text_;
     while(new_text.length() < WIDTH){
       new_text += " ";
@@ -30,8 +30,8 @@ const String TextAnimation::getLine(){
       new_text = new_text.substring(0, 20);
     }
   }
-  else if(time_now - reset_time_ < BLINK_PERIOD){
-    new_text = BLANK_LINE;
+  else if(time_now - reset_time_ < kBlinkPeriod){
+    new_text = kBlankLine;
   }
   else {
     reset_time_ = time_now;
@@ -59,14 +59,10 @@ void Display::update(){
   }
 }
 
-void Display::setAlarm(const String& alarm){
+void Display::writeAlarmText(const String& alarm){
   if(animation_.text() != alarm){
     animation_.reset(alarm);
   }
-}
-
-void Display::clearAlarm(){
-  animation_.reset();
 }
 
 void Display::writeVolume(const int& vol){

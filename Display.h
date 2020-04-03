@@ -8,21 +8,31 @@
 
 namespace display {
 
-static const int WIDTH = 20;
-static const int HEIGHT = 4;
-static const char* BLANK_LINE = "                    ";
-static const int BLINK_PERIOD = 1000;  // milliseconds
-static const float BLINK_ON_FRACTION = 0.5;
+static const int WIDTH = 20;  // Width of the display
+static const int HEIGHT = 4;  // Height of the display
 
 
+/**
+ * TextAnimation
+ * Handles the blinking of text in the display.
+ */
 class TextAnimation {
+  const char* kBlankLine = "                    ";  // One blank line of display width
+  const int kBlinkPeriod = 1000;        // Blinks this often in milliseconds
+  const float kBlinkOnFraction = 0.5;   // Text shows for this fraction of the blinking period
+
 public:
+
+  // Reset the text of the animation
   void reset(const String& text = "");
 
+  // Check if the animation text is empty
   bool empty();
 
+  // Get the animation text
   const String& text();
 
+  // Get the current string to display (text or blank line)
   const String getLine();
 
 private:
@@ -31,24 +41,23 @@ private:
 };
 
 
+/**
+ * Display
+ * Handles writing ventilator-specific things to the display.
+ */
 class Display {
 public:
-  // Construct from lcd display
-  // (make sure lcd is global)
+  // Constructor, save a pointer to the (global) display object
   Display(LiquidCrystal* lcd);
 
-  // Call inside setup() instead of lcd.begin()
+  // Setup during arduino setup()
   void begin();
 
-  // Update alarm display
-  // (for animation, e.g. blinking)
+  // Update during arduino loop()
   void update();
   
   // Write arbitrary alarm in the header
-  void setAlarm(const String& alarm);
-
-  // Clear alarm
-  void clearAlarm();
+  void writeAlarmText(const String& alarm);
 
   // Write volume as a percent of the max
   void writeVolume(const int& vol);
@@ -74,9 +83,6 @@ public:
 private:
   LiquidCrystal* lcd_;
   TextAnimation animation_;
-
-  // Write the top of the display
-  void writeHeader();
 
   // Write printable starting at (row, col)
   template <typename T>
