@@ -9,7 +9,7 @@ enum States {
   HOMING_STATE,   // 7
 };
 
-enum PastInhaleType {TIME_TRIGGERED, PATIENT_TRIGGERED};
+enum InhaleType {TIME_TRIGGERED, PATIENT_TRIGGERED};
 
 #include <LiquidCrystal.h>
 #include <RoboClaw.h>
@@ -40,8 +40,8 @@ int bagHome = 100; // The bag-specific position of the bag edge
 int pauseHome = 500; // The pause time (ms) during homing to ensure stability
 
 // Assist Control Flags and Settings
-bool ASSIST_CONTROL = false; // Enable assist control
-PastInhaleType pastInhale;
+bool ASSIST_CONTROL_Enabled = false; // Enables assist control and users can set it via a potentiometer.
+InhaleType pastInhale;
 float TriggerSensitivity;  // Tunable via a potentiometer. Its range is [2 cmH2O to 5 cmH2O] lower than PEEP
 bool DetectionWindow;
 float DP; // Driving Pressure = Plateau - PEEP
@@ -80,11 +80,10 @@ float BPM_MAX = 30;
 float IE_MIN = 1;
 float IE_MAX = 4;
 float VOL_MIN = 150;
-float VOL_MAX = 700; // 900; // For full 
+float VOL_MAX = 700; // 900; // For full
 float TRIGGERSENSITIVITY_MIN = 0;
-float TRIGGERSENSITIVITY_MAX = 5;
-
-float TRIGGER_LOWER_THRESHOLD = 2;
+float TRIGGERSENSITIVITY_MAX = 7;
+float TRIGGERSENSITIVITY_OFF = 5;
 
 // Bag Calibration for AMBU Adult bag
 float VOL_SLOPE = 9.39;
@@ -167,13 +166,13 @@ void setState(States newState){
 }
 
 // Set the type of last inhale
-void setInhaleType(PastInhaleType aType){
+void setInhaleType(InhaleType aType){
   pastInhale = aType;
 }
 
 // Get the type of last inhale
-PastInhaleType getInhaleType(){
-  return (PastInhaleType) pastInhale;
+InhaleType getInhaleType(){
+  return (InhaleType) pastInhale;
 }
 
 // readPots reads the pot values and sets the waveform parameters
@@ -181,17 +180,23 @@ void readPots(){
   Volume = map(analogRead(VOL_PIN), 0, 1024, VOL_MIN, VOL_MAX);
   float bpm = map(analogRead(BPM_PIN), 0, 1024, BPM_MIN, BPM_MAX);
   float ie = map(analogRead(IE_PIN), 0, 1024, IE_MIN*10, IE_MAX*10)/10.0; // Carry one decimal place
-  TriggerSensitivity = map(analogRead(PRESS_POT_PIN), 0, 1024, TRIGGERSENSITIVITY_MIN*100, TRIGGERSENSITIVITY_MAX*100)/100.0; //Carry two decimal places
+  TriggerSensitivity = map(analogRead(PRESS_POT_PIN), 0, 1024, TRIGGERSENSITIVITY_MAX*100, TRIGGERSENSITIVITY_MIN*100)/100.0; //Carry two decimal places
 
+  // Calculate waveform-relevant coefficients based on pots readings
   float period = 60.0/bpm; // seconds in each period
   Tin = period / (1 + ie);
   Tex = period - Tin;
   Vin = Volume/Tin; // Velocity in clicks/s
+  
+  // Enable/Disable assist control based on pots readings
+  ASSIST_CONTROL_Enabled = TriggerSensitivity > TRIGGERSENSITIVITY_OFF;
 
+  // Update display based on pots readings
   displ.writeVolume(max(0,map(Volume, VOL_MIN, VOL_MAX, 0, 100) * VOL_SLOPE + VOL_INT));
   displ.writeBPM(bpm);
   displ.writeIEratio(ie);
-  displ.writeACTrigger(TriggerSensitivity, TRIGGER_LOWER_THRESHOLD);
+  displ.writeACTrigger(TriggerSensitivity, ASSIST_CONTROL_Enabled);
+
   if(DEBUG){
     Serial.print("State: ");
     Serial.print(state);
@@ -521,7 +526,7 @@ void loop() {
     }
 
     // PATIENT-triggered inhale
-    if( pressure.get() < (pressure.peep() - TriggerSensitivity) && TriggerSensitivity > TRIGGER_LOWER_THRESHOLD ) {
+    if( ASSIST_CONTROL_Enabled && (pressure.get() < (pressure.peep() - TriggerSensitivity))) {
       pressure.set_peak_and_reset();
       // note: PEEP is NOT set in this case;
       // we use the PEEP recorded in EX_PAUSE_STATE instead

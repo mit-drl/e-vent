@@ -60,7 +60,7 @@ public:
   void writeIEratio(const float& ie);
 
   // AC trigger pressure
-  void writeACTrigger(const float& ac_trigger, const float& lower_threshold);
+  void writeACTrigger(const float& ac_trigger, const bool& ac_enabled);
 
   // Peak pressure in cm of H2O
   void writePeakP(const int& peak);

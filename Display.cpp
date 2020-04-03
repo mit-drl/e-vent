@@ -91,9 +91,9 @@ void Display::writeIEratio(const float& ie){
   write(2, 0, buff);
 }
 
-void Display::writeACTrigger(const float& ac_trigger, const float& lower_threshold){
+void Display::writeACTrigger(const float& ac_trigger, const bool& ac_enabled){
   char buff[13];
-  if(ac_trigger > lower_threshold){
+  if(ac_enabled){
     char ac_buff[4];
     dtostrf(ac_trigger, 3, 1, ac_buff);
     sprintf(buff, "AC=%scmH20 ", ac_buff);
