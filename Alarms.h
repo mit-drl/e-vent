@@ -8,37 +8,23 @@
 
 namespace alarms {
 
-// Time during which alarms are silenced, in milliseconds
-static const unsigned long SNOOZE_TIME = 2 * 60 * 1000UL;
 
-// Time each alarm is displayed if multiple, in milliseconds
-static const unsigned long DISPLAY_TIME_EACH = 2 * 1000UL;
-
-
-using display::Display;
-
-
-/// DebouncedButton ///
-
+/**
+ * DebouncedButton
+ * Represents a pullup button that filters out unintended LOW readings.
+ */
 class DebouncedButton {
-  const unsigned long DEBOUNCE_DELAY = 100;
+
+  const unsigned long kDebounceDelay = 100;
 
 public:
-  DebouncedButton(const int& pin): pin_(pin) {}
+  DebouncedButton(const int& pin);
 
-  bool is_LOW() {
-    int reading = digitalRead(pin_);
-    
-    bool low_value = false;
-    const unsigned long time_now = millis();
-    if (reading == LOW) {
-      if ((time_now - last_low_time_) > DEBOUNCE_DELAY) {
-        low_value = true;
-      }
-      last_low_time_ = time_now;
-    }
-    return low_value;
-  }
+  // Setup during arduino setup()
+  void begin();
+
+  // Check if button is low
+  bool is_LOW();
 
 private:
   int pin_;
@@ -46,16 +32,28 @@ private:
 };
 
 
-/// Beeper ///
-
+/**
+ * Beeper
+ * Represents the alarm speaker/buzzer. Handles playing of tones and snoozing.
+ */
 class Beeper {
+
+  // Time during which alarms are silenced, in milliseconds
+  static const unsigned long kSnoozeTime = 2 * 60 * 1000UL;
+
+  // notes in the emergency alarm defines the pattern:
+  static const int kNotesLen = 5;
+  const int kNotes[kNotesLen] = {NOTE_G4, NOTE_G4, NOTE_G4, NOTE_G4, NOTE_G5};
+  const int kNoteDurations[kNotesLen] = {300, 300, 300, 200, 200};
+  const int kNotePauses[kNotesLen] = {200, 200, 400, 100, 1500};
+
 public:
   Beeper(const int& beeper_pin, const int& snooze_pin);
 
-  // Setup 
+  // Setup during arduino setup()
   void begin();
 
-  // Update, should be called every loop
+  // Update during arduino loop()
   void update();
 
   // Indicate that alarms are ON
@@ -65,39 +63,33 @@ public:
   inline void alarmsOFF() { alarms_on_ = false; };
 
 private:
+  const int beeper_pin_;
+  DebouncedButton snooze_button_;
   bool alarms_on_ = false;
   unsigned long snooze_time_ = 0;
   bool snoozed_ = false;
   unsigned long tone_timer_ = 0;
-  int tone_step_ = notes_len_;
-
-  // notes in the emergency alarm defines the pattern:
-  static const int notes_len_ = 5;
-  int notes_[notes_len_] = {NOTE_G4, NOTE_G4, NOTE_G4, NOTE_G4, NOTE_G5};
-  int note_durations_[notes_len_] = {300, 300, 300, 200, 200};
-  int note_pauses_[notes_len_] = {200, 200, 400, 100, 1500};
-
-  const int beeper_pin_, snooze_pin_;
-  DebouncedButton snooze_button_;
+  int tone_step_ = kNotesLen;
 
   bool snoozeButtonPressed() const;
 
   void toggleSnooze();
 
-  inline void beeperPlay();
+  void play();
 };
 
 
-/// Alarm ///
-
+/** 
+ * Alarm
+ * Keeps track of the state of a specific alarm.
+ */
 class Alarm {
 public:
   Alarm(){};
   
-  // Construct from pins and display
   Alarm(const String& text): text_(text) {}
 
-  // Set ON value
+  // Set ON value (true == ON)
   inline void setValue(const bool& on) { on_ = on; }
 
   // Check if this alarm is on
@@ -112,15 +104,28 @@ private:
 };
 
 
-/// AlarmManager ///
+using display::Display;
 
+/**
+ * AlarmManager
+ * Manages multple alarms on the same screen space.
+ * If there is one alarm on, its text blinks in a designated portion of the screen,
+ * if there are more, each one blinks for `kDisplayTime` milliseconds at a time.
+ */
 class AlarmManager {
+
+  // Time each alarm is displayed if multiple, in milliseconds
+  static const unsigned long kDisplayTime = 2 * 1000UL;
+
+  // Indices for the different alarms
   enum Indices {
     HIGH_PRES_IDX = 0,
     LOW_PRES_IDX,
     BAD_PLAT_IDX,
     NUM_ALARMS 
   };
+
+  // Text to display for each alarm
   const char* strings[NUM_ALARMS] = {
     "HIGH PRESURE",
     "LOW PRES DISCONNECT?",
@@ -130,20 +135,20 @@ class AlarmManager {
 public:
   AlarmManager(const int& beeper_pin, const int& snooze_pin, Display* displ);
 
-  // Set up manager, should be called in setup()
+  // Setup during arduino setup()
   void begin();
 
   // Update alarms, should be called every loop
   void update();
 
-  // Indicate state of high pressure alarm
-  inline void high_pressure(const bool& value) { alarms_[HIGH_PRES_IDX].setValue(value); }
+  // Pressure too high alarm
+  inline void highPressure(const bool& value) { alarms_[HIGH_PRES_IDX].setValue(value); }
 
-  // Indicate state of low pressure alarm
-  inline void low_pressure(const bool& value) { alarms_[LOW_PRES_IDX].setValue(value); }
+  // Pressure too low alarm
+  inline void lowPressure(const bool& value) { alarms_[LOW_PRES_IDX].setValue(value); }
 
-  // Indicate state of bad plateau alarm
-  inline void bad_plateau(const bool& value) { alarms_[BAD_PLAT_IDX].setValue(value); }
+  // Bad plateau alarm
+  inline void badPlateau(const bool& value) { alarms_[BAD_PLAT_IDX].setValue(value); }
 
 private:
   Display* displ_;
