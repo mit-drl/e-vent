@@ -13,11 +13,10 @@ enum PastInhaleType {TIME_TRIGGERED, PATIENT_TRIGGERED};
 
 #include <LiquidCrystal.h>
 #include <RoboClaw.h>
-#include <SPI.h>
-#include <SD.h>
 
-#include "Display.h"
 #include "Alarms.h"
+#include "Display.h"
+#include "Logging.h"
 #include "Pressure.h"
 
 // General Settings
@@ -55,6 +54,7 @@ int PRESS_SENSE_PIN = A4;
 int HOME_PIN = 10;
 const int BEEPER_PIN = 11;
 const int SNOOZE_PIN = 42;
+const int SD_SELECT = 53;
 
 // Safety settings
 ////////////////////
@@ -112,15 +112,17 @@ int motorPosition = 0;
 const int rs = 9, en = 8, d4 = 7, d5 = 6, d6 = 5, d7 = 4;
 LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 display::Display displ(&lcd);
+
+// Alarms
 alarms::AlarmManager alarm(BEEPER_PIN, SNOOZE_PIN, &displ);
 
-File dataFile;
-char data_file_name[] = "DATA000.TXT";
-const int chipSelect = 53;
+// Logger
+logging::Logger logger(true, true);
 
 // Pressure
 Pressure pressure(PRESS_SENSE_PIN);
 
+// TODO: move function definitions after loop() or to classes if they don't use global vars
 // Functions
 ////////////
 
@@ -184,34 +186,6 @@ void readPots(){
     Serial.print(pressure.get());
     Serial.println();
   }
-
-  if(LOGGER){
-    //Writing data to the SD Card
-    dataFile = SD.open(data_file_name, FILE_WRITE);
-    if (dataFile) {
-      dataFile.print(millis()); dataFile.print("\t");
-      dataFile.print(state); dataFile.print("\t");
-      dataFile.print((int) getInhaleType()); dataFile.print("\t");
-      dataFile.print(motorPosition); dataFile.print("\t");
-      dataFile.print(Volume); dataFile.print("\t");
-      dataFile.print(bpm); dataFile.print("\t");
-      dataFile.print(ie); dataFile.print("\t");
-      dataFile.print(Tin); dataFile.print("\t");
-      dataFile.print(Tex); dataFile.print("\t");
-      dataFile.print(Vin); dataFile.print("\t");
-      dataFile.print(Vex); dataFile.print("\t");
-      dataFile.print(TriggerSensitivity); dataFile.print("\t");
-      dataFile.print(pressure.get()); dataFile.println("\t");
-      dataFile.close();
-    } else {
-      // if the file didn't open, print an error:
-      if(DEBUG){
-        Serial.print("error opening ");
-        Serial.println(data_file_name);
-      }
-      // else we need to THROW AN SD ALARM
-    }
-  }
 }
 
 int readEncoder() {
@@ -242,70 +216,6 @@ void goToPosition(int pos, int vel){
       Serial.println("encoder not valid; goToPosition command not sent");
     }
     // ELSE THROW AN ALARM
-  }
-}
-
-void makeNewFile() {
-  // setup SD card data logger
-  pinMode(chipSelect, OUTPUT);
-  if (!SD.begin(chipSelect)) {
-    if(DEBUG) {
-      Serial.println("SD card initialization failed!");
-    }
-    return;
-  }
-
-  if(DEBUG) {
-    Serial.println("SD card initialization done.");
-  }
-
-  File number_file = SD.open("number.txt", FILE_READ);
-
-  int num;
-  if(number_file){
-    num = number_file.parseInt();  
-
-    number_file.close();
-  }
-
-  SD.remove("number.txt");
-  
-  number_file = SD.open("number.txt", FILE_WRITE);
-
-  if(number_file){
-    number_file.println(num+1);
-
-    number_file.close();
-  }
-
-  snprintf(data_file_name, sizeof(data_file_name), "DATA%03d.TXT", num);
-
-  if(DEBUG) {
-    Serial.print("DATA FILE NAME: ");
-    Serial.println(data_file_name);
-  }
-  
-  dataFile = SD.open(data_file_name, FILE_WRITE);
-  if (dataFile) {
-    if(DEBUG) {
-      Serial.print("Writing to ");
-      Serial.print(data_file_name);
-      Serial.println("...");
-    }
-    dataFile.println("millis \tState \tMode \tPos \tVol \tBPM \tIE \tTin \tTex \tVin \tVex \tTrigSens \tPressure");
-    dataFile.close();
-    if(DEBUG) {
-      Serial.print("Writing to ");
-      Serial.print(data_file_name);
-      Serial.println("... done.");
-    }
-  } else {
-    if(DEBUG) {
-      // if the file didn't open, print an error:
-      Serial.print("error opening ");
-      Serial.println(data_file_name);
-    }
-    // else throw an SD card error!
   }
 }
 
@@ -346,6 +256,22 @@ void checkErrors() {
   }
 }
 
+// Set up logger level and variables
+void setupLogger() {
+  logger.begin(Serial, SD_SELECT);
+  logger.addVar("state", (int*)&state);
+  // logger.addVar("inhaletype", &inhaletype);
+  logger.addVar("motorPosition", &motorPosition);
+  logger.addVar("Volume", &Volume);
+  // logger.addVar("bpm", &bpm);
+  // logger.addVar("ie", &ie);
+  logger.addVar("Tin", &Tin);
+  logger.addVar("Tex", &Tex);
+  logger.addVar("Vin", &Vin);
+  logger.addVar("Vex", &Vex);
+  logger.addVar("TriggerSensitivity", &TriggerSensitivity);
+  // logger.addVar("pressure", pressure);
+}
 
 ///////////////////
 ////// Setup //////
@@ -357,6 +283,7 @@ void setup() {
   delay(1000);
   
   //Initialize
+  setupLogger();
   alarm.begin();
   pinMode(HOME_PIN, INPUT_PULLUP); // Pull up the limit switch
   displ.begin();
@@ -372,10 +299,6 @@ void setup() {
     Serial.begin(115200);
     while(!Serial);
     setState(DEBUG_STATE);
-  }
-
-  if(LOGGER){
-    makeNewFile();
   }
 }
 
@@ -542,3 +465,4 @@ void loop() {
     // Consider a timeout to give up on homing
   }
 }
+
