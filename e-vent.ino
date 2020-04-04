@@ -74,7 +74,7 @@ float IE_MIN = 1;
 float IE_MAX = 4;
 float VOL_MIN = 150;
 float VOL_MAX = 630; // 900; // For full 
-float TRIGGERSENSITIVITY_MIN = 0;
+float TRIGGERSENSITIVITY_MIN = 2;
 float TRIGGERSENSITIVITY_MAX = 7;
 float TRIGGERSENSITIVITY_OFF = 5;
 
@@ -151,7 +151,7 @@ void readPots(){
   Volume = map(analogRead(VOL_PIN), 0, 1024, VOL_MIN, VOL_MAX);
   float bpm = map(analogRead(BPM_PIN), 0, 1024, BPM_MIN, BPM_MAX);
   float ie = map(analogRead(IE_PIN), 0, 1024, IE_MIN*10, IE_MAX*10)/10.0; // Carry one decimal place
-  TriggerSensitivity = map(analogRead(PRESS_POT_PIN), 0, 1024, TRIGGERSENSITIVITY_MAX*100, TRIGGERSENSITIVITY_MIN*100)/100.0; //Carry two decimal places
+  TriggerSensitivity = map(analogRead(PRESS_POT_PIN), 0, 1024, TRIGGERSENSITIVITY_MIN*100, TRIGGERSENSITIVITY_MAX*100)/100.0; //Carry two decimal places
 
   // Calculate waveform-relevant coefficients based on pots readings
   float period = 60.0/bpm; // seconds in each period
@@ -160,7 +160,7 @@ void readPots(){
   Vin = Volume/Tin; // Velocity in clicks/s
   
   // Enable/Disable assist control based on pots readings
-  ASSIST_CONTROL_Enabled = TriggerSensitivity > TRIGGERSENSITIVITY_OFF;
+  ASSIST_CONTROL_Enabled = TriggerSensitivity < TRIGGERSENSITIVITY_OFF;
 
   // Update display based on pots readings
   displ.writeVolume(max(0,map(Volume, VOL_MIN, VOL_MAX, 0, 100) * VOL_SLOPE + VOL_INT));
