@@ -126,20 +126,22 @@ void Logger::makeFile() {
     serial_.println(filename_);
   }
   
-  File dataFile = SD.open(filename_, FILE_WRITE);
-  if (dataFile) {
+  File file = SD.open(filename_, FILE_WRITE);
+  if (file) {
     if(serial_.available()) {
       serial_.print("Writing to ");
       serial_.print(filename_);
       serial_.println("...");
     }
-    dataFile.println("millis \tState \tMode \tPos \tVol \tBPM \tIE \tTin \tTex \tVin \tVex \tTrigSens \tPressure");
-    dataFile.close();
-    if(serial_.available()) {
-      serial_.print("Writing to ");
-      serial_.print(filename_);
-      serial_.println("... done.");
+    String line;
+    for (int i = 0; i < num_vars_; i++) {
+      line += vars_[i].serialize();
+      if (i != num_vars_ - 1) {
+        line += delim_;
+      }
     }
+    file.println(line);
+    file.close();
   } else {
     if(serial_.available()) {
       // if the file didn't open, print an error:

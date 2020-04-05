@@ -1,3 +1,9 @@
+/**
+ TODO
+ - print csv header
+ - document public functions
+ - clean makeFile()
+ */
 #ifndef Logging_h
 #define Logging_h
 
@@ -75,6 +81,9 @@ private:
 
 
 /**
+ * Logger
+ * Handles logging to serial or SD card 
+ * 
  * Example usage:
  * 
  *    const bool log_to_serial = true;
@@ -100,7 +109,6 @@ private:
  *    
  *      logger.log();
  *    }
- * 
  */
 class Logger {
   static const int kMaxVars = 20;
@@ -134,15 +142,13 @@ private:
 };
 
 // Instantiation of template methods
-template 
-void Logger::addVar(const char var_name[], int* var, 
-                    const int& min_digits, const int& float_precision);
-template
-void Logger::addVar(const char var_name[], float* var, 
-                    const int& min_digits, const int& float_precision);
-template
-void Logger::addVar(const char var_name[], double* var, 
-                    const int& min_digits, const int& float_precision);
+#define ADDVAR(vartype) \
+  template void Logger::addVar(const char var_name[], vartype* var, \
+                               const int& min_digits, const int& float_precision);
+ADDVAR(int)
+ADDVAR(float)
+ADDVAR(double)
+#undef ADDVAR
 
 
 }  // namespace logging
