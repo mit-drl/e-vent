@@ -61,7 +61,8 @@ float MIN_PLATEAU_PRESSURE = 5; // ?????
 ////////////////////
 // Define cycle parameters
 float vIn, vEx, tIn, tHoldIn, tEx, tPeriod, Volume;
-float tCycleTimer, tLoopTimer;
+float tCycleTimer, tLoopTimer; // Timer starting at each breathing cycle, and each control loop iteration
+bool tLoopBuffer; // The amount of time left at the end of each loop
 
 // Define pot mappings
 float BPM_MIN = 10;
@@ -529,5 +530,6 @@ void loop() {
   }
 
   // Add a delay if there's still time in the loop period
-  delay(max(0, tLoopPeriod - tLoopTimer));
+  tLoopBuffer = max(0, tLoopPeriod - tLoopTimer);
+  delay(tLoopBuffer);
 }
