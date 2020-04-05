@@ -8,8 +8,8 @@
 
 namespace display {
 
-static const int WIDTH = 20;  // Width of the display
-static const int HEIGHT = 4;  // Height of the display
+static const int kWidth = 20;  // Width of the display
+static const int kHeight = 4;  // Height of the display
 
 
 /**

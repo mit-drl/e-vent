@@ -23,10 +23,10 @@ const String TextAnimation::getLine(){
   unsigned long time_now = millis();
   if(time_now - reset_time_ < kBlinkOnFraction * kBlinkPeriod){
     new_text = text_;
-    while(new_text.length() < WIDTH){
+    while(new_text.length() < kWidth){
       new_text += " ";
     }
-    if(new_text.length() > WIDTH){
+    if(new_text.length() > kWidth){
       new_text = new_text.substring(0, 20);
     }
   }
@@ -45,7 +45,7 @@ const String TextAnimation::getLine(){
 Display::Display(LiquidCrystal* lcd): lcd_(lcd) {}
 
 void Display::begin() {
-  lcd_->begin(WIDTH, HEIGHT);
+  lcd_->begin(kWidth, kHeight);
   lcd_->noCursor(); 
   update();
 }
