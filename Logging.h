@@ -3,6 +3,7 @@
  - print csv header
  - document public functions
  - clean makeFile()
+ - open and save less often
  */
 #ifndef Logging_h
 #define Logging_h
@@ -45,44 +46,23 @@ private:
     DOUBLE
   } type_;
 
-  void setPtr(int* var) {
-    var_.i = var;
-    type_ = INT;
-  }
+  void setPtr(int* var);
 
-  String serialize(int* var) const {
-    char buff[kMaxChars];
-    sprintf(buff, "%*d", min_digits_, *var);
-    return String(buff);
-  }
+  void setPtr(float* var);
 
-  void setPtr(float* var) {
-    var_.f = var;
-    type_ = FLOAT;
-  }
+  void setPtr(double* var);
 
-  String serialize(float* var) const {
-    char buff[kMaxChars];
-    dtostrf(*var, min_digits_, float_precision_, buff);
-    return String(buff);
-  }
+  String serialize(int* var) const;
 
-  void setPtr(double* var) {
-    var_.d = var;
-    type_ = DOUBLE;
-  }
+  String serialize(float* var) const;
 
-  String serialize(double* var) const {
-    char buff[kMaxChars];
-    dtostrf(*var, min_digits_, float_precision_, buff);
-    return String(buff);
-  }
+  String serialize(double* var) const;
 };
 
 
 /**
  * Logger
- * Handles logging to serial or SD card 
+ * Handles logging to serial or SD card.
  * 
  * Example usage:
  * 
@@ -93,7 +73,7 @@ private:
  *    
  *    setup() {
  *      const int sd_select_pin = 53;
- *      logger.begin(Serial, sd_select_pin);
+ *      logger.begin(&Serial, sd_select_pin);
  *
  *      logger.addVar("var1_label", &var1);
  *      logger.addVar("var2_label", &var2);
@@ -117,7 +97,7 @@ public:
   Logger(bool log_to_serial, bool log_to_SD, 
          bool serial_labels = true, const String delim = "\t");
 
-  void begin(const Stream& serial, const int& pin_select_SD);
+  void begin(const Stream* serial, const int& pin_select_SD);
 
   template <typename T>
   void addVar(const char var_name[], T* var, 
@@ -131,7 +111,7 @@ private:
   const String delim_;
 
   // Stream objects
-  Stream& serial_;
+  Stream* stream_;
   char filename_[12] = "DATA000.TXT";
 
   // Bookkeeping

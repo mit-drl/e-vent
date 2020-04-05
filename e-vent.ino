@@ -117,7 +117,11 @@ display::Display displ(&lcd);
 alarms::AlarmManager alarm(BEEPER_PIN, SNOOZE_PIN, &displ);
 
 // Logger
-logging::Logger logger(true, true);
+
+logging::Logger logger(true,   // log_to_serial,
+                       true,   // log_to_SD, 
+                       true,   // serial_labels, 
+                       ",");   // delim
 
 // Pressure
 Pressure pressure(PRESS_SENSE_PIN);
@@ -159,33 +163,6 @@ void readPots(){
   displ.writeBPM(bpm);
   displ.writeIEratio(ie);
   displ.writeACTrigger(TriggerSensitivity, TRIGGER_LOWER_THRESHOLD);
-  if(DEBUG){
-    Serial.print("State: ");
-    Serial.print(state);
-    Serial.print("\tMode: "); // TIME or PATIENT triggered
-    Serial.print((int) getInhaleType());
-    Serial.print("\tPos: ");
-    Serial.print(motorPosition);
-    Serial.print("\tVol: ");
-    Serial.print(Volume);
-    Serial.print("\tBPM: ");
-    Serial.print(bpm);
-    Serial.print("\tIE: ");
-    Serial.print(ie);
-    Serial.print("\tTin: ");
-    Serial.print(Tin);
-    Serial.print("\tTex:");
-    Serial.print(Tex);
-    Serial.print("\tVin:");
-    Serial.print(Vin);
-    Serial.print("\tVex:");
-    Serial.print(Vex);
-    Serial.print("\tTrigSens:");
-    Serial.print(TriggerSensitivity);
-    Serial.print("\tPressure:");
-    Serial.print(pressure.get());
-    Serial.println();
-  }
 }
 
 int readEncoder() {
@@ -258,10 +235,10 @@ void checkErrors() {
 
 // Set up logger level and variables
 void setupLogger() {
-  logger.begin(Serial, SD_SELECT);
+  logger.begin(&Serial, SD_SELECT);
   logger.addVar("state", (int*)&state);
   // logger.addVar("inhaletype", &inhaletype);
-  logger.addVar("motorPosition", &motorPosition);
+  logger.addVar("motorPosition", &motorPosition, 2);
   logger.addVar("Volume", &Volume);
   // logger.addVar("bpm", &bpm);
   // logger.addVar("ie", &ie);
@@ -278,6 +255,12 @@ void setupLogger() {
 ///////////////////
 
 void setup() {
+  if(DEBUG){
+    // setup serial coms
+    Serial.begin(115200);
+    while(!Serial);
+    setState(DEBUG_STATE);
+  }
 
   // wait 1 sec for the roboclaw to boot up
   delay(1000);
@@ -293,13 +276,6 @@ void setup() {
   roboclaw.SetM1VelocityPID(address,Kd,Kp,Ki,qpps); // Set Velocity PID Coefficients
   roboclaw.SetM1PositionPID(address,pKp,pKi,pKd,kiMax,deadzone,minPos,maxPos); // Set Position PID Coefficients
   roboclaw.SetEncM1(address, 0); // Zero the encoder
-  
-  if(DEBUG){
-    // setup serial coms
-    Serial.begin(115200);
-    while(!Serial);
-    setState(DEBUG_STATE);
-  }
 }
 
 //////////////////
@@ -464,5 +440,6 @@ void loop() {
     }
     // Consider a timeout to give up on homing
   }
+  logger.log();
 }
 

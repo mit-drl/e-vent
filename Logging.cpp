@@ -26,6 +26,44 @@ String Var::serialize() const {
   }
 }
 
+void Var::setPtr(int* var) {
+  var_.i = var;
+  type_ = INT;
+}
+
+void Var::setPtr(float* var) {
+  var_.f = var;
+  type_ = FLOAT;
+}
+
+void Var::setPtr(double* var) {
+  var_.d = var;
+  type_ = DOUBLE;
+}
+
+String Var::serialize(int* var) const {
+  char buff[kMaxChars];
+  snprintf(buff, kMaxChars, "%d", *var);
+
+  String string_out(buff);
+  while (string_out.length() < min_digits_) {
+    string_out = " " + string_out;
+  }
+
+  return String(buff);
+}
+
+String Var::serialize(float* var) const {
+  char buff[kMaxChars];
+  dtostrf(*var, min_digits_, float_precision_, buff);
+  return String(buff);
+}
+
+String Var::serialize(double* var) const {
+  char buff[kMaxChars];
+  dtostrf(*var, min_digits_, float_precision_, buff);
+  return String(buff);
+}
 
 
 /// Logger
@@ -37,22 +75,20 @@ Logger::Logger(bool log_to_serial, bool log_to_SD,
     serial_labels_(serial_labels),
     delim_(delim) {}
 
-void Logger::begin(const Stream& serial, const int& pin_select_SD) {
-  serial_ = serial;
+void Logger::begin(const Stream* serial, const int& pin_select_SD) {
+  stream_ = serial;
+  stream_->println("Logger::begin");
 
   if (log_to_SD_) {
     pinMode(pin_select_SD, OUTPUT);
 
+    stream_->println("SD card initialization");
     if (!SD.begin(pin_select_SD)) {
-      if(serial_.available()) {
-        serial_.println("SD card initialization failed!");
-      }
+      stream_->println("SD card initialization failed!");
       return;
     }
 
-    if(serial_.available()) {
-      serial_.println("SD card initialization done.");
-    }
+    stream_->println("SD card initialization done.");
 
     makeFile();
   }
@@ -88,7 +124,7 @@ void Logger::log() {
   }
   
   if (log_to_serial_) {
-    serial_.println(serial_labels_ ? line_with_labels : line);
+    stream_->println(serial_labels_ ? line_with_labels : line);
   }
 
   if (log_to_SD_) {
@@ -121,17 +157,17 @@ void Logger::makeFile() {
 
   snprintf(filename_, sizeof(filename_), "DATA%03d.TXT", num);
 
-  if(serial_.available()) {
-    serial_.print("DATA FILE NAME: ");
-    serial_.println(filename_);
+  if(stream_->available()) {
+    stream_->print("DATA FILE NAME: ");
+    stream_->println(filename_);
   }
   
   File file = SD.open(filename_, FILE_WRITE);
   if (file) {
-    if(serial_.available()) {
-      serial_.print("Writing to ");
-      serial_.print(filename_);
-      serial_.println("...");
+    if(stream_->available()) {
+      stream_->print("Writing to ");
+      stream_->print(filename_);
+      stream_->println("...");
     }
     String line;
     for (int i = 0; i < num_vars_; i++) {
@@ -143,10 +179,10 @@ void Logger::makeFile() {
     file.println(line);
     file.close();
   } else {
-    if(serial_.available()) {
+    if(stream_->available()) {
       // if the file didn't open, print an error:
-      serial_.print("error opening ");
-      serial_.println(filename_);
+      stream_->print("error opening ");
+      stream_->println(filename_);
     }
     // else throw an SD card error!
   }
