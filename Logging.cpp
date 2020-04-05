@@ -97,7 +97,7 @@ void Logger::update() {
   if ((!log_to_serial_ && !log_to_SD_) || num_vars_ == 0) {
     return;
   }
-
+  unsigned long time_now = millis();
   String line, line_with_labels;
 
   const bool need_line_without_labels = log_to_SD_ || (log_to_serial_ && !serial_labels_);
@@ -121,9 +121,16 @@ void Logger::update() {
   }
 
   if (log_to_SD_) {
-    File file = SD.open(filename_, FILE_WRITE);
-    file.println(line);
-    file.close();
+    if (!file_) {
+      file_ = SD.open(filename_, FILE_WRITE);
+    }
+    if (file_) {
+      file_.println(line);
+    }
+    if (time_now - last_save_ > kSavePeriod) {
+      file_.close();
+      last_save_ = time_now;
+    }
   }
 }
 
@@ -148,8 +155,8 @@ void Logger::makeFile() {
   snprintf(filename_, sizeof(filename_), "DATA%03d.TXT", num);
   
   // Print the header
-  File file = SD.open(filename_, FILE_WRITE);
-  if (file) {
+  file_ = SD.open(filename_, FILE_WRITE);
+  if (file_) {
     String line;
     for (int i = 0; i < num_vars_; i++) {
       line += vars_[i].label();
@@ -157,8 +164,9 @@ void Logger::makeFile() {
         line += delim_;
       }
     }
-    file.println(line);
-    file.close();
+    file_.println(line);
+    file_.close();
+    last_save_ = millis();
   }
 }
 

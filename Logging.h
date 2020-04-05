@@ -17,8 +17,6 @@ namespace logging {
  * A variable to be logged, with label and serialization methods.
  */
 class Var {
-  static const int kMaxChars = 10;
-
 public:
   Var() = default;
 
@@ -96,6 +94,11 @@ private:
  *    }
  */
 class Logger {
+
+  // Period for saving the file
+  const unsigned long kSavePeriod = 1 * 1000UL;
+
+  // Maximum number of variables to log
   static const int kMaxVars = 20;
 
 public:
@@ -124,8 +127,10 @@ private:
   // Stream objects
   Stream* stream_;
   char filename_[12] = "DATA000.TXT";
+  File file_;
 
   // Bookkeeping
+  unsigned long last_save_ = 0;
   Var vars_[kMaxVars];
   int num_vars_ = 0;
 
