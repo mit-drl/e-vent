@@ -26,6 +26,13 @@ String Var::serialize() const {
   }
 }
 
+String Var::pad(String& s) {
+  while (s.length() < min_digits_) {
+    s = " " + s;
+  }
+  return s;
+}
+
 void Var::setPtr(int* var) {
   var_.i = var;
   type_ = INT;
@@ -42,27 +49,18 @@ void Var::setPtr(double* var) {
 }
 
 String Var::serialize(int* var) const {
-  char buff[kMaxChars];
-  snprintf(buff, kMaxChars, "%d", *var);
-
-  String string_out(buff);
-  while (string_out.length() < min_digits_) {
-    string_out = " " + string_out;
-  }
-
-  return String(buff);
+  String string_out(*var);
+  return pad(string_out);
 }
 
 String Var::serialize(float* var) const {
-  char buff[kMaxChars];
-  dtostrf(*var, min_digits_, float_precision_, buff);
-  return String(buff);
+  String string_out(*var, float_precision_);
+  return pad(string_out);
 }
 
 String Var::serialize(double* var) const {
-  char buff[kMaxChars];
-  dtostrf(*var, min_digits_, float_precision_, buff);
-  return String(buff);
+  String string_out(*var, float_precision_);
+  return pad(string_out);
 }
 
 
@@ -88,7 +86,6 @@ void Logger::begin(const Stream* serial, const int& pin_select_SD) {
     pinMode(pin_select_SD, OUTPUT);
 
     if (!SD.begin(pin_select_SD)) {
-      stream_->println("SD card initialization failed!");
       return;
     }
 
@@ -131,40 +128,28 @@ void Logger::update() {
 }
 
 void Logger::makeFile() {
-  // setup SD card data logger
-  File number_file = SD.open("number.txt", FILE_READ);
-
+  // Open file with number of last saved file
   int num;
+  File number_file = SD.open("number.txt", FILE_READ);
   if(number_file){
     num = number_file.parseInt();  
-
     number_file.close();
   }
 
+  // Replace old number with new number
   SD.remove("number.txt");
-  
   number_file = SD.open("number.txt", FILE_WRITE);
-
   if(number_file){
-    number_file.println(num+1);
-
+    number_file.println(num + 1);
     number_file.close();
   }
 
+  // Assign the number to the new file name
   snprintf(filename_, sizeof(filename_), "DATA%03d.TXT", num);
-
-  if(stream_->available()) {
-    stream_->print("DATA FILE NAME: ");
-    stream_->println(filename_);
-  }
   
+  // Print the header
   File file = SD.open(filename_, FILE_WRITE);
   if (file) {
-    if(stream_->available()) {
-      stream_->print("Writing to ");
-      stream_->print(filename_);
-      stream_->println("...");
-    }
     String line;
     for (int i = 0; i < num_vars_; i++) {
       line += vars_[i].label();
@@ -174,13 +159,6 @@ void Logger::makeFile() {
     }
     file.println(line);
     file.close();
-  } else {
-    if(stream_->available()) {
-      // if the file didn't open, print an error:
-      stream_->print("error opening ");
-      stream_->println(filename_);
-    }
-    // else throw an SD card error!
   }
 }
 

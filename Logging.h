@@ -1,6 +1,5 @@
 /**
  TODO
- - clean makeFile()
  - open and save less often
  */
 #ifndef Logging_h
@@ -49,6 +48,8 @@ private:
     FLOAT,
     DOUBLE
   } type_;
+
+  String pad(String& s);
 
   void setPtr(int* var);
 

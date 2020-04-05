@@ -117,7 +117,7 @@ alarms::AlarmManager alarm(BEEPER_PIN, SNOOZE_PIN, &displ);
 
 // Logger
 
-logging::Logger logger(true,   // log_to_serial,
+logging::Logger logger(DEBUG,   // log_to_serial,
                        true,   // log_to_SD, 
                        true,   // serial_labels, 
                        "\t");   // delim
@@ -236,14 +236,14 @@ void checkErrors() {
 void setupLogger() {
   logger.addVar("state", (int*)&state);
   // logger.addVar("inhaletype", &inhaletype);
-  logger.addVar("motorPosition", &motorPosition, 2);
+  logger.addVar("motorPosition", &motorPosition, 4);
   logger.addVar("Volume", &Volume);
   // logger.addVar("bpm", &bpm);
   // logger.addVar("ie", &ie);
   logger.addVar("Tin", &Tin);
   logger.addVar("Tex", &Tex);
   logger.addVar("Vin", &Vin);
-  logger.addVar("Vex", &Vex);
+  logger.addVar("Vex", &Vex, 1, 1);
   logger.addVar("TriggerSensitivity", &TriggerSensitivity);
   // logger.addVar("pressure", pressure);
   logger.begin(&Serial, SD_SELECT);
