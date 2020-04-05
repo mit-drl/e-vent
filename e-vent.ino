@@ -1,10 +1,10 @@
 enum States {
   DEBUG_STATE,    // 0
   IN_STATE,       // 1
-  PAUSE_STATE,    // 2
+  HOLD_IN_STATE,  // 2
   EX_STATE,       // 3
-  EX_PAUSE_STATE, // 4
-  LISTEN_STATE,   // 5 (listen for inhalation to assist)
+  PEEP_PAUSE_STATE,//4
+  HOLD_EX_STATE,  // 5
   PREHOME_STATE,  // 6
   HOMING_STATE,   // 7
 };
@@ -26,11 +26,11 @@ bool DEBUG = false; // For controlling and displaying via serial
 int maxPwm = 255; // Maximum for PWM is 255 but this can be set lower
 float tLoopPeriod = 0.025; // The period (s) of the control loop
 float tHoldInDuration = 0.25; // Duration (s) to pause after inhalation
-float tMinHoldOutDuration = 0.05; // Time (s) to pause after exhalation / before watching for an assisted inhalation
+float tMinPeepPause = 0.05; // Time (s) to pause after exhalation / before watching for an assisted inhalation
 float tExMax = 1.00; // Maximum exhale timef
 float Vhome = 300; // The speed (clicks/s) to use during homing
 float voltHome = 30; // The speed (0-255) in volts to use during homing
-int goalTol = 20; // The tolerance to start stopping on reaching goal
+int goalTol = 10; // The tolerance to start stopping on reaching goal
 int bagHome = 100; // The bag-specific position of the bag edge
 float tPauseHome = 2.0*bagHome/Vhome; // The pause time (s) during homing to ensure stability
 
@@ -75,7 +75,6 @@ float TRIGGERSENSITIVITY_MIN = 0;
 float TRIGGERSENSITIVITY_MAX = 5;
 
 float TRIGGER_LOWER_THRESHOLD = 2;
-
 int ANALOG_PIN_MAX = 1023; // The maximum count on analog pins
 
 // Bag Calibration for AMBU Adult bag
@@ -146,7 +145,7 @@ void readPots(){
   tPeriod = 60.0/bpm; // seconds in each breathing cycle period
   tHoldIn = tPeriod / (1 + ie);
   tIn = tHoldIn - tHoldInDuration;
-  tEx = min(tHoldIn + tExMax, tPeriod - tMinHoldOutDuration);
+  tEx = min(tHoldIn + tExMax, tPeriod - tMinPeepPause);
   
   vIn = Volume/tIn; // Velocity in (clicks/s)
   vEx = Volume/(tEx - tHoldIn); // Velocity out (clicks/s)
@@ -422,11 +421,11 @@ void loop() {
     // Consider checking we reached the destination for fault detection
     // We need to figure out how to account for the PAUSE TIME
     if(now()-tCycleTimer > tIn){
-      setState(PAUSE_STATE);
+      setState(HOLD_IN_STATE);
     }
   }
   
-  else if(state == PAUSE_STATE){
+  else if(state == HOLD_IN_STATE){
     // Entering
     if(enteringState){
       enteringState = false;
@@ -447,49 +446,39 @@ void loop() {
 
     // go to LISTEN_STATE 
     if(motorPosition < goalTol){
-      setState(EX_PAUSE_STATE);
+      setState(PEEP_PAUSE_STATE);
     }
   }
 
-  else if(state == EX_PAUSE_STATE){
+  else if(state == PEEP_PAUSE_STATE){
     // Entering
     if(enteringState){
       enteringState = false;
     }
     
-    if(now()-tStateTimer > tMinHoldOutDuration){
+    if(now()-tStateTimer > tMinPeepPause){
       pressure.set_peep();
-      setState(LISTEN_STATE);
+      setState(HOLD_EX_STATE);
     }
   }
 
-  else if(state == LISTEN_STATE){
+  else if(state == HOLD_EX_STATE){
     // Entering
     if(enteringState){
       enteringState = false;
     }
 
-    // PATIENT-triggered inhale
-    if( pressure.get() < (pressure.peep() - TriggerSensitivity) && TriggerSensitivity > TRIGGER_LOWER_THRESHOLD ) {
+    // Check if patient triggers inhale
+    patientTriggered = pressure.get() < (pressure.peep() - TriggerSensitivity) && TriggerSensitivity > TRIGGER_LOWER_THRESHOLD;
+    if( patientTriggered ||  now() - tCycleTimer > tPeriod) {
       pressure.set_peak_and_reset();
-      // note: PEEP is NOT set in this case;
-      // we use the PEEP recorded in EX_PAUSE_STATE instead
       displ.writePeakP(pressure.peak());
       displ.writePEEP(pressure.peep());
       displ.writePlateauP(pressure.plateau());
       setState(IN_STATE);
-      patientTriggered = true;
-    }
-    
-    // TIME-triggered inhale
-    if(now() - tCycleTimer > tPeriod){
-      pressure.set_peak_and_reset();
-      pressure.set_peep();
-      displ.writePeakP(pressure.peak());
-      displ.writePEEP(pressure.peep());
-      displ.writePlateauP(pressure.plateau());
-      setState(IN_STATE);
-      patientTriggered = false;
+
+      // Consider if this is really necessary
+      if(!patientTriggered) pressure.set_peep(); // Set peep again if time triggered
     }
   }
 
