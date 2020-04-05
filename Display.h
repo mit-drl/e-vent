@@ -59,7 +59,7 @@ public:
   // Write arbitrary alarm in the header
   void writeAlarmText(const String& alarm);
 
-  // Write volume as a percent of the max
+  // Write volume in mL
   void writeVolume(const int& vol);
 
   // Beats per minute

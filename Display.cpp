@@ -68,7 +68,7 @@ void Display::writeAlarmText(const String& alarm){
 void Display::writeVolume(const int& vol){
   if(animation_.empty()){
     char buff[11];
-    sprintf(buff, "V=%3d cc  ", vol);
+    sprintf(buff, "V=%3d mL  ", vol);
     write(0, 0, buff);
   }
 }
