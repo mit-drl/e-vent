@@ -75,32 +75,28 @@ Logger::Logger(bool log_to_serial, bool log_to_SD,
     serial_labels_(serial_labels),
     delim_(delim) {}
 
-void Logger::begin(const Stream* serial, const int& pin_select_SD) {
-  stream_ = serial;
-  stream_->println("Logger::begin");
-
-  if (log_to_SD_) {
-    pinMode(pin_select_SD, OUTPUT);
-
-    stream_->println("SD card initialization");
-    if (!SD.begin(pin_select_SD)) {
-      stream_->println("SD card initialization failed!");
-      return;
-    }
-
-    stream_->println("SD card initialization done.");
-
-    makeFile();
-  }
-}
-
 template <typename T>
 void Logger::addVar(const char var_name[], T* var, 
                     const int& min_digits, const int& float_precision) {
   vars_[num_vars_++] = Var(var_name, var, min_digits, float_precision);
 }
 
-void Logger::log() {
+void Logger::begin(const Stream* serial, const int& pin_select_SD) {
+  stream_ = serial;
+
+  if (log_to_SD_) {
+    pinMode(pin_select_SD, OUTPUT);
+
+    if (!SD.begin(pin_select_SD)) {
+      stream_->println("SD card initialization failed!");
+      return;
+    }
+
+    makeFile();
+  }
+}
+
+void Logger::update() {
   if ((!log_to_serial_ && !log_to_SD_) || num_vars_ == 0) {
     return;
   }
@@ -171,7 +167,7 @@ void Logger::makeFile() {
     }
     String line;
     for (int i = 0; i < num_vars_; i++) {
-      line += vars_[i].serialize();
+      line += vars_[i].label();
       if (i != num_vars_ - 1) {
         line += delim_;
       }

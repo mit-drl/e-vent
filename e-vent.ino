@@ -22,7 +22,6 @@ enum PastInhaleType {TIME_TRIGGERED, PATIENT_TRIGGERED};
 // General Settings
 ////////////
 
-bool LOGGER = true; // Data logger to a file on SD card
 bool DEBUG = false; // For controlling and displaying via serial
 int maxPwm = 255; // Maximum for PWM is 255 but this can be set lower
 int loopPeriod = 25; // The period (ms) of the control loop delay
@@ -121,7 +120,7 @@ alarms::AlarmManager alarm(BEEPER_PIN, SNOOZE_PIN, &displ);
 logging::Logger logger(true,   // log_to_serial,
                        true,   // log_to_SD, 
                        true,   // serial_labels, 
-                       ",");   // delim
+                       "\t");   // delim
 
 // Pressure
 Pressure pressure(PRESS_SENSE_PIN);
@@ -235,7 +234,6 @@ void checkErrors() {
 
 // Set up logger level and variables
 void setupLogger() {
-  logger.begin(&Serial, SD_SELECT);
   logger.addVar("state", (int*)&state);
   // logger.addVar("inhaletype", &inhaletype);
   logger.addVar("motorPosition", &motorPosition, 2);
@@ -248,6 +246,7 @@ void setupLogger() {
   logger.addVar("Vex", &Vex);
   logger.addVar("TriggerSensitivity", &TriggerSensitivity);
   // logger.addVar("pressure", pressure);
+  logger.begin(&Serial, SD_SELECT);
 }
 
 ///////////////////
@@ -440,6 +439,6 @@ void loop() {
     }
     // Consider a timeout to give up on homing
   }
-  logger.log();
+  logger.update();
 }
 
