@@ -93,7 +93,7 @@ void AlarmManager::begin() {
 
 void AlarmManager::update() {
   const String text = getText();
-  displ_->setAlarm(text);
+  displ_->writeAlarmText(text);
   if (text.length() > 0) {
     beeper_.alarmsON();
   } else {
