@@ -122,10 +122,10 @@ alarms::AlarmManager alarm(BEEPER_PIN, SNOOZE_PIN, &displ);
 
 // Logger
 
-logging::Logger logger(DEBUG,   // log_to_serial,
+logging::Logger logger(true,    // log_to_serial,
                        true,    // log_to_SD, 
-                       true,    // serial_labels, 
-                       "\t");   // delim
+                       false,    // serial_labels, 
+                       ",");   // delim
 
 // Pressure
 Pressure pressureReader(PRESS_SENSE_PIN);
@@ -243,7 +243,7 @@ void setupLogger() {
   logger.addVar("tCycle", &tCycleDuration);
   logger.addVar("State", (int*)&state);
   logger.addVar("Mode", (int*)&patientTriggered);
-  logger.addVar("Pos", &motorPosition, 4);
+  logger.addVar("Pos", &motorPosition);
   logger.addVar("Vol", &Volume);
   logger.addVar("BPM", &bpm);
   logger.addVar("IE", &ieRatio);
@@ -263,10 +263,11 @@ void setupLogger() {
 ///////////////////
 
 void setup() {
+  // setup serial coms
+  Serial.begin(115200);
+  while(!Serial);
+
   if(DEBUG){
-    // setup serial coms
-    Serial.begin(115200);
-    while(!Serial);
     setState(DEBUG_STATE);
   }
 
