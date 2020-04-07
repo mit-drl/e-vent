@@ -1,27 +1,25 @@
 enum States {
-  DEBUG_STATE,    // 0
-  IN_STATE,       // 1
-  HOLD_IN_STATE,  // 2
-  EX_STATE,       // 3
-  PEEP_PAUSE_STATE,//4
-  HOLD_EX_STATE,  // 5
-  PREHOME_STATE,  // 6
-  HOMING_STATE,   // 7
+  DEBUG_STATE,      // 0
+  IN_STATE,         // 1
+  HOLD_IN_STATE,    // 2
+  EX_STATE,         // 3
+  PEEP_PAUSE_STATE, // 4
+  HOLD_EX_STATE,    // 5
+  PREHOME_STATE,    // 6
+  HOMING_STATE,     // 7
 };
 
 #include <LiquidCrystal.h>
 #include <RoboClaw.h>
-#include <SPI.h>
-#include <SD.h>
 
-#include "Display.h"
 #include "Alarms.h"
+#include "Display.h"
+#include "Logging.h"
 #include "Pressure.h"
 
 // General Settings
 ////////////
 
-bool LOGGER = true; // Data logger to a file on SD card
 bool DEBUG = false; // For controlling and displaying via serial
 int maxPwm = 255; // Maximum for PWM is 255 but this can be set lower
 float tLoopPeriod = 0.025; // The period (s) of the control loop
@@ -36,8 +34,8 @@ float tPauseHome = 2.0*bagHome/Vhome; // The pause time (s) during homing to ens
 
 // Assist Control Flags and Settings
 bool ASSIST_CONTROL = false; // Enable assist control
-bool patientTriggered;
-float TriggerSensitivity;  // Tunable via a potentiometer. Its range is [2 cmH2O to 5 cmH2O] lower than PEEP
+bool patientTriggered = false;
+float triggerSensitivity;  // Tunable via a potentiometer. Its range is [2 cmH2O to 5 cmH2O] lower than PEEP
 bool DetectionWindow;
 float DP; // Driving Pressure = Plateau - PEEP
 
@@ -51,6 +49,7 @@ int PRESS_SENSE_PIN = A4;
 int HOME_PIN = 10;
 const int BEEPER_PIN = 11;
 const int SNOOZE_PIN = 42;
+const int SD_SELECT = 53;
 
 // Safety settings
 ////////////////////
@@ -63,6 +62,14 @@ float MIN_PLATEAU_PRESSURE = 5; // ?????
 float vIn, vEx, tIn, tHoldIn, tEx, tPeriod, Volume;
 float tCycleTimer, tLoopTimer; // Timer starting at each breathing cycle, and each control loop iteration
 bool tLoopBuffer; // The amount of time left at the end of each loop
+float bpm;  // Respiratory rate
+float ieRatio;  // Inhale/exhale ratio
+float pressure;  // Latest pressure reading
+
+// Durations
+float tCycleDuration;   // Duration of each cycle
+float tExDuration;      // tEx - tHoldIn
+float tPeriodDuration;  // tPeriod - tEx
 
 // Define pot mappings
 float BPM_MIN = 10;
@@ -73,7 +80,6 @@ float VOL_MIN = 150;
 float VOL_MAX = 630; // 900; // For full 
 float TRIGGERSENSITIVITY_MIN = 0;
 float TRIGGERSENSITIVITY_MAX = 5;
-
 float TRIGGER_LOWER_THRESHOLD = 2;
 int ANALOG_PIN_MAX = 1023; // The maximum count on analog pins
 
@@ -110,15 +116,21 @@ int motorPosition = 0;
 const int rs = 9, en = 8, d4 = 7, d5 = 6, d6 = 5, d7 = 4;
 LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 display::Display displ(&lcd);
+
+// Alarms
 alarms::AlarmManager alarm(BEEPER_PIN, SNOOZE_PIN, &displ);
 
-File dataFile;
-char data_file_name[] = "DATA000.TXT";
-const int chipSelect = 53;
+// Logger
+
+logging::Logger logger(true,    // log_to_serial,
+                       true,    // log_to_SD, 
+                       false,    // serial_labels, 
+                       ",");   // delim
 
 // Pressure
-Pressure pressure(PRESS_SENSE_PIN);
+Pressure pressureReader(PRESS_SENSE_PIN);
 
+// TODO: move function definitions after loop() or to classes if they don't use global vars
 // Functions
 ////////////
 
@@ -137,84 +149,24 @@ void setState(States newState){
 // readPots reads the pot values and sets the waveform parameters
 void readPots(){
   Volume = map(analogRead(VOL_PIN), 0, ANALOG_PIN_MAX, VOL_MIN, VOL_MAX);
-  float bpm = map(analogRead(BPM_PIN), 0, ANALOG_PIN_MAX, BPM_MIN, BPM_MAX);
-  float ie = map(analogRead(IE_PIN), 0, ANALOG_PIN_MAX, IE_MIN*10, IE_MAX*10)/10.0; // Carry one decimal place
-  TriggerSensitivity = map(analogRead(PRESS_POT_PIN), 0, ANALOG_PIN_MAX, TRIGGERSENSITIVITY_MIN*100, TRIGGERSENSITIVITY_MAX*100)/100.0; //Carry two decimal places
+  bpm = map(analogRead(BPM_PIN), 0, ANALOG_PIN_MAX, BPM_MIN, BPM_MAX);
+  ieRatio = map(analogRead(IE_PIN), 0, ANALOG_PIN_MAX, IE_MIN*10, IE_MAX*10)/10.0; // Carry one decimal place
+  triggerSensitivity = map(analogRead(PRESS_POT_PIN), 0, ANALOG_PIN_MAX, TRIGGERSENSITIVITY_MIN*100, TRIGGERSENSITIVITY_MAX*100)/100.0; //Carry two decimal places
 
-  //float vIn, vEx, tIn, tHoldIn, tEx, tPeriod, Volume;
   tPeriod = 60.0/bpm; // seconds in each breathing cycle period
-  tHoldIn = tPeriod / (1 + ie);
+  tHoldIn = tPeriod / (1 + ieRatio);
   tIn = tHoldIn - tHoldInDuration;
   tEx = min(tHoldIn + tExMax, tPeriod - tMinPeepPause);
+  tExDuration = tEx - tHoldIn;  // For logging
+  tPeriodDuration = tPeriod - tEx;  // For logging
   
   vIn = Volume/tIn; // Velocity in (clicks/s)
   vEx = Volume/(tEx - tHoldIn); // Velocity out (clicks/s)
 
   displ.writeVolume(max(0,map(Volume, VOL_MIN, VOL_MAX, 0, 100) * VOL_SLOPE + VOL_INT));
   displ.writeBPM(bpm);
-  displ.writeIEratio(ie);
-  displ.writeACTrigger(TriggerSensitivity, TRIGGER_LOWER_THRESHOLD);
-  if(DEBUG){
-    Serial.print("CycleTime: ");
-    Serial.print(now() - tCycleTimer);    
-    Serial.print("\tState: ");
-    Serial.print(state);
-    Serial.print("\tMode: "); // TIME or PATIENT triggered
-    Serial.print((int) patientTriggered);
-    Serial.print("\tPos: ");
-    Serial.print(motorPosition);
-    Serial.print("\tVol: ");
-    Serial.print(Volume);
-    Serial.print("\tBPM: ");
-    Serial.print(bpm);
-    Serial.print("\tIE: ");
-    Serial.print(ie);
-    Serial.print("\tIn: ");
-    Serial.print(tIn);
-    Serial.print("\tHoldIn: ");
-    Serial.print(tHoldInDuration);
-    Serial.print("\ttEx:");
-    Serial.print(tEx - tHoldIn);
-    Serial.print("\ttHoldOut:");
-    Serial.print(tPeriod - tEx);
-    Serial.print("\tvIn:");
-    Serial.print(vIn);
-    Serial.print("\tvEx:");
-    Serial.print(vEx);
-    Serial.print("\tTrigSens:");
-    Serial.print(TriggerSensitivity);
-    Serial.print("\tPressure:");
-    Serial.print(pressure.get());
-    Serial.println();
-  }
-
-  if(LOGGER){
-    //Writing data to the SD Card
-    dataFile = SD.open(data_file_name, FILE_WRITE);
-    if (dataFile) {
-      dataFile.print(millis()); dataFile.print("\t");
-      dataFile.print(state); dataFile.print("\t");
-      dataFile.print((int) patientTriggered); dataFile.print("\t");
-      dataFile.print(motorPosition); dataFile.print("\t");
-      dataFile.print(Volume); dataFile.print("\t");
-      dataFile.print(bpm); dataFile.print("\t");
-      dataFile.print(ie); dataFile.print("\t");
-      dataFile.print(tIn); dataFile.print("\t");
-      dataFile.print(tEx); dataFile.print("\t");
-      dataFile.print(vIn); dataFile.print("\t");
-      dataFile.print(vEx); dataFile.print("\t");
-      dataFile.print(TriggerSensitivity); dataFile.print("\t");
-      dataFile.print(pressure.get()); dataFile.println("\t");
-      dataFile.close();
-    } else {
-      // if the file didn't open, print an error:
-      if(DEBUG){
-        Serial.print("error opening ");
-        Serial.println(data_file_name);
-      }
-      // else we need to THROW AN SD ALARM
-    }
-  }
+  displ.writeIEratio(ieRatio);
+  displ.writeACTrigger(triggerSensitivity, TRIGGER_LOWER_THRESHOLD);
 }
 
 int readEncoder() {
@@ -234,7 +186,7 @@ void goToPosition(int pos, int vel){
   if(valid){
     roboclaw.SpeedAccelDeccelPositionM1(address,accel,vel,deccel,pos,1);
     if(DEBUG){
-      Serial.print("CmdVel: ");
+      Serial.print("CmdVel: ");  // TODO remove
       Serial.print(vel);
       Serial.print("\tCmdDiff: ");
       Serial.println(pos);
@@ -248,70 +200,6 @@ void goToPosition(int pos, int vel){
   }
 }
 
-void makeNewFile() {
-  // setup SD card data logger
-  pinMode(chipSelect, OUTPUT);
-  if (!SD.begin(chipSelect)) {
-    if(DEBUG) {
-      Serial.println("SD card initialization failed!");
-    }
-    return;
-  }
-
-  if(DEBUG) {
-    Serial.println("SD card initialization done.");
-  }
-
-  File number_file = SD.open("number.txt", FILE_READ);
-
-  int num;
-  if(number_file){
-    num = number_file.parseInt();  
-
-    number_file.close();
-  }
-
-  SD.remove("number.txt");
-  
-  number_file = SD.open("number.txt", FILE_WRITE);
-
-  if(number_file){
-    number_file.println(num+1);
-
-    number_file.close();
-  }
-
-  snprintf(data_file_name, sizeof(data_file_name), "DATA%03d.TXT", num);
-
-  if(DEBUG) {
-    Serial.print("DATA FILE NAME: ");
-    Serial.println(data_file_name);
-  }
-  
-  dataFile = SD.open(data_file_name, FILE_WRITE);
-  if (dataFile) {
-    if(DEBUG) {
-      Serial.print("Writing to ");
-      Serial.print(data_file_name);
-      Serial.println("...");
-    }
-    dataFile.println("millis \tState \tMode \tPos \tVol \tBPM \tIE \tTin \tTex \tVin \tVex \tTrigSens \tPressure");
-    dataFile.close();
-    if(DEBUG) {
-      Serial.print("Writing to ");
-      Serial.print(data_file_name);
-      Serial.println("... done.");
-    }
-  } else {
-    if(DEBUG) {
-      // if the file didn't open, print an error:
-      Serial.print("error opening ");
-      Serial.println(data_file_name);
-    }
-    // else throw an SD card error!
-  }
-}
-
 // home switch
 bool homeSwitchPressed() {
   return digitalRead(HOME_PIN) == LOW;
@@ -320,10 +208,10 @@ bool homeSwitchPressed() {
 // check for errors
 void checkErrors() {
   // pressure above max pressure
-  alarm.highPressure(pressure.get() >= MAX_PRESSURE);
+  alarm.highPressure(pressureReader.get() >= MAX_PRESSURE);
 
   // only worry about low pressure after homing
-  alarm.lowPressure(state < 4 && pressure.plateau() <= MIN_PLATEAU_PRESSURE);
+  alarm.lowPressure(state < 4 && pressureReader.plateau() <= MIN_PLATEAU_PRESSURE);
 
   if(DEBUG){ //TODO integrate these into the alarm system
     // TODO what to do with these alarms
@@ -349,17 +237,45 @@ void checkErrors() {
   }
 }
 
+// Set up logger level and variables
+void setupLogger() {
+  logger.addVar("Time", &tCycleTimer);
+  logger.addVar("tCycle", &tCycleDuration);
+  logger.addVar("State", (int*)&state);
+  logger.addVar("Mode", (int*)&patientTriggered);
+  logger.addVar("Pos", &motorPosition);
+  logger.addVar("Vol", &Volume);
+  logger.addVar("BPM", &bpm);
+  logger.addVar("IE", &ieRatio);
+  logger.addVar("tIn", &tIn);
+  logger.addVar("tHoldIn", &tHoldInDuration);
+  logger.addVar("tEx", &tExDuration);
+  logger.addVar("tHoldOut", &tPeriodDuration);
+  logger.addVar("vIn", &vIn);
+  logger.addVar("vEx", &vEx);
+  logger.addVar("TrigSens", &triggerSensitivity);
+  logger.addVar("Pressure", &pressure);
+  logger.begin(&Serial, SD_SELECT);
+}
 
 ///////////////////
 ////// Setup //////
 ///////////////////
 
 void setup() {
+  // setup serial coms
+  Serial.begin(115200);
+  while(!Serial);
+
+  if(DEBUG){
+    setState(DEBUG_STATE);
+  }
 
   // wait 1 sec for the roboclaw to boot up
   delay(1000);
   
   //Initialize
+  setupLogger();
   alarm.begin();
   pinMode(HOME_PIN, INPUT_PULLUP); // Pull up the limit switch
   displ.begin();
@@ -369,17 +285,6 @@ void setup() {
   roboclaw.SetM1VelocityPID(address,Kd,Kp,Ki,qpps); // Set Velocity PID Coefficients
   roboclaw.SetM1PositionPID(address,pKp,pKi,pKd,kiMax,deadzone,minPos,maxPos); // Set Position PID Coefficients
   roboclaw.SetEncM1(address, 0); // Zero the encoder
-  
-  if(DEBUG){
-    // setup serial coms
-    Serial.begin(115200);
-    while(!Serial);
-    setState(DEBUG_STATE);
-  }
-
-  if(LOGGER){
-    makeNewFile();
-  }
 }
 
 //////////////////
@@ -398,7 +303,7 @@ void loop() {
   tLoopTimer = now(); // Start the loop timer
   readPots();
   readEncoder();
-  pressure.read();
+  pressureReader.read();
   checkErrors();
   alarm.update();
   displ.update();
@@ -414,7 +319,9 @@ void loop() {
     if(enteringState){
       // Consider changing PID tunings
       enteringState = false;
-      tCycleTimer = now(); // The cycle begins at the start of inspiration
+      const float tNow = now();
+      tCycleDuration = tNow - tCycleTimer;  // For logging
+      tCycleTimer = tNow; // The cycle begins at the start of inspiration
       goToPosition(Volume, vIn);
     }
 
@@ -431,7 +338,7 @@ void loop() {
       enteringState = false;
     }
     if(now()-tCycleTimer > tHoldIn){
-      pressure.set_plateau(); //Consider using some signal processing to better catch this value
+      pressureReader.set_plateau(); //Consider using some signal processing to better catch this value
       setState(EX_STATE);
     }
   }
@@ -457,7 +364,7 @@ void loop() {
     }
     
     if(now()-tStateTimer > tMinPeepPause){
-      pressure.set_peep();
+      pressureReader.set_peep();
       setState(HOLD_EX_STATE);
     }
   }
@@ -469,16 +376,18 @@ void loop() {
     }
 
     // Check if patient triggers inhale
-    patientTriggered = pressure.get() < (pressure.peep() - TriggerSensitivity) && TriggerSensitivity > TRIGGER_LOWER_THRESHOLD;
+    patientTriggered = pressureReader.get() < (pressureReader.peep() - triggerSensitivity) 
+        && triggerSensitivity > TRIGGER_LOWER_THRESHOLD;
+
     if( patientTriggered ||  now() - tCycleTimer > tPeriod) {
-      pressure.set_peak_and_reset();
-      displ.writePeakP(pressure.peak());
-      displ.writePEEP(pressure.peep());
-      displ.writePlateauP(pressure.plateau());
+      pressureReader.set_peak_and_reset();
+      displ.writePeakP(pressureReader.peak());
+      displ.writePEEP(pressureReader.peep());
+      displ.writePlateauP(pressureReader.plateau());
       setState(IN_STATE);
 
       // Consider if this is really necessary
-      if(!patientTriggered) pressure.set_peep(); // Set peep again if time triggered
+      if(!patientTriggered) pressureReader.set_peep(); // Set peep again if time triggered
     }
   }
 
@@ -518,7 +427,11 @@ void loop() {
     // Consider a timeout to give up on homing
   }
 
+  // Serialize all logged variables
+  logger.update();
+
   // Add a delay if there's still time in the loop period
   tLoopBuffer = max(0, tLoopPeriod - tLoopTimer);
   delay(tLoopBuffer);
 }
+
