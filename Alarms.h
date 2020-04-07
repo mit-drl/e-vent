@@ -122,14 +122,20 @@ class AlarmManager {
     HIGH_PRES_IDX = 0,
     LOW_PRES_IDX,
     BAD_PLAT_IDX,
+    UNMET_VOLUME,
+    NO_TIDAL_PRES,
+    OVER_CURRENT,
     NUM_ALARMS 
   };
 
   // Text to display for each alarm
   const char* strings[NUM_ALARMS] = {
-    "HIGH PRESURE",
+    "    HIGH PRESURE    ",
     "LOW PRES DISCONNECT?",
-    "ELEVATED PEAK PRES"
+    " ELEVATED PEAK PRES ",
+    " UNMET TIDAL VOLUME ",
+    " NO TIDAL PRESSURE  ",
+    " OVER CURRENT FAULT "
   };
 
 public:
@@ -149,6 +155,15 @@ public:
 
   // Bad plateau alarm
   inline void badPlateau(const bool& value) { alarms_[BAD_PLAT_IDX].setValue(value); }
+
+  // Tidal volume not met alarm
+  inline void unmetVolume(const bool& value) { alarms_[UNMET_VOLUME].setValue(value); }
+
+  // Tidal pressure not detected alarm
+  inline void noTidalPres(const bool& value) { alarms_[NO_TIDAL_PRES].setValue(value); }
+
+  // Current too high alarm
+  inline void overCurrent(const bool& value) { alarms_[OVER_CURRENT].setValue(value); }
 
 private:
   Display* displ_;
