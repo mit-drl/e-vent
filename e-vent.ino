@@ -59,6 +59,7 @@ float MIN_PLATEAU_PRESSURE = 5; // ?????
 // Initialize Vars
 ////////////////////
 // Define cycle parameters
+unsigned long cycleCount = 0;
 float vIn, vEx, tIn, tHoldIn, tEx, tPeriod, Volume;
 float tCycleTimer, tLoopTimer; // Timer starting at each breathing cycle, and each control loop iteration
 bool tLoopBuffer; // The amount of time left at the end of each loop
@@ -208,10 +209,10 @@ bool homeSwitchPressed() {
 // check for errors
 void checkErrors() {
   // pressure above max pressure
-  alarm.highPressure(pressureReader.get() >= MAX_PRESSURE);
+  alarm.highPressure(pressureReader.get() >= MAX_PRESSURE, cycleCount);
 
   // only worry about low pressure after homing
-  alarm.lowPressure(state < 4 && pressureReader.plateau() <= MIN_PLATEAU_PRESSURE);
+  alarm.lowPressure(state < 4 && pressureReader.plateau() <= MIN_PLATEAU_PRESSURE, cycleCount);
 
   if(DEBUG){ //TODO integrate these into the alarm system
     // TODO what to do with these alarms
@@ -323,6 +324,7 @@ void loop() {
       tCycleDuration = tNow - tCycleTimer;  // For logging
       tCycleTimer = tNow; // The cycle begins at the start of inspiration
       goToPosition(Volume, vIn);
+      cycleCount++;
     }
 
     // Consider checking we reached the destination for fault detection

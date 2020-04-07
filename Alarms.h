@@ -89,11 +89,24 @@ public:
   
   Alarm(const String& text): text_(text) {}
 
-  // Set ON value (true == ON)
-  inline void setValue(const bool& on) { on_ = on; }
+  // Set the ON value of this alarm, but only turn off if `bad == false` for at least `min_ok` 
+  // consecutive calls with different `seq`. The default is 1, meaning that a single call
+  // in which `bad == false` clears the alarm.
+  void setCondition(const bool& bad, const unsigned long& seq, const int& min_ok = 1) {
+    if (bad) {
+      on_ = true;
+      consecutive_good_ = 0;
+    } else {
+      consecutive_good_ += (seq != last_good_seq_);
+      last_good_seq_ = seq;
+      if (on_) {
+        on_ = consecutive_good_ < min_ok;
+      }
+    }
+  }
 
   // Check if this alarm is on
-  inline bool is_ON() const { return on_; }
+  inline bool isON() const { return on_; }
 
   // Get the text of this alarm
   inline const String text() const { return text_; }
@@ -101,6 +114,8 @@ public:
 private:
   String text_;
   bool on_ = false;
+  unsigned long consecutive_good_ = 0;
+  unsigned long last_good_seq_ = 0;
 };
 
 
@@ -148,22 +163,34 @@ public:
   void update();
 
   // Pressure too high alarm
-  inline void highPressure(const bool& value) { alarms_[HIGH_PRES_IDX].setValue(value); }
+  inline void highPressure(const bool& bad, const unsigned long& seq) {
+    alarms_[HIGH_PRES_IDX].setCondition(bad, seq, 2);
+  }
 
   // Pressure too low alarm
-  inline void lowPressure(const bool& value) { alarms_[LOW_PRES_IDX].setValue(value); }
+  inline void lowPressure(const bool& bad, const unsigned long& seq) {
+    alarms_[LOW_PRES_IDX].setCondition(bad, seq, 1);
+  }
 
   // Bad plateau alarm
-  inline void badPlateau(const bool& value) { alarms_[BAD_PLAT_IDX].setValue(value); }
+  inline void badPlateau(const bool& bad, const unsigned long& seq) {
+    alarms_[BAD_PLAT_IDX].setCondition(bad, seq, 2);
+  }
 
   // Tidal volume not met alarm
-  inline void unmetVolume(const bool& value) { alarms_[UNMET_VOLUME].setValue(value); }
+  inline void unmetVolume(const bool& bad, const unsigned long& seq) {
+    alarms_[UNMET_VOLUME].setCondition(bad, seq, 2);
+  }
 
   // Tidal pressure not detected alarm
-  inline void noTidalPres(const bool& value) { alarms_[NO_TIDAL_PRES].setValue(value); }
+  inline void noTidalPres(const bool& bad, const unsigned long& seq) {
+    alarms_[NO_TIDAL_PRES].setCondition(bad, seq, 2);
+  }
 
   // Current too high alarm
-  inline void overCurrent(const bool& value) { alarms_[OVER_CURRENT].setValue(value); }
+  inline void overCurrent(const bool& bad, const unsigned long& seq) {
+    alarms_[OVER_CURRENT].setCondition(bad, seq, 2);
+  }
 
 private:
   Display* displ_;

@@ -105,7 +105,7 @@ void AlarmManager::update() {
 int AlarmManager::numON() const {
   int num = 0;
   for (int i = 0; i < NUM_ALARMS; i++) {
-    num += (int)alarms_[i].is_ON();
+    num += (int)alarms_[i].isON();
   }
   return num;
 }
@@ -119,7 +119,7 @@ const String AlarmManager::getText() const {
     int count_on = 0;
     int i;
     for (i = 0; i < NUM_ALARMS; i++) {
-      if (alarms_[i].is_ON()) {
+      if (alarms_[i].isON()) {
         if (count_on++ == index) break;
       }
     }
