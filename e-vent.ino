@@ -9,8 +9,6 @@ enum States {
   HOMING_STATE,   // 7
 };
 
-enum InhaleType {TIME_TRIGGERED, PATIENT_TRIGGERED};
-
 #include <LiquidCrystal.h>
 #include <RoboClaw.h>
 #include <SPI.h>
@@ -493,7 +491,7 @@ void loop() {
       if(!patientTriggered) pressure.set_peep(); // Set peep again if time triggered
 
       // Consider an indicator that shows patient triggered cycles
-      
+
     }
   }
 
