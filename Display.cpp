@@ -21,17 +21,17 @@ const String& TextAnimation::text(){
 const String TextAnimation::getLine(){
   String new_text;
   unsigned long time_now = millis();
-  if(time_now - reset_time_ < BLINK_ON_FRACTION * BLINK_PERIOD){
+  if(time_now - reset_time_ < kBlinkOnFraction * kBlinkPeriod){
     new_text = text_;
-    while(new_text.length() < WIDTH){
+    while(new_text.length() < kWidth){
       new_text += " ";
     }
-    if(new_text.length() > WIDTH){
+    if(new_text.length() > kWidth){
       new_text = new_text.substring(0, 20);
     }
   }
-  else if(time_now - reset_time_ < BLINK_PERIOD){
-    new_text = BLANK_LINE;
+  else if(time_now - reset_time_ < kBlinkPeriod){
+    new_text = kBlankLine;
   }
   else {
     reset_time_ = time_now;
@@ -45,7 +45,7 @@ const String TextAnimation::getLine(){
 Display::Display(LiquidCrystal* lcd): lcd_(lcd) {}
 
 void Display::begin() {
-  lcd_->begin(WIDTH, HEIGHT);
+  lcd_->begin(kWidth, kHeight);
   lcd_->noCursor(); 
   update();
 }
@@ -59,20 +59,16 @@ void Display::update(){
   }
 }
 
-void Display::setAlarm(const String& alarm){
+void Display::writeAlarmText(const String& alarm){
   if(animation_.text() != alarm){
     animation_.reset(alarm);
   }
 }
 
-void Display::clearAlarm(){
-  animation_.reset();
-}
-
 void Display::writeVolume(const int& vol){
   if(animation_.empty()){
     char buff[11];
-    sprintf(buff, "V=%3d cc  ", vol);
+    sprintf(buff, "V=%3d mL  ", vol);
     write(0, 0, buff);
   }
 }

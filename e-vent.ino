@@ -1,10 +1,10 @@
 enum States {
   DEBUG_STATE,    // 0
   IN_STATE,       // 1
-  PAUSE_STATE,    // 2
+  HOLD_IN_STATE,  // 2
   EX_STATE,       // 3
-  EX_PAUSE_STATE, // 4
-  LISTEN_STATE,   // 5 (listen for inhalation to assist)
+  PEEP_PAUSE_STATE,//4
+  HOLD_EX_STATE,  // 5
   PREHOME_STATE,  // 6
   HOMING_STATE,   // 7
 };
@@ -26,27 +26,25 @@ enum InhaleType {TIME_TRIGGERED, PATIENT_TRIGGERED};
 bool LOGGER = true; // Data logger to a file on SD card
 bool DEBUG = false; // For controlling and displaying via serial
 int maxPwm = 255; // Maximum for PWM is 255 but this can be set lower
-int loopPeriod = 25; // The period (ms) of the control loop delay
-int pauseTime = 250; // Time in ms to pause after inhalation
-int exPauseTime = 50; // Time in ms to pause after exhalation / before watching for an assisted inhalation
-double Vex = 600; // Velocity to exhale
-double Vhome = 300; // The speed clicks per second to use during homing
-double voltHome = 30; // The speed (0-255) in volts to use during homing
-int goalTol = 20; // The tolerance to start stopping on reaching goal
+float tLoopPeriod = 0.025; // The period (s) of the control loop
+float tHoldInDuration = 0.25; // Duration (s) to pause after inhalation
+float tMinPeepPause = 0.05; // Time (s) to pause after exhalation / before watching for an assisted inhalation
+float tExMax = 1.00; // Maximum exhale timef
+float Vhome = 300; // The speed (clicks/s) to use during homing
+float voltHome = 30; // The speed (0-255) in volts to use during homing
+int goalTol = 10; // The tolerance to start stopping on reaching goal
 int bagHome = 100; // The bag-specific position of the bag edge
-int pauseHome = 2000*bagHome/Vhome; // The pause time (ms) during homing to ensure stability
+float tPauseHome = 2.0*bagHome/Vhome; // The pause time (s) during homing to ensure stability
 
 // Assist Control Flags and Settings
-bool ASSIST_CONTROL_Enabled = false; // Enables assist control and users can set it via a potentiometer.
-InhaleType pastInhale;
+bool ASSIST_CONTROL_Enabled = false; // Enable assist control
+bool patientTriggered;
 float TriggerSensitivity;  // Tunable via a potentiometer. Its range is [2 cmH2O to 5 cmH2O] lower than PEEP
 bool DetectionWindow;
 float DP; // Driving Pressure = Plateau - PEEP
-unsigned long exhale_time;
 
 // Pins
 ////////////
-
 int VOL_PIN = A0;
 int BPM_PIN = A1;
 int IE_PIN = A2;
@@ -63,13 +61,14 @@ float MIN_PLATEAU_PRESSURE = 5; // ?????
 
 // Initialize Vars
 ////////////////////
-
-// Define waveform parameters
-double Vin, Tin, Tex, Volume;  // Vex is fixed in settings above
+// Define cycle parameters
+float vIn, vEx, tIn, tHoldIn, tEx, tPeriod, Volume;
+float tCycleTimer, tLoopTimer; // Timer starting at each breathing cycle, and each control loop iteration
+bool tLoopBuffer; // The amount of time left at the end of each loop
 
 // Define pot mappings
 float BPM_MIN = 10;
-float BPM_MAX = 30;
+float BPM_MAX = 40;
 float IE_MIN = 1;
 float IE_MAX = 4;
 float VOL_MIN = 150;
@@ -77,6 +76,7 @@ float VOL_MAX = 630; // 900; // For full
 float TRIGGERSENSITIVITY_MIN = 2;
 float TRIGGERSENSITIVITY_MAX = 7;
 float TRIGGERSENSITIVITY_OFF = 5;
+int ANALOG_PIN_MAX = 1023; // The maximum count on analog pins
 
 // Bag Calibration for AMBU Adult bag
 float VOL_SLOPE = 9.39;
@@ -85,7 +85,7 @@ float VOL_INT = -102.2;
 //Setup States
 States state;
 bool enteringState;
-unsigned long stateTimer;
+float tStateTimer;
 
 // Roboclaw
 RoboClaw roboclaw(&Serial3, 10000);
@@ -129,36 +129,34 @@ Pressure pressure(PRESS_SENSE_PIN);
 // Functions
 ////////////
 
+// Returns the current time in seconds
+float now() {
+  return millis()*1e-3;
+}
+
 // Set the current state in the state machine
 void setState(States newState){
   enteringState = true;
   state = newState;
-  stateTimer = millis();
-}
-
-// Set the type of last inhale
-void setInhaleType(InhaleType aType){
-  pastInhale = aType;
-}
-
-// Get the type of last inhale
-InhaleType getInhaleType(){
-  return (InhaleType) pastInhale;
+  tStateTimer = now();
 }
 
 // readPots reads the pot values and sets the waveform parameters
 void readPots(){
-  Volume = map(analogRead(VOL_PIN), 0, 1024, VOL_MIN, VOL_MAX);
-  float bpm = map(analogRead(BPM_PIN), 0, 1024, BPM_MIN, BPM_MAX);
-  float ie = map(analogRead(IE_PIN), 0, 1024, IE_MIN*10, IE_MAX*10)/10.0; // Carry one decimal place
-  TriggerSensitivity = map(analogRead(PRESS_POT_PIN), 0, 1024, TRIGGERSENSITIVITY_MIN*100, TRIGGERSENSITIVITY_MAX*100)/100.0; //Carry two decimal places
+  Volume = map(analogRead(VOL_PIN), 0, ANALOG_PIN_MAX, VOL_MIN, VOL_MAX);
+  float bpm = map(analogRead(BPM_PIN), 0, ANALOG_PIN_MAX, BPM_MIN, BPM_MAX);
+  float ie = map(analogRead(IE_PIN), 0, ANALOG_PIN_MAX, IE_MIN*10, IE_MAX*10)/10.0; // Carry one decimal place
+  TriggerSensitivity = map(analogRead(PRESS_POT_PIN), 0, ANALOG_PIN_MAX, TRIGGERSENSITIVITY_MIN*100, TRIGGERSENSITIVITY_MAX*100)/100.0; //Carry two decimal places
 
-  // Calculate waveform-relevant coefficients based on pots readings
-  float period = 60.0/bpm; // seconds in each period
-  Tin = period / (1 + ie);
-  Tex = period - Tin;
-  Vin = Volume/Tin; // Velocity in clicks/s
+  //float vIn, vEx, tIn, tHoldIn, tEx, tPeriod, Volume;
+  tPeriod = 60.0/bpm; // seconds in each breathing cycle period
+  tHoldIn = tPeriod / (1 + ie);
+  tIn = tHoldIn - tHoldInDuration;
+  tEx = min(tHoldIn + tExMax, tPeriod - tMinPeepPause);
   
+  vIn = Volume/tIn; // Velocity in (clicks/s)
+  vEx = Volume/(tEx - tHoldIn); // Velocity out (clicks/s)
+
   // Enable/Disable assist control based on pots readings
   ASSIST_CONTROL_Enabled = TriggerSensitivity < TRIGGERSENSITIVITY_OFF;
 
@@ -169,10 +167,12 @@ void readPots(){
   displ.writeACTrigger(TriggerSensitivity, ASSIST_CONTROL_Enabled);
 
   if(DEBUG){
-    Serial.print("State: ");
+    Serial.print("CycleTime: ");
+    Serial.print(now() - tCycleTimer);    
+    Serial.print("\tState: ");
     Serial.print(state);
     Serial.print("\tMode: "); // TIME or PATIENT triggered
-    Serial.print((int) getInhaleType());
+    Serial.print((int) patientTriggered);
     Serial.print("\tPos: ");
     Serial.print(motorPosition);
     Serial.print("\tVol: ");
@@ -181,14 +181,18 @@ void readPots(){
     Serial.print(bpm);
     Serial.print("\tIE: ");
     Serial.print(ie);
-    Serial.print("\tTin: ");
-    Serial.print(Tin);
-    Serial.print("\tTex:");
-    Serial.print(Tex);
-    Serial.print("\tVin:");
-    Serial.print(Vin);
-    Serial.print("\tVex:");
-    Serial.print(Vex);
+    Serial.print("\tIn: ");
+    Serial.print(tIn);
+    Serial.print("\tHoldIn: ");
+    Serial.print(tHoldInDuration);
+    Serial.print("\ttEx:");
+    Serial.print(tEx - tHoldIn);
+    Serial.print("\ttHoldOut:");
+    Serial.print(tPeriod - tEx);
+    Serial.print("\tvIn:");
+    Serial.print(vIn);
+    Serial.print("\tvEx:");
+    Serial.print(vEx);
     Serial.print("\tTrigSens:");
     Serial.print(TriggerSensitivity);
     Serial.print("\tPressure:");
@@ -202,15 +206,15 @@ void readPots(){
     if (dataFile) {
       dataFile.print(millis()); dataFile.print("\t");
       dataFile.print(state); dataFile.print("\t");
-      dataFile.print((int) getInhaleType()); dataFile.print("\t");
+      dataFile.print((int) patientTriggered); dataFile.print("\t");
       dataFile.print(motorPosition); dataFile.print("\t");
       dataFile.print(Volume); dataFile.print("\t");
       dataFile.print(bpm); dataFile.print("\t");
       dataFile.print(ie); dataFile.print("\t");
-      dataFile.print(Tin); dataFile.print("\t");
-      dataFile.print(Tex); dataFile.print("\t");
-      dataFile.print(Vin); dataFile.print("\t");
-      dataFile.print(Vex); dataFile.print("\t");
+      dataFile.print(tIn); dataFile.print("\t");
+      dataFile.print(tEx); dataFile.print("\t");
+      dataFile.print(vIn); dataFile.print("\t");
+      dataFile.print(vEx); dataFile.print("\t");
       dataFile.print(TriggerSensitivity); dataFile.print("\t");
       dataFile.print(pressure.get()); dataFile.println("\t");
       dataFile.close();
@@ -403,20 +407,15 @@ void loop() {
   }
 
   // All States
+  tLoopTimer = now(); // Start the loop timer
   readPots();
   readEncoder();
-  delay(loopPeriod);
-  
-  // read pressure every cycle to keep track of peak
   pressure.read();
-
-  // Check errors and update alarm
   checkErrors();
   alarm.update();
-
-  // Update display header
   displ.update();
   
+  // State Machine
   if(state == DEBUG_STATE){
     // Stop motor
     roboclaw.ForwardM1(address, 0);
@@ -427,23 +426,24 @@ void loop() {
     if(enteringState){
       // Consider changing PID tunings
       enteringState = false;
-      goToPosition(Volume, Vin);
+      tCycleTimer = now(); // The cycle begins at the start of inspiration
+      goToPosition(Volume, vIn);
     }
 
     // Consider checking we reached the destination for fault detection
     // We need to figure out how to account for the PAUSE TIME
-    if(millis()-stateTimer > Tin*1000){
-      setState(PAUSE_STATE);
+    if(now()-tCycleTimer > tIn){
+      setState(HOLD_IN_STATE);
     }
   }
   
-  else if(state == PAUSE_STATE){
+  else if(state == HOLD_IN_STATE){
     // Entering
     if(enteringState){
       enteringState = false;
     }
-    if(millis()-stateTimer > pauseTime){
-      pressure.set_plateau();
+    if(now()-tCycleTimer > tHoldIn){
+      pressure.set_plateau(); //Consider using some signal processing to better catch this value
       setState(EX_STATE);
     }
   }
@@ -453,67 +453,47 @@ void loop() {
     if(enteringState){
       //consider changing PID tunings
       enteringState = false;
-      goToPosition(0, Vex);
-      setInhaleType(TIME_TRIGGERED);
+      goToPosition(0, vEx);
     }
 
     // go to LISTEN_STATE 
     if(motorPosition < goalTol){
-      exhale_time = millis() - stateTimer;
-      setState(EX_PAUSE_STATE);
-    }
-
-    // IF THERE IS A TIMEOUT for some reason
-    // (the motor is not able to reach the 0 position),
-    // just go straight to inhale?
-    if(millis()-stateTimer > Tex*1000){
-      pressure.set_peak_and_reset();
-      pressure.set_peep();
-      displ.writePeakP(pressure.peak());
-      displ.writePEEP(pressure.peep());
-      displ.writePlateauP(pressure.plateau());
-      setState(IN_STATE);
+      setState(PEEP_PAUSE_STATE);
     }
   }
 
-  else if(state == EX_PAUSE_STATE){
+  else if(state == PEEP_PAUSE_STATE){
     // Entering
     if(enteringState){
       enteringState = false;
     }
     
-    if(millis()-stateTimer > exPauseTime){
+    if(now()-tStateTimer > tMinPeepPause){
       pressure.set_peep();
-      setState(LISTEN_STATE);
+      setState(HOLD_EX_STATE);
     }
   }
 
-  else if(state == LISTEN_STATE){
+  else if(state == HOLD_EX_STATE){
     // Entering
     if(enteringState){
       enteringState = false;
     }
 
-    // PATIENT-triggered inhale
-    if( ASSIST_CONTROL_Enabled && (pressure.get() < (pressure.peep() - TriggerSensitivity))) {
+    // Check if patient triggers inhale
+    patientTriggered = ASSIST_CONTROL_Enabled && (pressure.get() < (pressure.peep() - TriggerSensitivity));
+    if( patientTriggered ||  now() - tCycleTimer > tPeriod) {
       pressure.set_peak_and_reset();
-      // note: PEEP is NOT set in this case;
-      // we use the PEEP recorded in EX_PAUSE_STATE instead
       displ.writePeakP(pressure.peak());
       displ.writePEEP(pressure.peep());
       displ.writePlateauP(pressure.plateau());
       setState(IN_STATE);
-      setInhaleType(PATIENT_TRIGGERED);
-    }
-    
-    // TIME-triggered inhale
-    if(millis()-stateTimer > Tex*1000 - exPauseTime - exhale_time){
-      pressure.set_peak_and_reset();
-      pressure.set_peep();
-      displ.writePeakP(pressure.peak());
-      displ.writePEEP(pressure.peep());
-      displ.writePlateauP(pressure.plateau());
-      setState(IN_STATE);
+
+      // Consider if this is really necessary
+      if(!patientTriggered) pressure.set_peep(); // Set peep again if time triggered
+
+      // Consider an indicator that shows patient triggered cycles
+      
     }
   }
 
@@ -544,12 +524,16 @@ void loop() {
     if(!homeSwitchPressed()) {
       roboclaw.ForwardM1(address, 0);
       roboclaw.SetEncM1(address, 0); // Zero the encoder
-      delay(pauseHome); // Wait for things to settle
+      delay(tPauseHome * 1000); // Wait for things to settle
       goToPosition(bagHome, Vhome); // Stop motor
-      delay(pauseHome); // Wait for things to settle
+      delay(tPauseHome * 1000); // Wait for things to settle
       roboclaw.SetEncM1(address, 0); // Zero the encoder
       setState(IN_STATE); 
     }
     // Consider a timeout to give up on homing
   }
+
+  // Add a delay if there's still time in the loop period
+  tLoopBuffer = max(0, tLoopPeriod - tLoopTimer);
+  delay(tLoopBuffer);
 }
