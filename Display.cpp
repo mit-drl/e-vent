@@ -126,7 +126,7 @@ void Display::showPatientIcon(const int& row, const int& col) {
   	B11111,
   	B11111,
   	B11111,
-  	B11011,
+  	B01010,
     B01010,
 	};
   lcd_->createChar(0, patientIcon);
