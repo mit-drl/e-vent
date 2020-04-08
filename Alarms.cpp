@@ -77,6 +77,23 @@ void Beeper::play(){
   }
 }
 
+
+/// Alarm ///
+
+void Alarm::setCondition(const bool& bad, const unsigned long& seq, const int& min_ok) {
+  if (bad) {
+    on_ = true;
+    consecutive_good_ = 0;
+  } else {
+    consecutive_good_ += (seq != last_good_seq_);
+    last_good_seq_ = seq;
+    if (on_) {
+      on_ = consecutive_good_ < min_ok;
+    }
+  }
+}
+
+
 /// AlarmManager ///
 
 AlarmManager::AlarmManager(const int& beeper_pin, const int& snooze_pin, 

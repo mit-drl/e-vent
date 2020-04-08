@@ -92,18 +92,7 @@ public:
   // Set the ON value of this alarm, but only turn off if `bad == false` for at least `min_ok` 
   // consecutive calls with different `seq`. The default is 1, meaning that a single call
   // in which `bad == false` clears the alarm.
-  void setCondition(const bool& bad, const unsigned long& seq, const int& min_ok = 1) {
-    if (bad) {
-      on_ = true;
-      consecutive_good_ = 0;
-    } else {
-      consecutive_good_ += (seq != last_good_seq_);
-      last_good_seq_ = seq;
-      if (on_) {
-        on_ = consecutive_good_ < min_ok;
-      }
-    }
-  }
+  void setCondition(const bool& bad, const unsigned long& seq, const int& min_ok = 1);
 
   // Check if this alarm is on
   inline bool isON() const { return on_; }
