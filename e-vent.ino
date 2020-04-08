@@ -33,7 +33,7 @@ int bagHome = 100; // The bag-specific position of the bag edge
 float tPauseHome = 2.0*bagHome/Vhome; // The pause time (s) during homing to ensure stability
 
 // Assist Control Flags and Settings
-bool ASSIST_CONTROL_Enabled = false; // Enable assist control
+bool ASSIST_CONTROL = false; // Enable assist control
 bool patientTriggered = false;
 float triggerSensitivity;  // Tunable via a potentiometer. Its range is [2 cmH2O to 5 cmH2O] lower than PEEP
 bool DetectionWindow;
@@ -163,8 +163,8 @@ void readPots(){
   vIn = Volume/tIn; // Velocity in (clicks/s)
   vEx = Volume/(tEx - tHoldIn); // Velocity out (clicks/s)
 
-  // Enable/Disable assist control based on pots readings
-  ASSIST_CONTROL_Enabled = triggerSensitivity < TRIGGERSENSITIVITY_OFF;
+  // Enable or Disable assist control based on pots readings
+  ASSIST_CONTROL = triggerSensitivity < TRIGGERSENSITIVITY_OFF;
 
   // Update display based on pots readings
   displ.writeVolume(max(0,map(Volume, VOL_MIN, VOL_MAX, 0, 100) * VOL_SLOPE + VOL_INT));
@@ -380,7 +380,7 @@ void loop() {
     }
 
     // Check if patient triggers inhale
-    patientTriggered = ASSIST_CONTROL_Enabled && (pressureReader.get() < (pressureReader.peep() - triggerSensitivity));
+    patientTriggered = ASSIST_CONTROL && (pressureReader.get() < (pressureReader.peep() - triggerSensitivity));
 
     if( patientTriggered ||  now() - tCycleTimer > tPeriod) {
       pressureReader.set_peak_and_reset();
