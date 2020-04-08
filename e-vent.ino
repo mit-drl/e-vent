@@ -81,9 +81,9 @@ float IE_MIN = 1;
 float IE_MAX = 4;
 float VOL_MIN = 150;
 float VOL_MAX = 630; // 900; // For full 
-float TRIGGERSENSITIVITY_MIN = 2;
-float TRIGGERSENSITIVITY_MAX = 7;
-float TRIGGERSENSITIVITY_OFF = 5;
+float TRIGGERSENSITIVITY_MIN = 0;
+float TRIGGERSENSITIVITY_MAX = 5;
+float TRIGGERSENSITIVITY_OFF = 2;
 int ANALOG_PIN_MAX = 1023; // The maximum count on analog pins
 
 // Bag Calibration for AMBU Adult bag
