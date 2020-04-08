@@ -79,9 +79,11 @@ void Beeper::play(){
 
 /// AlarmManager ///
 
-AlarmManager::AlarmManager(const int& beeper_pin, const int& snooze_pin, Display* displ):
+AlarmManager::AlarmManager(const int& beeper_pin, const int& snooze_pin, 
+                           Display* displ, unsigned long const* cycle_count):
     displ_(displ),
-    beeper_(beeper_pin, snooze_pin) {
+    beeper_(beeper_pin, snooze_pin),
+    cycle_count_(cycle_count) {
   for (int i = 0; i < NUM_ALARMS; i++) {
     alarms_[i] = Alarm(strings[i]);
   }

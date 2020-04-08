@@ -154,7 +154,8 @@ class AlarmManager {
   };
 
 public:
-  AlarmManager(const int& beeper_pin, const int& snooze_pin, Display* displ);
+  AlarmManager(const int& beeper_pin, const int& snooze_pin, 
+               Display* displ, unsigned long const* cycle_count);
 
   // Setup during arduino setup()
   void begin();
@@ -163,39 +164,40 @@ public:
   void update();
 
   // Pressure too high alarm
-  inline void highPressure(const bool& bad, const unsigned long& seq) {
-    alarms_[HIGH_PRES_IDX].setCondition(bad, seq, 2);
+  inline void highPressure(const bool& value) {
+    alarms_[HIGH_PRES_IDX].setCondition(value, *cycle_count_, 2);
   }
 
   // Pressure too low alarm
-  inline void lowPressure(const bool& bad, const unsigned long& seq) {
-    alarms_[LOW_PRES_IDX].setCondition(bad, seq, 1);
+  inline void lowPressure(const bool& value) {
+    alarms_[LOW_PRES_IDX].setCondition(value, *cycle_count_, 1);
   }
 
   // Bad plateau alarm
-  inline void badPlateau(const bool& bad, const unsigned long& seq) {
-    alarms_[BAD_PLAT_IDX].setCondition(bad, seq, 2);
+  inline void badPlateau(const bool& value) {
+    alarms_[BAD_PLAT_IDX].setCondition(value, *cycle_count_, 2);
   }
 
   // Tidal volume not met alarm
-  inline void unmetVolume(const bool& bad, const unsigned long& seq) {
-    alarms_[UNMET_VOLUME].setCondition(bad, seq, 2);
+  inline void unmetVolume(const bool& value) {
+    alarms_[UNMET_VOLUME].setCondition(value, *cycle_count_, 2);
   }
 
   // Tidal pressure not detected alarm
-  inline void noTidalPres(const bool& bad, const unsigned long& seq) {
-    alarms_[NO_TIDAL_PRES].setCondition(bad, seq, 2);
+  inline void noTidalPres(const bool& value) {
+    alarms_[NO_TIDAL_PRES].setCondition(value, *cycle_count_, 2);
   }
 
   // Current too high alarm
-  inline void overCurrent(const bool& bad, const unsigned long& seq) {
-    alarms_[OVER_CURRENT].setCondition(bad, seq, 2);
+  inline void overCurrent(const bool& value) {
+    alarms_[OVER_CURRENT].setCondition(value, *cycle_count_, 2);
   }
 
 private:
   Display* displ_;
   Beeper beeper_;
   Alarm alarms_[NUM_ALARMS];
+  unsigned long const* cycle_count_;
 
   // Get number of alarms that are ON
   int numON() const;

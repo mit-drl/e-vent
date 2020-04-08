@@ -119,7 +119,7 @@ LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 display::Display displ(&lcd);
 
 // Alarms
-alarms::AlarmManager alarm(BEEPER_PIN, SNOOZE_PIN, &displ);
+alarms::AlarmManager alarm(BEEPER_PIN, SNOOZE_PIN, &displ, &cycleCount);
 
 // Logger
 
@@ -209,10 +209,10 @@ bool homeSwitchPressed() {
 // check for errors
 void checkErrors() {
   // pressure above max pressure
-  alarm.highPressure(pressureReader.get() >= MAX_PRESSURE, cycleCount);
+  alarm.highPressure(pressureReader.get() >= MAX_PRESSURE);
 
   // only worry about low pressure after homing
-  alarm.lowPressure(state < 4 && pressureReader.plateau() <= MIN_PLATEAU_PRESSURE, cycleCount);
+  alarm.lowPressure(state < 4 && pressureReader.plateau() <= MIN_PLATEAU_PRESSURE);
 
   if(DEBUG){ //TODO integrate these into the alarm system
     // TODO what to do with these alarms
