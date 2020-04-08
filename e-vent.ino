@@ -172,7 +172,7 @@ void readPots(){
   vEx = Volume/(tEx - tHoldIn); // Velocity out (clicks/s)
 
   // Enable or Disable assist control based on pots readings
-  ASSIST_CONTROL = triggerSensitivity < TRIGGERSENSITIVITY_OFF;
+  ASSIST_CONTROL = triggerSensitivity > TRIGGERSENSITIVITY_OFF;
 
   // Update display based on pots readings
   displ.writeVolume(ticks2Volume(Volume));
