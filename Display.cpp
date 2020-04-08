@@ -67,8 +67,8 @@ void Display::writeAlarmText(const String& alarm){
 
 void Display::writeVolume(const int& vol){
   if(animation_.empty()){
-    char buff[11];
-    sprintf(buff, "V=%3d mL  ", vol);
+    char buff[7];
+    sprintf(buff, "V=%3d mL", vol);
     write(0, 0, buff);
   }
 }
@@ -146,9 +146,26 @@ void Display::showTimeIcon(const int& row, const int& col) {
     B11111,
     B11111,
 	};
-  lcd_->createChar(0, timeIcon);
+  lcd_->createChar(1, timeIcon);
   lcd_->setCursor(col, row);
   lcd_->write(byte(1));
+}
+
+// Hides icon
+void Display::hideIcon(const int& row, const int& col) {
+  byte timeIcon[8] = {
+    B00000,
+  	B00000,
+  	B00000,
+  	B00000,
+  	B00000,
+  	B00000,
+    B00000,
+    B00000,
+	};
+  lcd_->createChar(2, timeIcon);
+  lcd_->setCursor(col, row);
+  lcd_->write(byte(2));
 }
 
 template <typename T>

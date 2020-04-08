@@ -86,6 +86,9 @@ public:
   // This displays a time icon
   void showTimeIcon(const int& row, const int& col);
 
+  // Hides icon
+  void hideIcon(const int& row, const int& col);
+
 private:
   LiquidCrystal* lcd_;
   TextAnimation animation_;

@@ -178,7 +178,7 @@ void readPots(){
   displ.writeVolume(ticks2Volume(Volume));
   displ.writeBPM(bpm);
   displ.writeIEratio(ieRatio);
-  displ.writeACTrigger(triggerSensitivity, TRIGGERSENSITIVITY_OFF);
+  displ.writeACTrigger(triggerSensitivity, ASSIST_CONTROL);
 }
 
 int readEncoder() {
@@ -371,6 +371,7 @@ void loop() {
       //consider changing PID tunings
       enteringState = false;
       goToPosition(0, vEx);
+      displ.hideIcon(0,9);
     }
 
     // go to LISTEN_STATE 
@@ -413,9 +414,9 @@ void loop() {
 
       // An indicator that shows patient-triggered or time-triggered cycles
       if(patientTriggered) {
-        displ.showPatientIcon(20,0);
+        displ.showPatientIcon(0,9);
       } else {
-        displ.showTimeIcon(20,0);
+        displ.showTimeIcon(0,9);
       }
     }
   }
