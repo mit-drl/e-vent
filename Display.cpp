@@ -117,6 +117,40 @@ void Display::writePEEP(const int& peep){
   write(3, 11, buff);
 }
 
+// This displays a patient icon
+void Display::showPatientIcon(const int& row, const int& col) {
+  byte patientIcon[8] = {
+  	B01110,
+  	B01110,
+  	B00100,
+  	B11111,
+  	B11111,
+  	B11111,
+  	B11011,
+    B01010,
+	};
+  lcd_->createChar(0, patientIcon);
+  lcd_->setCursor(col, row);
+  lcd_->write(byte(0));
+}
+
+// This displays a time icon
+void Display::showTimeIcon(const int& row, const int& col) {
+  byte timeIcon[8] = {
+    B00000,
+  	B11111,
+  	B11111,
+  	B01110,
+  	B00100,
+  	B01110,
+    B11111,
+    B11111,
+	};
+  lcd_->createChar(0, timeIcon);
+  lcd_->setCursor(col, row);
+  lcd_->write(byte(1));
+}
+
 template <typename T>
 void Display::write(const int& row, const int& col, const T& printable){
   lcd_->setCursor(col, row);

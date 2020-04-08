@@ -164,13 +164,13 @@ void readPots(){
   vEx = Volume/(tEx - tHoldIn); // Velocity out (clicks/s)
 
   // Enable/Disable assist control based on pots readings
-  ASSIST_CONTROL_Enabled = TriggerSensitivity < TRIGGERSENSITIVITY_OFF;
+  ASSIST_CONTROL_Enabled = triggerSensitivity < TRIGGERSENSITIVITY_OFF;
 
   // Update display based on pots readings
   displ.writeVolume(max(0,map(Volume, VOL_MIN, VOL_MAX, 0, 100) * VOL_SLOPE + VOL_INT));
   displ.writeBPM(bpm);
   displ.writeIEratio(ieRatio);
-  displ.writeACTrigger(triggerSensitivity, TRIGGER_LOWER_THRESHOLD);
+  displ.writeACTrigger(triggerSensitivity, TRIGGERSENSITIVITY_OFF);
 }
 
 int readEncoder() {
@@ -392,7 +392,12 @@ void loop() {
       // Consider if this is really necessary
       if(!patientTriggered) pressureReader.set_peep(); // Set peep again if time triggered
 
-      // Consider an indicator that shows patient triggered cycles
+      // An indicator that shows patient-triggered or time-triggered cycles
+      if(patientTriggered) {
+        displ.showPatientIcon(20,0);
+      } else {
+        displ.showTimeIcon(20,0);
+      }
     }
   }
 

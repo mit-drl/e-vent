@@ -80,6 +80,12 @@ public:
   // PEEP pressure in cm of H2O
   void writePEEP(const int& peep);
 
+  // This displays a patient icon
+  void showPatientIcon(const int& row, const int& col);
+
+  // This displays a time icon
+  void showTimeIcon(const int& row, const int& col);
+
 private:
   LiquidCrystal* lcd_;
   TextAnimation animation_;
