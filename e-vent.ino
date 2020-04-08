@@ -48,23 +48,26 @@ int PRESS_POT_PIN = A3;
 int PRESS_SENSE_PIN = A4;
 int HOME_PIN = 10;
 const int BEEPER_PIN = 11;
-const int SNOOZE_PIN = 42;
+const int SNOOZE_PIN = 43;
 const int SD_SELECT = 53;
 
 // Safety settings
 ////////////////////
-float MAX_PRESSURE = 40;
-float MIN_PLATEAU_PRESSURE = 5; // ?????
+const float MAX_PRESSURE = 40.0;
+const float MIN_PLATEAU_PRESSURE = 5.0;
+const float MAX_DRIVING_PRESSURE = 2.0;
+const float MIN_TIDAL_PRESSURE = 5.0;
+const float VOLUME_ERROR_THRESH = 50.0;  // mL
 
 // Initialize Vars
 ////////////////////
 // Define cycle parameters
+unsigned long cycleCount = 0;
 float vIn, vEx, tIn, tHoldIn, tEx, tPeriod, Volume;
 float tCycleTimer, tLoopTimer; // Timer starting at each breathing cycle, and each control loop iteration
 bool tLoopBuffer; // The amount of time left at the end of each loop
 float bpm;  // Respiratory rate
 float ieRatio;  // Inhale/exhale ratio
-float pressure;  // Latest pressure reading
 
 // Durations
 float tCycleDuration;   // Duration of each cycle
@@ -118,7 +121,7 @@ LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 display::Display displ(&lcd);
 
 // Alarms
-alarms::AlarmManager alarm(BEEPER_PIN, SNOOZE_PIN, &displ);
+alarms::AlarmManager alarm(BEEPER_PIN, SNOOZE_PIN, &displ, &cycleCount);
 
 // Logger
 
@@ -146,6 +149,11 @@ void setState(States newState){
   tStateTimer = now();
 }
 
+// Convert motor position in ticks to volume in mL
+const int ticks2Volume(const int& vol_ticks) {
+  return max(0,map(vol_ticks, VOL_MIN, VOL_MAX, 0, 100) * VOL_SLOPE + VOL_INT);
+}
+
 // readPots reads the pot values and sets the waveform parameters
 void readPots(){
   Volume = map(analogRead(VOL_PIN), 0, ANALOG_PIN_MAX, VOL_MIN, VOL_MAX);
@@ -167,7 +175,7 @@ void readPots(){
   ASSIST_CONTROL = triggerSensitivity < TRIGGERSENSITIVITY_OFF;
 
   // Update display based on pots readings
-  displ.writeVolume(max(0,map(Volume, VOL_MIN, VOL_MAX, 0, 100) * VOL_SLOPE + VOL_INT));
+  displ.writeVolume(ticks2Volume(Volume));
   displ.writeBPM(bpm);
   displ.writeIEratio(ieRatio);
   displ.writeACTrigger(triggerSensitivity, TRIGGERSENSITIVITY_OFF);
@@ -211,14 +219,22 @@ bool homeSwitchPressed() {
 
 // check for errors
 void checkErrors() {
-  // pressure above max pressure
+  // Pressure alarms
   alarm.highPressure(pressureReader.get() >= MAX_PRESSURE);
 
-  // only worry about low pressure after homing
-  alarm.lowPressure(state < 4 && pressureReader.plateau() <= MIN_PLATEAU_PRESSURE);
+  // These pressure alarms only make sense after homing 
+  if (enteringState && state == IN_STATE) {
+    alarm.badPlateau(pressureReader.peak() - pressureReader.plateau() > MAX_DRIVING_PRESSURE);
+    alarm.lowPressure(pressureReader.plateau() < MIN_PLATEAU_PRESSURE);
+    alarm.noTidalPres(pressureReader.peak() - pressureReader.peep() < MIN_TIDAL_PRESSURE);
+  }
+
+  // Check if desired volume was reached
+  if (enteringState && state == EX_STATE) {
+    alarm.unmetVolume(ticks2Volume(Volume - motorPosition) > VOLUME_ERROR_THRESH);
+  }
 
   if(DEBUG){ //TODO integrate these into the alarm system
-    // TODO what to do with these alarms
     // check for roboclaw errors
     bool valid;
     uint32_t error_state = roboclaw.ReadError(address, &valid);
@@ -241,7 +257,7 @@ void checkErrors() {
   }
 }
 
-// Set up logger level and variables
+// Set up logger variables
 void setupLogger() {
   logger.addVar("Time", &tCycleTimer);
   logger.addVar("tCycle", &tCycleDuration);
@@ -258,7 +274,8 @@ void setupLogger() {
   logger.addVar("vIn", &vIn);
   logger.addVar("vEx", &vEx);
   logger.addVar("TrigSens", &triggerSensitivity);
-  logger.addVar("Pressure", &pressure);
+  logger.addVar("Pressure", &pressureReader.get());
+  // begin called after all variables added to include them all in the header
   logger.begin(&Serial, SD_SELECT);
 }
 
@@ -304,6 +321,7 @@ void loop() {
   }
 
   // All States
+  logger.update();
   tLoopTimer = now(); // Start the loop timer
   readPots();
   readEncoder();
@@ -327,9 +345,9 @@ void loop() {
       tCycleDuration = tNow - tCycleTimer;  // For logging
       tCycleTimer = tNow; // The cycle begins at the start of inspiration
       goToPosition(Volume, vIn);
+      cycleCount++;
     }
 
-    // Consider checking we reached the destination for fault detection
     // We need to figure out how to account for the PAUSE TIME
     if(now()-tCycleTimer > tIn){
       setState(HOLD_IN_STATE);
@@ -369,6 +387,7 @@ void loop() {
     
     if(now()-tStateTimer > tMinPeepPause){
       pressureReader.set_peep();
+      
       setState(HOLD_EX_STATE);
     }
   }
@@ -382,11 +401,11 @@ void loop() {
     // Check if patient triggers inhale
     patientTriggered = ASSIST_CONTROL && (pressureReader.get() < (pressureReader.peep() - triggerSensitivity));
 
-    if( patientTriggered ||  now() - tCycleTimer > tPeriod) {
+    if(patientTriggered ||  now() - tCycleTimer > tPeriod) {
       pressureReader.set_peak_and_reset();
-      displ.writePeakP(pressureReader.peak());
-      displ.writePEEP(pressureReader.peep());
-      displ.writePlateauP(pressureReader.plateau());
+      displ.writePeakP(round(pressureReader.peak()));
+      displ.writePEEP(round(pressureReader.peep()));
+      displ.writePlateauP(round(pressureReader.plateau()));
       setState(IN_STATE);
 
       // Consider if this is really necessary
@@ -436,9 +455,6 @@ void loop() {
     }
     // Consider a timeout to give up on homing
   }
-
-  // Serialize all logged variables
-  logger.update();
 
   // Add a delay if there's still time in the loop period
   tLoopBuffer = max(0, tLoopPeriod - tLoopTimer);

@@ -87,13 +87,15 @@ class Alarm {
 public:
   Alarm(){};
   
-  Alarm(const String& text): text_(text) {}
+  Alarm(const String& text, const int& min_bad_to_trigger, const int& min_good_to_clear);
 
-  // Set ON value (true == ON)
-  inline void setValue(const bool& on) { on_ = on; }
+  // Set the ON value of this alarm, but only turn ON if `bad == true` for at least 
+  // `min_bad_to_trigger_` consecutive calls with different `seq` and OFF if `bad == false` 
+  // for at least `min_good_to_clear_` consecutive calls with different `seq`.   
+  void setCondition(const bool& bad, const unsigned long& seq);
 
   // Check if this alarm is on
-  inline bool is_ON() const { return on_; }
+  inline bool isON() const { return on_; }
 
   // Get the text of this alarm
   inline const String text() const { return text_; }
@@ -101,6 +103,12 @@ public:
 private:
   String text_;
   bool on_ = false;
+  int min_bad_to_trigger_;
+  int min_good_to_clear_;
+  unsigned long consecutive_bad_ = 0;
+  unsigned long consecutive_good_ = 0;
+  unsigned long last_bad_seq_ = 0;
+  unsigned long last_good_seq_ = 0;
 };
 
 
@@ -119,21 +127,28 @@ class AlarmManager {
 
   // Indices for the different alarms
   enum Indices {
-    HIGH_PRES_IDX = 0,
-    LOW_PRES_IDX,
-    BAD_PLAT_IDX,
+    HIGH_PRESSU = 0,
+    LOW_PRESSUR,
+    BAD_PLATEAU,
+    UNMET_VOLUM,
+    NO_TIDAL_PR,
+    OVER_CURREN,
     NUM_ALARMS 
   };
 
-  // Text to display for each alarm
-  const char* strings[NUM_ALARMS] = {
-    "HIGH PRESURE",
-    "LOW PRES DISCONNECT?",
-    "ELEVATED PEAK PRES"
-  };
-
 public:
-  AlarmManager(const int& beeper_pin, const int& snooze_pin, Display* displ);
+  AlarmManager(const int& beeper_pin, const int& snooze_pin, 
+               Display* displ, unsigned long const* cycle_count):
+      displ_(displ),
+      beeper_(beeper_pin, snooze_pin),
+      cycle_count_(cycle_count) {
+    alarms_[HIGH_PRESSU] = Alarm("    HIGH PRESURE    ", 1, 2);
+    alarms_[LOW_PRESSUR] = Alarm("LOW PRES DISCONNECT?", 1, 1);
+    alarms_[BAD_PLATEAU] = Alarm(" ELEVATED PEAK PRES ", 1, 1);
+    alarms_[UNMET_VOLUM] = Alarm(" UNMET TIDAL VOLUME ", 1, 1);
+    alarms_[NO_TIDAL_PR] = Alarm(" NO TIDAL PRESSURE  ", 2, 1);
+    alarms_[OVER_CURREN] = Alarm(" OVER CURRENT FAULT ", 1, 2);
+  }
 
   // Setup during arduino setup()
   void begin();
@@ -142,18 +157,40 @@ public:
   void update();
 
   // Pressure too high alarm
-  inline void highPressure(const bool& value) { alarms_[HIGH_PRES_IDX].setValue(value); }
+  inline void highPressure(const bool& value) {
+    alarms_[HIGH_PRESSU].setCondition(value, *cycle_count_);
+  }
 
   // Pressure too low alarm
-  inline void lowPressure(const bool& value) { alarms_[LOW_PRES_IDX].setValue(value); }
+  inline void lowPressure(const bool& value) {
+    alarms_[LOW_PRESSUR].setCondition(value, *cycle_count_);
+  }
 
   // Bad plateau alarm
-  inline void badPlateau(const bool& value) { alarms_[BAD_PLAT_IDX].setValue(value); }
+  inline void badPlateau(const bool& value) {
+    alarms_[BAD_PLATEAU].setCondition(value, *cycle_count_);
+  }
+
+  // Tidal volume not met alarm
+  inline void unmetVolume(const bool& value) {
+    alarms_[UNMET_VOLUM].setCondition(value, *cycle_count_);
+  }
+
+  // Tidal pressure not detected alarm
+  inline void noTidalPres(const bool& value) {
+    alarms_[NO_TIDAL_PR].setCondition(value, *cycle_count_);
+  }
+
+  // Current too high alarm
+  inline void overCurrent(const bool& value) {
+    alarms_[OVER_CURREN].setCondition(value, *cycle_count_);
+  }
 
 private:
   Display* displ_;
   Beeper beeper_;
   Alarm alarms_[NUM_ALARMS];
+  unsigned long const* cycle_count_;
 
   // Get number of alarms that are ON
   int numON() const;

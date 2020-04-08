@@ -77,15 +77,34 @@ void Beeper::play(){
   }
 }
 
-/// AlarmManager ///
 
-AlarmManager::AlarmManager(const int& beeper_pin, const int& snooze_pin, Display* displ):
-    displ_(displ),
-    beeper_(beeper_pin, snooze_pin) {
-  for (int i = 0; i < NUM_ALARMS; i++) {
-    alarms_[i] = Alarm(strings[i]);
+/// Alarm ///
+
+Alarm::Alarm(const String& text, const int& min_bad_to_trigger, const int& min_good_to_clear):
+  text_(text),
+  min_bad_to_trigger_(min_bad_to_trigger),
+  min_good_to_clear_(min_good_to_clear) {}
+
+void Alarm::setCondition(const bool& bad, const unsigned long& seq) {
+  if (bad) {
+    consecutive_bad_ += (seq != last_bad_seq_);
+    last_bad_seq_ = seq;
+    if (!on_) {
+      on_ = consecutive_bad_ >= min_bad_to_trigger_;
+    }
+    consecutive_good_ = 0;
+  } else {
+    consecutive_good_ += (seq != last_good_seq_);
+    last_good_seq_ = seq;
+    if (on_) {
+      on_ = consecutive_good_ < min_good_to_clear_;
+    }
+    consecutive_bad_ = 0;
   }
 }
+
+
+/// AlarmManager ///
 
 void AlarmManager::begin() {
   beeper_.begin();
@@ -105,7 +124,7 @@ void AlarmManager::update() {
 int AlarmManager::numON() const {
   int num = 0;
   for (int i = 0; i < NUM_ALARMS; i++) {
-    num += (int)alarms_[i].is_ON();
+    num += (int)alarms_[i].isON();
   }
   return num;
 }
@@ -119,7 +138,7 @@ const String AlarmManager::getText() const {
     int count_on = 0;
     int i;
     for (i = 0; i < NUM_ALARMS; i++) {
-      if (alarms_[i].is_ON()) {
+      if (alarms_[i].isON()) {
         if (count_on++ == index) break;
       }
     }
