@@ -53,8 +53,10 @@ const int SD_SELECT = 53;
 
 // Safety settings
 ////////////////////
-float MAX_PRESSURE = 40;
-float MIN_PLATEAU_PRESSURE = 5; // ?????
+const float MAX_PRESSURE = 40.0;
+const float MIN_PLATEAU_PRESSURE = 5.0;
+const float MAX_DRIVING_PRESSURE = 2.0;
+const float MIN_TIDAL_PRESSURE = 5.0;
 
 // Initialize Vars
 ////////////////////
@@ -65,7 +67,6 @@ float tCycleTimer, tLoopTimer; // Timer starting at each breathing cycle, and ea
 bool tLoopBuffer; // The amount of time left at the end of each loop
 float bpm;  // Respiratory rate
 float ieRatio;  // Inhale/exhale ratio
-float pressure;  // Latest pressure reading
 
 // Durations
 float tCycleDuration;   // Duration of each cycle
@@ -208,14 +209,19 @@ bool homeSwitchPressed() {
 
 // check for errors
 void checkErrors() {
-  // pressure above max pressure
+  // pressure alarms
   alarm.highPressure(pressureReader.get() >= MAX_PRESSURE);
 
-  // only worry about low pressure after homing
-  alarm.lowPressure(state < 4 && pressureReader.plateau() <= MIN_PLATEAU_PRESSURE);
+  // These pressure alarms only make sense after homing 
+  if (state != DEBUG_STATE && 
+      state != PREHOME_STATE && 
+      state != HOMING_STATE) {
+    alarm.badPlateau(pressureReader.peak() - pressureReader.plateau() > MAX_DRIVING_PRESSURE);
+    alarm.lowPressure(pressureReader.plateau() < MIN_PLATEAU_PRESSURE);
+    alarm.noTidalPres(pressureReader.peak() - pressureReader.peep() < MIN_TIDAL_PRESSURE);
+  }
 
   if(DEBUG){ //TODO integrate these into the alarm system
-    // TODO what to do with these alarms
     // check for roboclaw errors
     bool valid;
     uint32_t error_state = roboclaw.ReadError(address, &valid);
@@ -255,7 +261,7 @@ void setupLogger() {
   logger.addVar("vIn", &vIn);
   logger.addVar("vEx", &vEx);
   logger.addVar("TrigSens", &triggerSensitivity);
-  logger.addVar("Pressure", &pressure);
+  logger.addVar("Pressure", &pressureReader.get());
   logger.begin(&Serial, SD_SELECT);
 }
 
@@ -367,6 +373,7 @@ void loop() {
     
     if(now()-tStateTimer > tMinPeepPause){
       pressureReader.set_peep();
+      
       setState(HOLD_EX_STATE);
     }
   }
@@ -381,11 +388,11 @@ void loop() {
     patientTriggered = pressureReader.get() < (pressureReader.peep() - triggerSensitivity) 
         && triggerSensitivity > TRIGGER_LOWER_THRESHOLD;
 
-    if( patientTriggered ||  now() - tCycleTimer > tPeriod) {
+    if(patientTriggered ||  now() - tCycleTimer > tPeriod) {
       pressureReader.set_peak_and_reset();
-      displ.writePeakP(pressureReader.peak());
-      displ.writePEEP(pressureReader.peep());
-      displ.writePlateauP(pressureReader.plateau());
+      displ.writePeakP(round(pressureReader.peak()));
+      displ.writePEEP(round(pressureReader.peep()));
+      displ.writePlateauP(round(pressureReader.plateau()));
       setState(IN_STATE);
 
       // Consider if this is really necessary

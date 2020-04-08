@@ -175,7 +175,7 @@ public:
 
   // Bad plateau alarm
   inline void badPlateau(const bool& value) {
-    alarms_[BAD_PLAT_IDX].setCondition(value, *cycle_count_, 2);
+    alarms_[BAD_PLAT_IDX].setCondition(value, *cycle_count_, 1);
   }
 
   // Tidal volume not met alarm
@@ -184,6 +184,7 @@ public:
   }
 
   // Tidal pressure not detected alarm
+  // TODO only set after 2 bad cycles?
   inline void noTidalPres(const bool& value) {
     alarms_[NO_TIDAL_PRES].setCondition(value, *cycle_count_, 2);
   }

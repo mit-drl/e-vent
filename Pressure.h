@@ -33,7 +33,7 @@ public:
     current_ = pres;
   }
 
-  float get() {
+  const float& get() {
     return current_;
   }
 
@@ -50,9 +50,9 @@ public:
     peep_ = get();
   }
 
-  int peak() { return round(peak_); }
-  int plateau() { return round(plateau_); }
-  int peep() { return round(peep_); }
+  float peak() { return peak_; }
+  float plateau() { return plateau_; }
+  float peep() { return peep_; }
 
 private:
   int sense_pin_;

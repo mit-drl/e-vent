@@ -1,7 +1,3 @@
-/**
- TODO
- - open and save less often
- */
 #ifndef Logging_h
 #define Logging_h
 
@@ -49,11 +45,11 @@ private:
 
   String pad(String& s);
 
-  void setPtr(int* var);
+  void setPtr(const int* var);
 
-  void setPtr(float* var);
+  void setPtr(const float* var);
 
-  void setPtr(double* var);
+  void setPtr(const double* var);
 
   String serialize(int* var) const;
 
@@ -108,7 +104,7 @@ public:
 
   // Add variable
   template <typename T>
-  void addVar(const char var_name[], T* var, 
+  void addVar(const char var_name[], const T* var, 
               const int& min_digits = 1, const int& float_precision = 2);
 
   // Setup during arduino setup()
@@ -139,7 +135,7 @@ private:
 
 // Instantiation of template methods
 #define ADDVAR(vartype) \
-  template void Logger::addVar(const char var_name[], vartype* var, \
+  template void Logger::addVar(const char var_name[], const vartype* var, \
                                const int& min_digits, const int& float_precision);
 ADDVAR(int)
 ADDVAR(float)
