@@ -253,7 +253,7 @@ void checkErrors() {
   }
 }
 
-// Set up logger level and variables
+// Set up logger variables
 void setupLogger() {
   logger.addVar("Time", &tCycleTimer);
   logger.addVar("tCycle", &tCycleDuration);
