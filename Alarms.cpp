@@ -80,16 +80,26 @@ void Beeper::play(){
 
 /// Alarm ///
 
-void Alarm::setCondition(const bool& bad, const unsigned long& seq, const int& min_ok) {
+Alarm::Alarm(const String& text, const int& min_bad_to_trigger, const int& min_good_to_clear):
+  text_(text),
+  min_bad_to_trigger_(min_bad_to_trigger),
+  min_good_to_clear_(min_good_to_clear) {}
+
+void Alarm::setCondition(const bool& bad, const unsigned long& seq) {
   if (bad) {
-    on_ = true;
+    consecutive_bad_ += (seq != last_bad_seq_);
+    last_bad_seq_ = seq;
+    if (!on_) {
+      on_ = consecutive_bad_ >= min_bad_to_trigger_;
+    }
     consecutive_good_ = 0;
   } else {
     consecutive_good_ += (seq != last_good_seq_);
     last_good_seq_ = seq;
     if (on_) {
-      on_ = consecutive_good_ < min_ok;
+      on_ = consecutive_good_ < min_good_to_clear_;
     }
+    consecutive_bad_ = 0;
   }
 }
 
@@ -100,10 +110,13 @@ AlarmManager::AlarmManager(const int& beeper_pin, const int& snooze_pin,
                            Display* displ, unsigned long const* cycle_count):
     displ_(displ),
     beeper_(beeper_pin, snooze_pin),
-    cycle_count_(cycle_count) {
-  for (int i = 0; i < NUM_ALARMS; i++) {
-    alarms_[i] = Alarm(strings[i]);
-  }
+    cycle_count_(cycle_count){
+  alarms_[HIGH_PRESSU] = Alarm("    HIGH PRESURE    ", 1, 2);
+  alarms_[LOW_PRESSUR] = Alarm("LOW PRES DISCONNECT?", 1, 1);
+  alarms_[BAD_PLATEAU] = Alarm(" ELEVATED PEAK PRES ", 1, 1);
+  alarms_[UNMET_VOLUM] = Alarm(" UNMET TIDAL VOLUME ", 1, 2);
+  alarms_[NO_TIDAL_PR] = Alarm(" NO TIDAL PRESSURE  ", 2, 1);
+  alarms_[OVER_CURREN] = Alarm(" OVER CURRENT FAULT ", 1, 2);
 }
 
 void AlarmManager::begin() {
