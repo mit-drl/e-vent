@@ -33,17 +33,17 @@ String Var::pad(String& s) {
   return s;
 }
 
-void Var::setPtr(int* var) {
+void Var::setPtr(const int* var) {
   var_.i = var;
   type_ = INT;
 }
 
-void Var::setPtr(float* var) {
+void Var::setPtr(const float* var) {
   var_.f = var;
   type_ = FLOAT;
 }
 
-void Var::setPtr(double* var) {
+void Var::setPtr(const double* var) {
   var_.d = var;
   type_ = DOUBLE;
 }
@@ -74,7 +74,7 @@ Logger::Logger(bool log_to_serial, bool log_to_SD,
     delim_(delim) {}
 
 template <typename T>
-void Logger::addVar(const char var_name[], T* var, 
+void Logger::addVar(const char var_name[], const T* var, 
                     const int& min_digits, const int& float_precision) {
   vars_[num_vars_++] = Var(var_name, var, min_digits, float_precision);
 }
