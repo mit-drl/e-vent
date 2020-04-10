@@ -144,7 +144,7 @@ public:
       cycle_count_(cycle_count) {
     alarms_[HIGH_PRESSU] = Alarm("    HIGH PRESURE    ", 1, 2);
     alarms_[LOW_PRESSUR] = Alarm("LOW PRES DISCONNECT?", 1, 1);
-    alarms_[BAD_PLATEAU] = Alarm(" ELEVATED PEAK PRES ", 1, 1);
+    alarms_[BAD_PLATEAU] = Alarm(" HIGH RESIST PRES ", 1, 1);
     alarms_[UNMET_VOLUM] = Alarm(" UNMET TIDAL VOLUME ", 1, 1);
     alarms_[NO_TIDAL_PR] = Alarm(" NO TIDAL PRESSURE  ", 2, 1);
     alarms_[OVER_CURREN] = Alarm(" OVER CURRENT FAULT ", 1, 2);
