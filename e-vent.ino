@@ -55,7 +55,7 @@ const int SD_SELECT = 53;
 const float MAX_PRESSURE = 45.0;
 const float MAX_PRESSURE_ALARM = 40.0;
 const float MIN_PLATEAU_PRESSURE = 5.0;
-const float MAX_DRIVING_PRESSURE = 2.0;
+const float MAX_RESIST_PRESSURE = 2.0;
 const float MIN_TIDAL_PRESSURE = 5.0;
 const float VOLUME_ERROR_THRESH = 50.0;  // mL
 
@@ -221,7 +221,7 @@ void checkErrors() {
   
   // These pressure alarms only make sense after homing 
   if (enteringState && state == IN_STATE) {
-    alarm.badPlateau(pressureReader.peak() - pressureReader.plateau() > MAX_DRIVING_PRESSURE);
+    alarm.badPlateau(pressureReader.peak() - pressureReader.plateau() > MAX_RESIST_PRESSURE);
     alarm.lowPressure(pressureReader.plateau() < MIN_PLATEAU_PRESSURE);
     alarm.noTidalPres(pressureReader.peak() - pressureReader.peep() < MIN_TIDAL_PRESSURE);
   }
