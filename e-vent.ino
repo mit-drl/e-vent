@@ -127,8 +127,8 @@ alarms::AlarmManager alarm(BEEPER_PIN, SNOOZE_PIN, &displ, &cycleCount);
 
 logging::Logger logger(true,    // log_to_serial,
                        true,    // log_to_SD, 
-                       false,    // serial_labels, 
-                       ",");   // delim
+                       true,    // serial_labels, 
+                       ",\t");   // delim
 
 // Pressure
 Pressure pressureReader(PRESS_SENSE_PIN);
