@@ -58,6 +58,7 @@ const float MIN_PLATEAU_PRESSURE = 5.0;
 const float MAX_RESIST_PRESSURE = 2.0;
 const float MIN_TIDAL_PRESSURE = 5.0;
 const float VOLUME_ERROR_THRESH = 50.0;  // mL
+const int MAX_MOTOR_CURRENT = 1000; // Max motor current
 
 // Initialize Vars
 ////////////////////
@@ -98,6 +99,7 @@ float tStateTimer;
 // Roboclaw
 RoboClaw roboclaw(&Serial3, 10000);
 #define address 0x80
+int16_t motorCurrent;
 
 // auto-tuned PID values for PG188
 #define Kp 6.38650
@@ -184,6 +186,11 @@ int readEncoder() {
   return valid;
 }
 
+bool readMotorCurrent() {
+  int noSecondMotor;
+  bool valid = roboclaw.ReadCurrents(address, motorCurrent, noSecondMotor);
+  return valid;
+}
 // goToPosition goes to a desired position at the given speed,
 void goToPosition(int pos, int vel){
   bool valid = readEncoder();
@@ -231,6 +238,14 @@ void checkErrors() {
     alarm.unmetVolume(ticks2Volume(Volume - motorPosition) > VOLUME_ERROR_THRESH);
   }
 
+  // Check if maximum motor current was exceeded
+  if(motorCurrent >= MAX_MOTOR_CURRENT){
+    setState(EX_STATE);
+    alarm.overCurrent(true);
+  } else {
+    alarm.overCurrent(false);
+  }
+  
   if(DEBUG){ //TODO integrate these into the alarm system
     // check for roboclaw errors
     bool valid;
@@ -260,7 +275,8 @@ void setupLogger() {
   logger.addVar("tCycle", &tCycleDuration);
   logger.addVar("State", (int*)&state);
   logger.addVar("Mode", (int*)&patientTriggered);
-  logger.addVar("Pos", &motorPosition);
+  logger.addVar("Pos", &motorPosition, 3);
+  logger.addVar("Current", &motorCurrent, 3);
   logger.addVar("Vol", &Volume);
   logger.addVar("BPM", &bpm);
   logger.addVar("IE", &ieRatio);
@@ -299,7 +315,7 @@ void setup() {
   displ.begin();
   setState(PREHOME_STATE); // Initial state
   roboclaw.begin(38400); // Roboclaw
-  roboclaw.SetM1MaxCurrent(address, 10000); // Current limit is 10A
+  roboclaw.SetM1MaxCurrent(address, 5000); // Current limit is 5A
   roboclaw.SetM1VelocityPID(address,Kd,Kp,Ki,qpps); // Set Velocity PID Coefficients
   roboclaw.SetM1PositionPID(address,pKp,pKi,pKd,kiMax,deadzone,minPos,maxPos); // Set Position PID Coefficients
   roboclaw.SetEncM1(address, 0); // Zero the encoder
@@ -322,6 +338,7 @@ void loop() {
   tLoopTimer = now(); // Start the loop timer
   readPots();
   readEncoder();
+  readMotorCurrent();
   pressureReader.read();
   checkErrors();
   alarm.update();
@@ -451,4 +468,3 @@ void loop() {
   tLoopBuffer = max(0, tLoopPeriod - tLoopTimer);
   delay(tLoopBuffer);
 }
-
