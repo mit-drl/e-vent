@@ -28,7 +28,7 @@ float tExMax = 1.00; // Maximum exhale timef
 float Vhome = 300; // The speed (clicks/s) to use during homing
 float voltHome = 30; // The speed (0-255) in volts to use during homing
 int goalTol = 10; // The tolerance to start stopping on reaching goal
-int bagHome = 100; // The bag-specific position of the bag edge
+int bagHome = 50; // The bag-specific position of the bag edge
 float tPauseHome = 2.0*bagHome/Vhome; // The pause time (s) during homing to ensure stability
 
 // Assist Control Flags and Settings
@@ -81,7 +81,7 @@ float BPM_MAX = 40;
 float IE_MIN = 1;
 float IE_MAX = 4;
 float VOL_MIN = 150;
-float VOL_MAX = 630; // 900; // For full 
+float VOL_MAX = 650; // 900; // For full 
 float TRIGGERSENSITIVITY_MIN = 0;
 float TRIGGERSENSITIVITY_MAX = 5;
 float TRIGGER_LOWER_THRESHOLD = 2;
