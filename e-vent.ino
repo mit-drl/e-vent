@@ -19,7 +19,6 @@ enum States {
 
 // General Settings
 ////////////
-
 bool DEBUG = false; // For controlling and displaying via serial
 int maxPwm = 255; // Maximum for PWM is 255 but this can be set lower
 float tLoopPeriod = 0.025; // The period (s) of the control loop
@@ -53,7 +52,8 @@ const int SD_SELECT = 53;
 
 // Safety settings
 ////////////////////
-const float MAX_PRESSURE = 40.0;
+const float MAX_PRESSURE = 45.0;
+const float MAX_PRESSURE_ALARM = 40.0;
 const float MIN_PLATEAU_PRESSURE = 5.0;
 const float MAX_DRIVING_PRESSURE = 2.0;
 const float MIN_TIDAL_PRESSURE = 5.0;
@@ -216,8 +216,9 @@ bool homeSwitchPressed() {
 // check for errors
 void checkErrors() {
   // Pressure alarms
-  alarm.highPressure(pressureReader.get() >= MAX_PRESSURE);
-
+  alarm.highPressure(pressureReader.get() >= MAX_PRESSURE_ALARM);
+  if(pressureReader.get() >= MAX_PRESSURE) setState(EX_STATE);
+  
   // These pressure alarms only make sense after homing 
   if (enteringState && state == IN_STATE) {
     alarm.badPlateau(pressureReader.peak() - pressureReader.plateau() > MAX_DRIVING_PRESSURE);
