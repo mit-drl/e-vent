@@ -14,6 +14,7 @@ enum States {
 
 #include "Alarms.h"
 #include "Display.h"
+#include "Input.h"
 #include "Logging.h"
 #include "Pressure.h"
 
@@ -64,7 +65,7 @@ const int MAX_MOTOR_CURRENT = 1000; // Max motor current
 ////////////////////
 // Define cycle parameters
 unsigned long cycleCount = 0;
-float vIn, vEx, tIn, tHoldIn, tEx, tPeriod, Volume;
+float vIn, vEx, tIn, tHoldIn, tEx, tPeriod, setVolumeTicks;
 float tCycleTimer, tLoopTimer; // Timer starting at each breathing cycle, and each control loop iteration
 bool tLoopBuffer; // The amount of time left at the end of each loop
 float bpm;  // Respiratory rate
@@ -135,6 +136,9 @@ logging::Logger logger(true,    // log_to_serial,
 // Pressure
 Pressure pressureReader(PRESS_SENSE_PIN);
 
+// Knobs
+input::Knob<int> volumeKnob;
+
 // TODO: move function definitions after loop() or to classes if they don't use global vars
 // Functions
 ////////////
@@ -151,14 +155,25 @@ void setState(States newState){
   tStateTimer = now();
 }
 
-// Convert motor position in ticks to volume in mL
-const int ticks2Volume(const int& vol_ticks) {
+// Converts motor position in ticks to volume in mL
+int ticks2Volume(const int& vol_ticks) {
   return max(0,map(vol_ticks, VOL_MIN, VOL_MAX, 0, 100) * VOL_SLOPE + VOL_INT);
 }
 
-// readPots reads the pot values and sets the waveform parameters
-void readPots(){
-  Volume = map(analogRead(VOL_PIN), 0, ANALOG_PIN_MAX, VOL_MIN, VOL_MAX);
+// Converts volume in mL to motor position in ticks
+int volume2ticks(const int& vol_cc) {
+  return map((vol_cc - VOL_INT) / VOL_SLOPE, 0, 100, VOL_MIN, VOL_MAX);
+}
+
+// Reads volume from the volume pin in mL
+int readVolume() {
+  const int volTicks = map(analogRead(VOL_PIN), 0, ANALOG_PIN_MAX, VOL_MIN, VOL_MAX);
+  return ticks2Volume(volTicks);
+}
+
+// Reads user settings to set the waveform parameters
+void readInput(){
+  setVolumeTicks = volume2ticks(volumeKnob.read());
   bpm = map(analogRead(BPM_PIN), 0, ANALOG_PIN_MAX, BPM_MIN, BPM_MAX);
   ieRatio = map(analogRead(IE_PIN), 0, ANALOG_PIN_MAX, IE_MIN*10, IE_MAX*10)/10.0; // Carry one decimal place
   triggerSensitivity = map(analogRead(PRESS_POT_PIN), 0, ANALOG_PIN_MAX, TRIGGERSENSITIVITY_MIN*100, TRIGGERSENSITIVITY_MAX*100)/100.0; //Carry two decimal places
@@ -170,10 +185,10 @@ void readPots(){
   tExDuration = tEx - tHoldIn;  // For logging
   tPeriodDuration = tPeriod - tEx;  // For logging
   
-  vIn = Volume/tIn; // Velocity in (clicks/s)
-  vEx = Volume/(tEx - tHoldIn); // Velocity out (clicks/s)
+  vIn = setVolumeTicks / tIn; // Velocity in (clicks/s)
+  vEx = setVolumeTicks / (tEx - tHoldIn); // Velocity out (clicks/s)
 
-  displ.writeVolume(ticks2Volume(Volume));
+  displ.writeVolume(volumeKnob.read());  // TODO volumeKnob should handle this
   displ.writeBPM(bpm);
   displ.writeIEratio(ieRatio);
   displ.writeACTrigger(triggerSensitivity, TRIGGER_LOWER_THRESHOLD);
@@ -235,7 +250,7 @@ void checkErrors() {
 
   // Check if desired volume was reached
   if (enteringState && state == EX_STATE) {
-    alarm.unmetVolume(ticks2Volume(Volume - motorPosition) > VOLUME_ERROR_THRESH);
+    alarm.unmetVolume(ticks2Volume(setVolumeTicks - motorPosition) > VOLUME_ERROR_THRESH);
   }
 
   // Check if maximum motor current was exceeded
@@ -277,7 +292,7 @@ void setupLogger() {
   logger.addVar("Mode", (int*)&patientTriggered);
   logger.addVar("Pos", &motorPosition, 3);
   logger.addVar("Current", &motorCurrent, 3);
-  logger.addVar("Vol", &Volume);
+  logger.addVar("Vol", &setVolumeTicks);
   logger.addVar("BPM", &bpm);
   logger.addVar("IE", &ieRatio);
   logger.addVar("tIn", &tIn);
@@ -313,6 +328,7 @@ void setup() {
   alarm.begin();
   pinMode(HOME_PIN, INPUT_PULLUP); // Pull up the limit switch
   displ.begin();
+  volumeKnob.begin(&readVolume);  // Pass the read function to the knob handler
   setState(PREHOME_STATE); // Initial state
   roboclaw.begin(38400); // Roboclaw
   roboclaw.SetM1MaxCurrent(address, 5000); // Current limit is 5A
@@ -336,7 +352,7 @@ void loop() {
   // All States
   logger.update();
   tLoopTimer = now(); // Start the loop timer
-  readPots();
+  readInput();
   readEncoder();
   readMotorCurrent();
   pressureReader.read();
@@ -358,7 +374,7 @@ void loop() {
       const float tNow = now();
       tCycleDuration = tNow - tCycleTimer;  // For logging
       tCycleTimer = tNow; // The cycle begins at the start of inspiration
-      goToPosition(Volume, vIn);
+      goToPosition(setVolumeTicks, vIn);
       cycleCount++;
     }
 
@@ -468,3 +484,4 @@ void loop() {
   tLoopBuffer = max(0, tLoopPeriod - tLoopTimer);
   delay(tLoopBuffer);
 }
+
