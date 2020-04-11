@@ -9,14 +9,17 @@ jobs:
   test-matrix:
 
     strategy:
+
       matrix:
+        os: [windows-latest, ubuntu-latest]
+
         arduino-platform: ["arduino:avr"]
 
         include:
           - arduino-platform: "arduino:avr"
             fqbn: "arduino:avr:mega:cpu=atmega2560"
 
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout
