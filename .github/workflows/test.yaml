@@ -1,4 +1,7 @@
+# based on https://blog.arduino.cc/2019/11/14/arduino-on-github-actions/
+
 name: test
+description: Compile sketch
 
 on: [push, pull_request]
 
@@ -14,7 +17,7 @@ jobs:
           - arduino-platform: "arduino:avr"
             fqbn: "arduino:avr:mega:cpu=atmega2560"
 
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
@@ -30,3 +33,4 @@ jobs:
 
       - name: Compile Sketch
         run: arduino-cli compile --fqbn ${{ matrix.fqbn }} ./e-vent.ino
+
