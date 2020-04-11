@@ -10,7 +10,7 @@ enum States {
 };
 
 #include <LiquidCrystal.h>
-#include "thirdparty/RoboClaw/RoboClaw.h"
+#include "src/thirdparty/RoboClaw/RoboClaw.h"
 
 #include "Alarms.h"
 #include "Display.h"
