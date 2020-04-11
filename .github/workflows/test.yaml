@@ -29,7 +29,7 @@ jobs:
         run: |
           arduino-cli core update-index
           arduino-cli core install ${{ matrix.arduino-platform }}
-          arduino-cli lib install SD RoboClaw LiquidCrystal
+          arduino-cli lib install SD LiquidCrystal
 
       - name: Compile Sketch
         run: arduino-cli compile --fqbn ${{ matrix.fqbn }} ./e-vent.ino
