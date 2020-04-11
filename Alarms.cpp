@@ -6,7 +6,16 @@ namespace alarms {
 
 /// Tone ///
 
+Tone::Tone(const Note notes[], const int* pin): 
+    notes_(notes),
+    pin_(pin),
+    length_(sizeof(notes) / sizeof(notes[0])),
+    tone_step_(length_) {}
+
 void Tone::play() {
+  if (length_ == 0) {
+    return;
+  }
   tone_step_ %= length_; // Start again if tone finished
   if(millis() > tone_timer_){
     tone(*pin_, notes_[tone_step_].note, notes_[tone_step_].duration);
@@ -40,13 +49,6 @@ bool DebouncedButton::is_LOW() {
 
 
 /// Beeper ///
-
-Beeper::Beeper(const int& beeper_pin, const int& snooze_pin):
-    beeper_pin_(beeper_pin), 
-    snooze_button_(snooze_pin) {
-  tones_[NOTIFY] = Tone(kNotifyNotes, &beeper_pin_);
-  tones_[EMERGENCY] = Tone(kEmergencyNotes, &beeper_pin_);
-}
 
 void Beeper::begin() {
   snooze_button_.begin();

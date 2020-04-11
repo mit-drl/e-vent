@@ -22,6 +22,7 @@ enum AlarmLevel {
 };
 
 
+// Container for notes elements
 struct Note {
   int note;
   int duration;
@@ -29,6 +30,7 @@ struct Note {
 };
 
 
+// Emergency notes
 static const Note kEmergencyNotes[] = {
   {NOTE_G4, 300, 200},
   {NOTE_G4, 300, 200},
@@ -37,6 +39,7 @@ static const Note kEmergencyNotes[] = {
   {NOTE_G5, 200, 1500}
 };
 
+// Notifiation notes
 static const Note kNotifyNotes[] = {
   {NOTE_G4, 300, 200},  // TODO design notes
   {NOTE_G4, 300, 200},
@@ -44,18 +47,20 @@ static const Note kNotifyNotes[] = {
 };
 
 
+/**
+ * Tone
+ * A sequence of notes that can be played.
+ */
 class Tone {
 public:
-  Tone() {}
+  Tone(): length_(0) {}
 
-  Tone(const Note notes[], const int* pin): 
-      notes_(notes),
-      pin_(pin),
-      length_(sizeof(notes) / sizeof(notes[0])),
-      tone_step_(length_) {}
+  Tone(const Note notes[], const int* pin);
 
+  // Play the tone, if any
   void play();
 
+  // Stop playing
   inline void stop() { tone_step_ = length_; }
 
 private:
@@ -100,7 +105,12 @@ class Beeper {
   static const unsigned long kSnoozeTime = 2 * 60 * 1000UL;
 
 public:
-  Beeper(const int& beeper_pin, const int& snooze_pin);
+  Beeper(const int& beeper_pin, const int& snooze_pin):
+    beeper_pin_(beeper_pin), 
+    snooze_button_(snooze_pin) {
+      tones_[NOTIFY] = Tone(kNotifyNotes, &beeper_pin_);
+      tones_[EMERGENCY] = Tone(kEmergencyNotes, &beeper_pin_);
+    }
 
   // Setup during arduino setup()
   void begin();
