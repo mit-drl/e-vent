@@ -1,7 +1,6 @@
 # based on https://blog.arduino.cc/2019/11/14/arduino-on-github-actions/
 
 name: test
-description: Compile sketch
 
 on: [push, pull_request]
 
@@ -30,6 +29,7 @@ jobs:
         run: |
           arduino-cli core update-index
           arduino-cli core install ${{ matrix.arduino-platform }}
+          arduino-cli lib install SD RoboClaw LiquidCrystal
 
       - name: Compile Sketch
         run: arduino-cli compile --fqbn ${{ matrix.fqbn }} ./e-vent.ino
