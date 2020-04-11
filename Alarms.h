@@ -5,6 +5,7 @@
 
 #include "Display.h"
 #include "pitches.h"
+#include "Utilities.h"
 
 
 namespace alarms {
@@ -74,29 +75,6 @@ private:
 
 
 /**
- * DebouncedButton
- * Represents a pullup button that filters out unintended LOW readings.
- */
-class DebouncedButton {
-
-  const unsigned long kDebounceDelay = 100;
-
-public:
-  DebouncedButton(const int& pin);
-
-  // Setup during arduino setup()
-  void begin();
-
-  // Check if button is low
-  bool is_LOW();
-
-private:
-  int pin_;
-  unsigned long last_low_time_ = 0;
-};
-
-
-/**
  * Beeper
  * Represents the alarm speaker/buzzer. Handles playing of tones and snoozing.
  */
@@ -124,7 +102,7 @@ public:
 
 private:
   const int beeper_pin_;
-  DebouncedButton snooze_button_;
+  utilities::DebouncedButton snooze_button_;
   Tone tones_[NUM_LEVELS];
 
   unsigned long snooze_time_ = 0;
