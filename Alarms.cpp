@@ -83,9 +83,9 @@ void Beeper::stop() {
 
 /// Alarm ///
 
-Alarm::Alarm(const String& text, const AlarmLevel& alarm_level,
+Alarm::Alarm(const String& default_text, const AlarmLevel& alarm_level,
              const int& min_bad_to_trigger, const int& min_good_to_clear):
-  text_(text),
+  text_(default_text),
   alarm_level_(alarm_level),
   min_bad_to_trigger_(min_bad_to_trigger),
   min_good_to_clear_(min_good_to_clear) {}
@@ -105,6 +105,21 @@ void Alarm::setCondition(const bool& bad, const unsigned long& seq) {
       on_ = consecutive_good_ < min_good_to_clear_;
     }
     consecutive_bad_ = 0;
+  }
+}
+
+void Alarm::setText(const String& text) {
+  if (text.length() == display::kWidth) {
+    text_ = text;
+  }
+  else if (text.length() > display::kWidth) {
+    text_ = text.substring(0, display::kWidth);
+  }
+  else {
+    text_ = text;
+    while (text_.length() < display::kWidth) {
+      text_ += " ";
+    }
   }
 }
 

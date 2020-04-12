@@ -126,13 +126,16 @@ class Alarm {
 public:
   Alarm(){};
   
-  Alarm(const String& text, const AlarmLevel& alarm_level,
+  Alarm(const String& default_text, const AlarmLevel& alarm_level,
         const int& min_bad_to_trigger, const int& min_good_to_clear);
 
   // Set the ON value of this alarm, but only turn ON if `bad == true` for at least 
   // `min_bad_to_trigger_` consecutive calls with different `seq` and OFF if `bad == false` 
   // for at least `min_good_to_clear_` consecutive calls with different `seq`.   
   void setCondition(const bool& bad, const unsigned long& seq);
+
+  // Set the alarm text (trim or pad to display width)
+  void setText(const String& text);
 
   // Check if this alarm is on
   inline bool isON() const { return on_; }
@@ -175,6 +178,7 @@ class AlarmManager {
     UNMET_VOLUM,
     NO_TIDAL_PR,
     OVER_CURREN,
+    NOT_CONFIRM,
     NUM_ALARMS 
   };
 
@@ -190,6 +194,7 @@ public:
     alarms_[UNMET_VOLUM] = Alarm(" UNMET TIDAL VOLUME ", 1, 1, EMERGENCY);
     alarms_[NO_TIDAL_PR] = Alarm(" NO TIDAL PRESSURE  ", 2, 1, EMERGENCY);
     alarms_[OVER_CURREN] = Alarm(" OVER CURRENT FAULT ", 1, 2, EMERGENCY);
+    alarms_[NOT_CONFIRM] = Alarm("      CONFIRM?      ", 1, 1, NOTIFY);
   }
 
   // Setup during arduino setup()
@@ -226,6 +231,12 @@ public:
   // Current too high alarm
   inline void overCurrent(const bool& value) {
     alarms_[OVER_CURREN].setCondition(value, *cycle_count_);
+  }
+
+  // Setting not confirmed
+  inline void unconfirmedChange(const bool& value, const String& message) {
+    alarms_[NOT_CONFIRM].setText(message);
+    alarms_[NOT_CONFIRM].setCondition(value, *cycle_count_);
   }
 
 private:
