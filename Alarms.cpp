@@ -116,7 +116,7 @@ void AlarmManager::begin() {
 }
 
 void AlarmManager::update() {
-  displ_->writeAlarmText(getText());
+  displ_->setAlarmText(getText());
   beeper_.update(getHighestLevel());
 }
 

@@ -79,7 +79,9 @@ class Display {
 
 public:
   // Constructor, save a pointer to the (global) display object
-  Display(LiquidCrystal* lcd): lcd_(lcd) {
+  Display(LiquidCrystal* lcd, const float& trigger_threshold):
+      lcd_(lcd),
+      trigger_threshold_(trigger_threshold) {
     elements_[HEADER]       = Element{0, 0, 20};
     elements_[VOLUME]       = Element{0, 0, 11};
     elements_[BPM]          = Element{1, 0, 11};
@@ -96,12 +98,16 @@ public:
 
   // Update during arduino loop()
   void update();
-
-  // Write printable corresponding to key'ed element
-  void write(const DisplayKey& key, const String& printable);
   
   // Write arbitrary alarm in the header
-  void writeAlarmText(const String& alarm);
+  void setAlarmText(const String& alarm);
+
+  // Write value corresponding to key'ed element
+  template <typename T>
+  void write(const DisplayKey& key, const T& value);
+
+  // Write current header
+  void writeHeader();
 
   // Write volume in mL
   void writeVolume(const int& vol);
@@ -113,7 +119,10 @@ public:
   void writeIEratio(const float& ie);
 
   // AC trigger pressure
-  void writeACTrigger(const float& ac_trigger, const float& lower_threshold);
+  void writeACTrigger(const float& ac_trigger);
+
+  // Label for pressure units
+  void writePresLabel();
 
   // Peak pressure in cm of H2O
   void writePeakP(const int& peak);
@@ -126,6 +135,7 @@ public:
 
 private:
   LiquidCrystal* lcd_;
+  const float trigger_threshold_;
   TextAnimation animation_;
   Element elements_[NUM_KEYS];
 
@@ -133,6 +143,14 @@ private:
   template <typename T>
   void write(const int& row, const int& col, const T& printable);
 };
+
+
+// Instantiation of template methods
+#define INSTANTIATE_WRITE(type) \
+  template void Display::write(const DisplayKey& key, const type& value);
+INSTANTIATE_WRITE(int)
+INSTANTIATE_WRITE(float)
+#undef INSTANTIATE
 
 
 }  // namespace display

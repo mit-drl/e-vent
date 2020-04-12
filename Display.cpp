@@ -49,28 +49,54 @@ void Display::begin() {
 }
 
 void Display::update(){
-  if(animation_.empty()){
-    write(PRES_LABEL, " P(cmH2O):");
-  } 
-  else {
-    write(HEADER, animation_.getLine());
-  }
+  writeHeader();
 }
 
-void Display::write(const DisplayKey& key, const String& printable){
-  String s = printable;
-  if (printable.length() > elements_[key].width) {
-    s = s.substring(0, elements_[key].width);
-  }
-  while (s.length() < elements_[key].width) {
-    s += " ";
-  }
-  write(elements_[key].row, elements_[key].col, s);
-}
-
-void Display::writeAlarmText(const String& alarm){
+void Display::setAlarmText(const String& alarm){
   if(animation_.text() != alarm){
     animation_.reset(alarm);
+  }
+}
+
+template <typename T>
+void Display::write(const DisplayKey& key, const T& value){
+  switch (key) {
+    case HEADER:
+      writeHeader();
+      break;
+    case VOLUME:
+      writeVolume(value);
+      break;
+    case BPM:
+      writeBPM(value);
+      break;
+    case IE_RATIO:
+      writeIEratio(value);
+      break;
+    case AC_TRIGGER:
+      writeACTrigger(value);
+      break;
+    case PRES_LABEL:
+      writePresLabel();
+      break;
+    case PEAK_PRES:
+      writePeakP(value);
+      break;
+    case PLATEAU_PRES:
+      writePlateauP(value);
+      break;
+    case PEEP_PRES:
+      writePEEP(value);
+      break;
+  }
+}
+
+void Display::writeHeader() {
+  if(animation_.empty()){
+    writePresLabel();
+  } 
+  else {
+    write(elements_[HEADER].row, elements_[HEADER].col, animation_.getLine());
   }
 }
 
@@ -78,14 +104,14 @@ void Display::writeVolume(const int& vol){
   if(animation_.empty()){
     char buff[12];
     sprintf(buff, "V=%3d mL   ", vol);
-    write(VOLUME, buff);
+    write(elements_[VOLUME].row, elements_[VOLUME].col, buff);
   }
 }
 
 void Display::writeBPM(const int& bpm){
   char buff[12];
   sprintf(buff, "RR=%2d/min  ", bpm);
-  write(BPM, buff);
+  write(elements_[BPM].row, elements_[BPM].col, buff);
 }
 
 void Display::writeIEratio(const float& ie){
@@ -93,37 +119,41 @@ void Display::writeIEratio(const float& ie){
   dtostrf(ie, 3, 1, ie_buff);
   char buff[12];
   sprintf(buff, "I:E=1:%s  ", ie_buff);
-  write(IE_RATIO, buff);
+  write(elements_[IE_RATIO].row, elements_[IE_RATIO].col, buff);
 }
 
-void Display::writeACTrigger(const float& ac_trigger, const float& lower_threshold){
+void Display::writeACTrigger(const float& ac_trigger){
   char buff[12];
-  if(ac_trigger > lower_threshold){
+  if(ac_trigger > trigger_threshold_){
     char ac_buff[4];
     dtostrf(ac_trigger, 3, 1, ac_buff);
     sprintf(buff, "AC=%scmH20", ac_buff);
   } else {
     sprintf(buff, "AC=OFF    ");
   }
-  write(AC_TRIGGER, buff);
+  write(elements_[AC_TRIGGER].row, elements_[AC_TRIGGER].col, buff);
+}
+
+void Display::writePresLabel(){
+  write(elements_[PRES_LABEL].row, elements_[PRES_LABEL].col, " P(cmH2O):");
 }
 
 void Display::writePeakP(const int& peak){
   char buff[10];
   sprintf(buff, "  peak=%2d", peak);
-  write(PEAK_PRES, buff);
+  write(elements_[PEAK_PRES].row, elements_[PEAK_PRES].col, buff);
 }
 
 void Display::writePlateauP(const int& plat){
   char buff[10];
   sprintf(buff, "  plat=%2d", plat);
-  write(PLATEAU_PRES, buff);
+  write(elements_[PLATEAU_PRES].row, elements_[PLATEAU_PRES].col, buff);
 }
 
 void Display::writePEEP(const int& peep){
   char buff[10];
   sprintf(buff, "  PEEP=%2d", peep);
-  write(PEEP_PRES, buff);
+  write(elements_[PEEP_PRES].row, elements_[PEEP_PRES].col, buff);
 }
 
 template <typename T>

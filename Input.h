@@ -3,13 +3,22 @@
 
 #include "Arduino.h"
 
+#include "Display.h"
+
 
 namespace input {
+
+
+using display::Display;
 
 
 template <typename T>
 class Input {
 public:
+  Input(Display* displ, const display::DisplayKey& key): 
+      displ_(displ),
+      disp_key_(key) {}
+
   void begin(T (*read_fun)()) {
     read_fun_ = read_fun;
   }
@@ -18,19 +27,28 @@ public:
 
   virtual T read() const = 0;
 
-private:
+protected:
   T (*read_fun_)();
+  Display* displ_;
+  display::DisplayKey disp_key_;
 };
 
 
 template <typename T>
 class Knob : public Input<T> {
 public:
-  void update() {}
+  Knob(Display* displ, const display::DisplayKey& key): Input<T>(displ, key) {}
+
+  void update() {
+    value_ = read_fun_();
+    this->displ_->write(this->disp_key_, read());  
+  }
 
   T read() const {
-    return read_fun_();
+    return value_;
   }
+private:
+  T value_;
 };
 
 

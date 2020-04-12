@@ -121,7 +121,7 @@ int motorPosition = 0;
 // LCD Screen
 const int rs = 9, en = 8, d4 = 7, d5 = 6, d6 = 5, d7 = 4;
 LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
-display::Display displ(&lcd);
+display::Display displ(&lcd, TRIGGER_LOWER_THRESHOLD);
 
 // Alarms
 alarms::AlarmManager alarm(BEEPER_PIN, SNOOZE_PIN, &displ, &cycleCount);
@@ -136,10 +136,14 @@ logging::Logger logger(true,    // log_to_serial,
 Pressure pressureReader(PRESS_SENSE_PIN);
 
 // Knobs
-input::Knob<int> volumeKnob;
-input::Knob<int> bpmKnob;
-input::Knob<float> ieRatioKnob;
-input::Knob<float> triggerKnob;
+struct Knobs {
+  void begin();
+  void update();
+  input::Knob<int> volume     = input::Knob<int>(&displ, display::VOLUME);
+  input::Knob<int> bpm        = input::Knob<int>(&displ, display::BPM);
+  input::Knob<float> ie       = input::Knob<float>(&displ, display::IE_RATIO);
+  input::Knob<float> trigger  = input::Knob<float>(&displ, display::AC_TRIGGER);
+} knobs;
 
 // TODO: move function definitions after loop() or to classes if they don't use global vars
 // Functions
@@ -158,46 +162,24 @@ void setState(States newState){
 }
 
 // Converts motor position in ticks to volume in mL
-int ticks2Volume(const int& vol_ticks) {
-  return max(0,map(vol_ticks, VOL_MIN, VOL_MAX, 0, 100) * VOL_SLOPE + VOL_INT);
-}
+int ticks2Volume(const int& vol_ticks);
 
 // Converts volume in mL to motor position in ticks
-int volume2ticks(const int& vol_cc) {
-  return map((vol_cc - VOL_INT) / VOL_SLOPE, 0, 100, VOL_MIN, VOL_MAX);
-}
+int volume2ticks(const int& vol_cc);
 
-// Reads set volume (in mL) from the volume pot
-int readVolume() {
-  const int volTicks = map(analogRead(VOL_PIN), 0, ANALOG_PIN_MAX, VOL_MIN, VOL_MAX);
-  return ticks2Volume(volTicks);
-}
-
-// Reads set bpm from the bpm pot
-int readBpm() { 
-  return map(analogRead(BPM_PIN), 0, ANALOG_PIN_MAX, BPM_MIN, BPM_MAX); 
-}
-
-// Reads set IE ratio from the IE pot
-float readIeRatio() {
-  return map(analogRead(IE_PIN), 0, ANALOG_PIN_MAX,
-             IE_MIN*10, IE_MAX*10) / 10.0; // Carry one decimal place
-}
-
-// Reads set trigger sensitivity from the trigger pot
-float readTriggerSens() {
-  return map(analogRead(PRESS_POT_PIN), 0, ANALOG_PIN_MAX,
-             TRIGGERSENSITIVITY_MIN*100,
-             TRIGGERSENSITIVITY_MAX*100) / 100.0; //Carry two decimal places
-}
+// For reading of pots
+int readVolume();         // Reads set volume (in mL) from the volume pot
+int readBpm();            // Reads set bpm from the bpm pot
+float readIeRatio();      // Reads set IE ratio from the IE pot
+float readTriggerSens();  // Reads set trigger sensitivity from the trigger pot
 
 // Reads user settings to set the waveform parameters
 void readInput(){
   // Read knobs
-  setVolumeTicks = volume2ticks(volumeKnob.read());
-  bpm = bpmKnob.read();
-  ieRatio = ieRatioKnob.read();
-  triggerSensitivity = triggerKnob.read();
+  setVolumeTicks = volume2ticks(knobs.volume.read());
+  bpm = knobs.bpm.read();
+  ieRatio = knobs.ie.read();
+  triggerSensitivity = knobs.trigger.read();
 
   tPeriod = 60.0 / bpm; // seconds in each breathing cycle period
   tHoldIn = tPeriod / (1 + ieRatio);
@@ -208,12 +190,6 @@ void readInput(){
   
   vIn = setVolumeTicks / tIn; // Velocity in (clicks/s)
   vEx = setVolumeTicks / (tEx - tHoldIn); // Velocity out (clicks/s)
-
-  // TODO knobs should handle these
-  displ.writeVolume(volumeKnob.read());  
-  displ.writeBPM(bpm);
-  displ.writeIEratio(ieRatio);
-  displ.writeACTrigger(triggerSensitivity, TRIGGER_LOWER_THRESHOLD);
 }
 
 int readEncoder() {
@@ -228,6 +204,7 @@ bool readMotorCurrent() {
   bool valid = roboclaw.ReadCurrents(address, motorCurrent, noSecondMotor);
   return valid;
 }
+
 // goToPosition goes to a desired position at the given speed,
 void goToPosition(int pos, int vel){
   bool valid = readEncoder();
@@ -352,10 +329,7 @@ void setup() {
   displ.begin();
 
   // Set up knobs with their respective read functions
-  volumeKnob.begin(&readVolume);
-  bpmKnob.begin(&readBpm);
-  ieRatioKnob.begin(&readIeRatio);
-  triggerKnob.begin(&readTriggerSens);
+  knobs.begin();
 
   setState(PREHOME_STATE); // Initial state
   roboclaw.begin(38400); // Roboclaw
@@ -379,6 +353,7 @@ void loop() {
 
   // All States
   logger.update();
+  knobs.update();
   tLoopTimer = now(); // Start the loop timer
   readInput();
   readEncoder();
@@ -460,14 +435,14 @@ void loop() {
     patientTriggered = pressureReader.get() < (pressureReader.peep() - triggerSensitivity) 
         && triggerSensitivity > TRIGGER_LOWER_THRESHOLD;
 
-    if(patientTriggered ||  now() - tCycleTimer > tPeriod) {
+    if(patientTriggered || now() - tCycleTimer > tPeriod) {
       pressureReader.set_peak_and_reset();
       displ.writePeakP(round(pressureReader.peak()));
       displ.writePEEP(round(pressureReader.peep()));
       displ.writePlateauP(round(pressureReader.plateau()));
       setState(IN_STATE);
 
-      // Consider if this is really necessary
+      // TODO Consider if this is really necessary
       if(!patientTriggered) pressureReader.set_peep(); // Set peep again if time triggered
     }
   }
@@ -476,7 +451,7 @@ void loop() {
     //Entering
     if(enteringState){
       enteringState = false;
-      //Consider displaying homing status on the screen
+      // TODO Consider displaying homing status on the screen
       roboclaw.BackwardM1(address, voltHome);
     }
 
@@ -485,14 +460,14 @@ void loop() {
       setState(HOMING_STATE); 
     }
 
-    // Consider a timeout to give up on homing
+    // TODO Consider a timeout to give up on homing
   }
 
   else if(state == HOMING_STATE){
     //Entering
     if(enteringState){
       enteringState = false;
-      //Consider displaying homing status on the screen
+      // TODO Consider displaying homing status on the screen
       roboclaw.ForwardM1(address, voltHome);
     }
     
@@ -505,11 +480,58 @@ void loop() {
       roboclaw.SetEncM1(address, 0); // Zero the encoder
       setState(IN_STATE); 
     }
-    // Consider a timeout to give up on homing
+    // TODO Consider a timeout to give up on homing
   }
 
   // Add a delay if there's still time in the loop period
   tLoopBuffer = max(0, tLoopPeriod - tLoopTimer);
   delay(tLoopBuffer);
+}
+
+
+/////////////////
+// Definitions //
+/////////////////
+
+void Knobs::begin() {
+  volume.begin(&readVolume);
+  bpm.begin(&readBpm);
+  ie.begin(&readIeRatio);
+  trigger.begin(&readTriggerSens);
+}
+
+void Knobs::update() {
+  volume.update();
+  bpm.update();
+  ie.update();
+  trigger.update();
+}
+
+int ticks2Volume(const int& vol_ticks) {
+  return max(0,map(vol_ticks, VOL_MIN, VOL_MAX, 0, 100) * VOL_SLOPE + VOL_INT);
+}
+
+int volume2ticks(const int& vol_cc) {
+  return map((vol_cc - VOL_INT) / VOL_SLOPE, 0, 100, VOL_MIN, VOL_MAX);
+}
+
+int readVolume() {
+  const int volTicks = map(analogRead(VOL_PIN), 0, ANALOG_PIN_MAX, VOL_MIN, VOL_MAX);
+  return ticks2Volume(volTicks);
+}
+
+int readBpm() {
+  return map(analogRead(BPM_PIN), 0, ANALOG_PIN_MAX, BPM_MIN, BPM_MAX); 
+}
+
+float readIeRatio() {
+  return map(analogRead(IE_PIN), 0, ANALOG_PIN_MAX,
+             IE_MIN*10, IE_MAX*10) / 10.0; // Carry one decimal place
+}
+
+float readTriggerSens() {
+  return map(analogRead(PRESS_POT_PIN), 0, ANALOG_PIN_MAX,
+             TRIGGERSENSITIVITY_MIN*100,
+             TRIGGERSENSITIVITY_MAX*100) / 100.0; //Carry two decimal places
 }
 
