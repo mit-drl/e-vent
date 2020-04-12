@@ -224,7 +224,7 @@ bool homeSwitchPressed() {
 void checkErrors() {
   // Pressure alarms
   alarm.highPressure(pressureReader.get() >= MAX_PRESSURE_ALARM);
-  if(pressureReader.get() >= MAX_PRESSURE) setState(EX_STATE);
+  if(pressureReader.get() >= MAX_PRESSURE) setState(EX_STATE);  // TODO this should not be in checkErrors
   
   // These pressure alarms only make sense after homing 
   if (enteringState && state == IN_STATE) {

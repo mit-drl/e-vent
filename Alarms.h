@@ -6,7 +6,71 @@
 #include "Display.h"
 #include "pitches.h"
 
+
 namespace alarms {
+
+
+using display::Display;
+
+
+// Alarm levels in order of increasing priority
+enum AlarmLevel {
+  NO_ALARM,
+  NOTIFY,
+  EMERGENCY,
+  NUM_LEVELS
+};
+
+
+// Container for notes elements
+struct Note {
+  int note;
+  int duration;
+  int pause;
+};
+
+
+// Emergency notes
+static const Note kEmergencyNotes[] = {
+  {NOTE_G4, 300, 200},
+  {NOTE_G4, 300, 200},
+  {NOTE_G4, 300, 400},
+  {NOTE_G4, 200, 100},
+  {NOTE_G5, 200, 1500}
+};
+
+// Notifiation notes
+static const Note kNotifyNotes[] = {
+  {NOTE_B4, 200, 100},  // TODO design notes
+  {NOTE_B4, 200, 100},
+  {NOTE_B4, 200, 1500}
+};
+
+
+/**
+ * Tone
+ * A sequence of notes that can be played.
+ */
+class Tone {
+public:
+  Tone(): length_(0) {}
+
+  Tone(const Note notes[], const int& notes_length, const int* pin);
+
+  // Play the tone, if any
+  void play();
+
+  // Stop playing
+  inline void stop() { playing_ = false; }
+
+private:
+  Note* notes_;
+  int length_;
+  int* pin_;
+  bool playing_ = false;
+  int tone_step_;
+  unsigned long tone_timer_ = 0;
+};
 
 
 /**
@@ -41,41 +105,38 @@ class Beeper {
   // Time during which alarms are silenced, in milliseconds
   static const unsigned long kSnoozeTime = 2 * 60 * 1000UL;
 
-  // notes in the emergency alarm defines the pattern:
-  static const int kNotesLen = 5;
-  const int kNotes[kNotesLen] = {NOTE_G4, NOTE_G4, NOTE_G4, NOTE_G4, NOTE_G5};
-  const int kNoteDurations[kNotesLen] = {300, 300, 300, 200, 200};
-  const int kNotePauses[kNotesLen] = {200, 200, 400, 100, 1500};
-
 public:
-  Beeper(const int& beeper_pin, const int& snooze_pin);
+  Beeper(const int& beeper_pin, const int& snooze_pin):
+    beeper_pin_(beeper_pin), 
+    snooze_button_(snooze_pin) {
+      const int notify_notes_length = sizeof(kNotifyNotes) / sizeof(kNotifyNotes[0]);
+      tones_[NOTIFY] = Tone(kNotifyNotes, notify_notes_length, &beeper_pin_);
+
+      const int emergency_notes_length = sizeof(kEmergencyNotes) / sizeof(kEmergencyNotes[0]);
+      tones_[EMERGENCY] = Tone(kEmergencyNotes, emergency_notes_length, &beeper_pin_);
+    }
 
   // Setup during arduino setup()
   void begin();
 
   // Update during arduino loop()
-  void update();
-
-  // Indicate that alarms are ON
-  inline void alarmsON() { alarms_on_ = true; };
-
-  // Indicate that alarms are OFF
-  inline void alarmsOFF() { alarms_on_ = false; };
+  void update(const AlarmLevel& alarm_level);
 
 private:
   const int beeper_pin_;
   DebouncedButton snooze_button_;
-  bool alarms_on_ = false;
+  Tone tones_[NUM_LEVELS];
+
   unsigned long snooze_time_ = 0;
   bool snoozed_ = false;
-  unsigned long tone_timer_ = 0;
-  int tone_step_ = kNotesLen;
 
   bool snoozeButtonPressed() const;
 
   void toggleSnooze();
 
-  void play();
+  void play(const AlarmLevel& alarm_level);
+
+  void stop();
 };
 
 
@@ -87,7 +148,8 @@ class Alarm {
 public:
   Alarm(){};
   
-  Alarm(const String& text, const int& min_bad_to_trigger, const int& min_good_to_clear);
+  Alarm(const String& text, const AlarmLevel& alarm_level,
+        const int& min_bad_to_trigger, const int& min_good_to_clear);
 
   // Set the ON value of this alarm, but only turn ON if `bad == true` for at least 
   // `min_bad_to_trigger_` consecutive calls with different `seq` and OFF if `bad == false` 
@@ -98,21 +160,23 @@ public:
   inline bool isON() const { return on_; }
 
   // Get the text of this alarm
-  inline const String text() const { return text_; }
+  inline String text() const { return text_; }
+
+  // Get the alarm level of this alarm
+  inline AlarmLevel alarmLevel() const { return alarm_level_; }
 
 private:
   String text_;
-  bool on_ = false;
+  AlarmLevel alarm_level_;
   int min_bad_to_trigger_;
   int min_good_to_clear_;
+  bool on_ = false;
   unsigned long consecutive_bad_ = 0;
   unsigned long consecutive_good_ = 0;
   unsigned long last_bad_seq_ = 0;
   unsigned long last_good_seq_ = 0;
 };
 
-
-using display::Display;
 
 /**
  * AlarmManager
@@ -142,12 +206,12 @@ public:
       displ_(displ),
       beeper_(beeper_pin, snooze_pin),
       cycle_count_(cycle_count) {
-    alarms_[HIGH_PRESSU] = Alarm("    HIGH PRESURE    ", 1, 2);
-    alarms_[LOW_PRESSUR] = Alarm("LOW PRES DISCONNECT?", 1, 1);
-    alarms_[BAD_PLATEAU] = Alarm(" HIGH RESIST PRES ", 1, 1);
-    alarms_[UNMET_VOLUM] = Alarm(" UNMET TIDAL VOLUME ", 1, 1);
-    alarms_[NO_TIDAL_PR] = Alarm(" NO TIDAL PRESSURE  ", 2, 1);
-    alarms_[OVER_CURREN] = Alarm(" OVER CURRENT FAULT ", 1, 2);
+    alarms_[HIGH_PRESSU] = Alarm("    HIGH PRESURE    ", 1, 2, EMERGENCY);
+    alarms_[LOW_PRESSUR] = Alarm("LOW PRES DISCONNECT?", 1, 1, EMERGENCY);
+    alarms_[BAD_PLATEAU] = Alarm("  HIGH RESIST PRES  ", 1, 1, NOTIFY);
+    alarms_[UNMET_VOLUM] = Alarm(" UNMET TIDAL VOLUME ", 1, 1, EMERGENCY);
+    alarms_[NO_TIDAL_PR] = Alarm(" NO TIDAL PRESSURE  ", 2, 1, EMERGENCY);
+    alarms_[OVER_CURREN] = Alarm(" OVER CURRENT FAULT ", 1, 2, EMERGENCY);
   }
 
   // Setup during arduino setup()
@@ -196,7 +260,10 @@ private:
   int numON() const;
 
   // Get text to display
-  const String getText() const;
+  String getText() const;
+
+  // Get highest priority level of the alarms that are ON
+  AlarmLevel getHighestLevel() const;
 };
 
 

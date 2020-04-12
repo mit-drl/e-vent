@@ -4,6 +4,32 @@
 namespace alarms {
 
 
+/// Tone ///
+
+Tone::Tone(const Note notes[], const int& notes_length, const int* pin): 
+    notes_(notes),
+    pin_(pin),
+    length_(notes_length),
+    tone_step_(length_) {}
+
+void Tone::play() {
+  if (length_ == 0) {
+    return;
+  }
+  if (!playing_) {  // Do once when tone starts
+    tone_timer_ = millis();
+    tone_step_ = 0;
+    playing_ = true;
+  }
+  tone_step_ %= length_; // Start again if tone finished
+  if(millis() > tone_timer_){
+    tone(*pin_, notes_[tone_step_].note, notes_[tone_step_].duration);
+    tone_timer_ += notes_[tone_step_].duration + notes_[tone_step_].pause;
+    tone_step_ ++;
+  }
+}
+
+
 /// DebouncedButton ///
 
 DebouncedButton::DebouncedButton(const int& pin): pin_(pin) {}
@@ -29,16 +55,12 @@ bool DebouncedButton::is_LOW() {
 
 /// Beeper ///
 
-Beeper::Beeper(const int& beeper_pin, const int& snooze_pin):
-    beeper_pin_(beeper_pin), 
-    snooze_button_(snooze_pin) {}
-
 void Beeper::begin() {
   snooze_button_.begin();
   pinMode(beeper_pin_, OUTPUT);
 }
 
-void Beeper::update() {
+void Beeper::update(const AlarmLevel& alarm_level) {
   if (snoozeButtonPressed()) {
     toggleSnooze();
   }
@@ -46,11 +68,10 @@ void Beeper::update() {
   if (snoozed_ && millis() - snooze_time_ > kSnoozeTime) {
     snoozed_ = false;
   }
-  if (alarms_on_ && !snoozed_) {
-    if(tone_step_ == kNotesLen) tone_step_ = 0; // Start again if tone finished
-    play();
+  if (snoozed_) {
+    stop();
   } else {
-    tone_step_ = kNotesLen;
+    play(alarm_level);
   }
 }
 
@@ -67,21 +88,28 @@ void Beeper::toggleSnooze() {
   }
 }
 
-void Beeper::play(){
-  unsigned long current = millis();
-  if (tone_step_ == kNotesLen) return; // The tone has completed
-  if(current > tone_timer_){
-    tone(beeper_pin_, kNotes[tone_step_], kNoteDurations[tone_step_]);
-    tone_timer_ = current + kNoteDurations[tone_step_] + kNotePauses[tone_step_];
-    tone_step_ ++;
+void Beeper::play(const AlarmLevel& alarm_level) {
+  for (int i = 0; i < NUM_LEVELS; i++) {
+    if (i != alarm_level) {
+      tones_[i].stop();
+    }
+  }
+  tones_[alarm_level].play();
+}
+
+void Beeper::stop() {
+  for (int i = 0; i < NUM_LEVELS; i++) {
+    tones_[i].stop();
   }
 }
 
 
 /// Alarm ///
 
-Alarm::Alarm(const String& text, const int& min_bad_to_trigger, const int& min_good_to_clear):
+Alarm::Alarm(const String& text, const AlarmLevel& alarm_level,
+             const int& min_bad_to_trigger, const int& min_good_to_clear):
   text_(text),
+  alarm_level_(alarm_level),
   min_bad_to_trigger_(min_bad_to_trigger),
   min_good_to_clear_(min_good_to_clear) {}
 
@@ -111,14 +139,8 @@ void AlarmManager::begin() {
 }
 
 void AlarmManager::update() {
-  const String text = getText();
-  displ_->writeAlarmText(text);
-  if (text.length() > 0) {
-    beeper_.alarmsON();
-  } else {
-    beeper_.alarmsOFF();
-  }
-  beeper_.update();
+  displ_->writeAlarmText(getText());
+  beeper_.update(getHighestLevel());
 }
 
 int AlarmManager::numON() const {
@@ -129,7 +151,7 @@ int AlarmManager::numON() const {
   return num;
 }
 
-const String AlarmManager::getText() const {
+String AlarmManager::getText() const {
   const int num_on = numON();
   String text = "";
   if (num_on > 0) {
@@ -145,6 +167,16 @@ const String AlarmManager::getText() const {
     text = alarms_[i].text();
   }
   return text;
+}
+
+AlarmLevel AlarmManager::getHighestLevel() const {
+  AlarmLevel alarm_level = NO_ALARM;
+  for (int i = 0; i < NUM_ALARMS; i++) {
+    if (alarms_[i].isON()) {
+      alarm_level = max(alarm_level, alarms_[i].alarmLevel());
+    }
+  }
+  return alarm_level;
 }
 
 
