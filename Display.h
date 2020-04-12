@@ -2,8 +2,9 @@
 #define Display_h
 
 #include "Arduino.h"
-
 #include <LiquidCrystal.h>
+
+#include "Utilities.h"
 
 
 namespace display {
@@ -17,26 +18,25 @@ static const int kHeight = 4;  // Height of the display
  * Handles the blinking of text in the display.
  */
 class TextAnimation {
-  const char* kBlankLine = "                    ";  // One blank line of display width
-  const int kBlinkPeriod = 1000;        // Blinks this often in milliseconds
-  const float kBlinkOnFraction = 0.5;   // Text shows for this fraction of the blinking period
-
 public:
+  TextAnimation(const unsigned long& period, const float& on_fraction):
+      pulse_(period, on_fraction) {}
 
   // Reset the text of the animation
-  void reset(const String& text = "");
+  inline void reset(const String& text = "") { text_ = text; }
 
   // Check if the animation text is empty
-  bool empty();
+  inline bool empty() { return text_.length() == 0; }
 
-  // Get the animation text
-  const String& text();
+  // Get the animation text (original text passed to reset)
+  inline const String& text() { return text_; }
 
-  // Get the current string to display (text or blank line)
-  const String getLine();
+  // Get the current string to display (empty string for blank)
+  inline const String getLine() { return pulse_.read() ? text_ : ""; }
 
 private:
   String text_;
+  utilities::Pulse pulse_;
   unsigned long reset_time_;
 };
 
@@ -88,7 +88,8 @@ public:
   // Constructor, save a pointer to the (global) display object
   Display(LiquidCrystal* lcd, const float& trigger_threshold):
       lcd_(lcd),
-      trigger_threshold_(trigger_threshold) {
+      trigger_threshold_(trigger_threshold),
+      animation_(1000, 0.5) {
     elements_[HEADER]       = Element{0, 0, 20};
     elements_[VOLUME]       = Element{0, 0, 11};
     elements_[BPM]          = Element{1, 0, 11};

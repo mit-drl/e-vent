@@ -35,7 +35,7 @@ private:
  * Generates an ON/OFF signal with given period and duty.
  */
 class Pulse {
-private:
+public:
   Pulse(const unsigned long& period, const float& duty, const bool& random_offset = true):
       period_(period),
       on_duration_(duty * period),
@@ -46,7 +46,7 @@ private:
     return (millis() - offset_) % period_ < on_duration_;
   }
 
-public:
+private:
   const unsigned long period_;
   const unsigned long on_duration_;
   const unsigned long offset_;

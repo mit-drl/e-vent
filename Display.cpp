@@ -3,43 +3,6 @@
 namespace display {
 
 
-/// TextAntimation ///
-
-void TextAnimation::reset(const String& text) {
-  reset_time_ = millis();
-  text_ = text;
-}
-
-bool TextAnimation::empty() {
-  return text_.length() == 0;
-}
-
-const String& TextAnimation::text() {
-  return text_;
-}
-
-const String TextAnimation::getLine() {
-  String new_text;
-  unsigned long time_now = millis();
-  if(time_now - reset_time_ < kBlinkOnFraction * kBlinkPeriod) {
-    new_text = text_;
-    while(new_text.length() < kWidth) {
-      new_text += " ";
-    }
-    if(new_text.length() > kWidth) {
-      new_text = new_text.substring(0, 20);
-    }
-  }
-  else if(time_now - reset_time_ < kBlinkPeriod) {
-    new_text = kBlankLine;
-  }
-  else {
-    reset_time_ = time_now;
-  }
-  return new_text;
-}
-
-
 /// Display ///
 
 void Display::begin() {
@@ -100,7 +63,13 @@ void Display::writeHeader() {
     writePresLabel();
   } 
   else {
-    write(elements_[HEADER].row, elements_[HEADER].col, animation_.getLine());
+    const String line = animation_.getLine();
+    if (line.length() > 0) {
+      write(elements_[HEADER].row, elements_[HEADER].col, animation_.getLine());
+    }
+    else {
+      writeBlank(HEADER);
+    }
   }
 }
 
