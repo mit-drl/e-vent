@@ -1,0 +1,109 @@
+#######################################
+# Syntax Coloring Map for RoboClaw
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+RoboClaw	KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+begin	KEYWORD2
+ForwardM1 KEYWORD2
+BackwardM1 KEYWORD2
+SetMinVoltageMainBattery KEYWORD2
+SetMaxVoltageMainBattery KEYWORD2
+ForwardM2 KEYWORD2
+BackwardM2 KEYWORD2
+ForwardBackwardM1 KEYWORD2
+ForwardBackwardM2 KEYWORD2
+ForwardMixed KEYWORD2
+BackwardMixed KEYWORD2
+TurnRightMixed KEYWORD2
+TurnLeftMixed KEYWORD2
+ForwardBackwardMixed KEYWORD2
+LeftRightMixed KEYWORD2
+ReadEncM1 KEYWORD2
+ReadEncM2 KEYWORD2
+SetEncM1 KEYWORD2
+SetEncM2 KEYWORD2
+ReadSpeedM1 KEYWORD2
+ReadSpeedM2 KEYWORD2
+ResetEncoders KEYWORD2
+ReadVersion KEYWORD2
+ReadMainBatteryVoltage KEYWORD2
+ReadLogicBattVoltage KEYWORD2
+SetMinVoltageLogicBattery KEYWORD2
+SetMaxVoltageLogicBattery KEYWORD2
+SetM1VelocityPID KEYWORD2
+SetM2VelocityPID KEYWORD2
+ReadISpeedM1 KEYWORD2
+ReadISpeedM2 KEYWORD2
+DutyM1 KEYWORD2
+DutyM2 KEYWORD2
+DutyM1M2 KEYWORD2
+SpeedM1 KEYWORD2
+SpeedM2 KEYWORD2
+SpeedM1M2 KEYWORD2
+SpeedAccelM1 KEYWORD2
+SpeedAccelM2 KEYWORD2
+SpeedAccelM1M2 KEYWORD2
+SpeedDistanceM1 KEYWORD2
+SpeedDistanceM2 KEYWORD2
+SpeedDistanceM1M2 KEYWORD2
+SpeedAccelDistanceM1 KEYWORD2
+SpeedAccelDistanceM2 KEYWORD2
+SpeedAccelDistanceM1M2 KEYWORD2
+ReadBuffers KEYWORD2
+ReadPWMs KEYWORD2
+ReadCurrents KEYWORD2
+SpeedAccelM1M2_2 KEYWORD2
+SpeedAccelDistanceM1M2_2 KEYWORD2
+DutyAccelM1 KEYWORD2
+DutyAccelM2 KEYWORD2
+DutyAccelM1M2 KEYWORD2
+ReadM1VelocityPID KEYWORD2
+ReadM2VelocityPID KEYWORD2
+SetMainVoltages KEYWORD2
+SetLogicVoltages KEYWORD2
+ReadMinMaxMainVoltages KEYWORD2
+ReadMinMaxLogicVoltages KEYWORD2
+SetM1PositionPID KEYWORD2
+SetM2PositionPID KEYWORD2
+ReadM1PositionPID KEYWORD2
+ReadM2PositionPID KEYWORD2
+SpeedAccelDeccelPositionM1 KEYWORD2
+SpeedAccelDeccelPositionM2 KEYWORD2
+SpeedAccelDeccelPositionM1M2 KEYWORD2
+SetM1DefaultAccel KEYWORD2
+SetM2DefaultAccel KEYWORD2
+SetPinFunctions KEYWORD2
+GetPinFunctions KEYWORD2
+SetDeadBand KEYWORD2
+GetDeadBand KEYWORD2
+RestoreDefaults KEYWORD2
+ReadTemp KEYWORD2
+ReadTemp2 KEYWORD2
+ReadError KEYWORD2
+ReadEncoderModes KEYWORD2
+SetM1EncoderMode KEYWORD2
+SetM2EncoderMode KEYWORD2
+WriteNVM KEYWORD2
+ReadNVM KEYWORD2
+SetConfig KEYWORD2
+GetConfig KEYWORD2
+SetM1MaxCurrent KEYWORD2
+SetM2MaxCurrent KEYWORD2
+ReadM1MaxCurrent KEYWORD2
+ReadM2MaxCurrent KEYWORD2
+SetPWMMode KEYWORD2
+GetPWMMode KEYWORD2
+
+#######################################
+# Constants (LITERAL1)
+#######################################
+
