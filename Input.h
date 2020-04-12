@@ -3,6 +3,7 @@
 
 #include "Arduino.h"
 
+#include "Alarms.h"
 #include "Display.h"
 #include "Utilities.h"
 
@@ -10,6 +11,7 @@
 namespace input {
 
 
+using alarms::AlarmManager;
 using display::Display;
 
 
@@ -49,6 +51,10 @@ protected:
       displ_->write(disp_key_, value);
     }
   }
+
+  inline String toString(const T& val) const { return displ_->toString(disp_key_, val); }
+
+  inline String getLabel() const { return displ_->getLabel(disp_key_); }
 };
 
 
@@ -71,13 +77,20 @@ public:
 /**
  * SafeKnob
  * Safe knob that requires confirmation via 'confirm' button before setting a value.
+ * TODO move definitions to cpp
  */
 template <typename T>
 class SafeKnob : public Input<T> {
+
+  // Time to sound alarm if knob is changed and not confirmed
+  static const unsigned long kAlarmTime = 10 * 1000UL;
+
 public:
-  SafeKnob(Display* displ, const display::DisplayKey& key, const int& confirm_pin): 
+  SafeKnob(Display* displ, const display::DisplayKey& key,
+           const int& confirm_pin, AlarmManager* alarms): 
       Input<T>(displ, key),
       confirm_button_(confirm_pin),
+      alarms_(alarms),
       pulse_(1000, 0.5) {}
 
   void begin(T (*read_fun)()) {
@@ -92,6 +105,7 @@ public:
     }
     else if (confirm_button_.is_LOW()) {
       this->set_value_ = unconfirmed_value_;
+      alarms_->unconfirmedChange(false);
       confirmed_ = true;
     }
     else {
@@ -101,15 +115,28 @@ public:
         confirmed_ = false;
       }
       this->display(unconfirmed_value_, !pulse_.read());
+      if (time_now - time_changed_ > kAlarmTime) {
+        alarms_->unconfirmedChange(true, getConfirmPrompt());
+      }
     }
   }
 
 private:
   utilities::DebouncedButton confirm_button_;
+  AlarmManager* alarms_;
   utilities::Pulse pulse_;
   T unconfirmed_value_;
   unsigned long time_changed_ = 0;
   bool confirmed_ = true;
+
+  String getConfirmPrompt() const {
+    char buff[display::kWidth + 1];
+    sprintf(buff, "Set %s(%s)->%s?", this->getLabel().c_str(), 
+            this->toString(this->set_value_).c_str(), this->toString(unconfirmed_value_).c_str());
+    String s(buff);
+    while (s.length() < display::kWidth) s += " ";
+    return s;
+  }
 };
 
 

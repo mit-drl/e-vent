@@ -76,34 +76,28 @@ void Display::writeHeader() {
 void Display::writeVolume(const int& vol) {
   if(animation_.empty()) {
     char buff[12];
-    sprintf(buff, "V=%3d mL   ", vol);
+    sprintf(buff, "%1s=%3s mL   ", getLabel(VOLUME), toString(VOLUME, vol));
     write(elements_[VOLUME].row, elements_[VOLUME].col, buff);
   }
 }
 
 void Display::writeBPM(const int& bpm) {
   char buff[12];
-  sprintf(buff, "RR=%2d/min  ", bpm);
+  sprintf(buff, "%2s=%2s/min  ", getLabel(BPM), toString(VOLUME, bpm));
   write(elements_[BPM].row, elements_[BPM].col, buff);
 }
 
 void Display::writeIEratio(const float& ie) {
-  char ie_buff[4];
-  dtostrf(ie, 3, 1, ie_buff);
   char buff[12];
-  sprintf(buff, "I:E=1:%s  ", ie_buff);
+  sprintf(buff, "%3s=1:%3s  ", getLabel(IE_RATIO), toString(IE_RATIO, ie));
   write(elements_[IE_RATIO].row, elements_[IE_RATIO].col, buff);
 }
 
 void Display::writeACTrigger(const float& ac_trigger) {
   char buff[12];
-  if(ac_trigger > trigger_threshold_) {
-    char ac_buff[4];
-    dtostrf(ac_trigger, 3, 1, ac_buff);
-    sprintf(buff, "AC=%scmH20", ac_buff);
-  } else {
-    sprintf(buff, "AC=OFF    ");
-  }
+  const String trigger_str = toString(AC_TRIGGER, ac_trigger);
+  sprintf(buff, "%2s=%3s%5s", getLabel(AC_TRIGGER), trigger_str,
+          trigger_str == "OFF" ? "     " : "cmH2O");
   write(elements_[AC_TRIGGER].row, elements_[AC_TRIGGER].col, buff);
 }
 
@@ -113,20 +107,43 @@ void Display::writePresLabel() {
 
 void Display::writePeakP(const int& peak) {
   char buff[10];
-  sprintf(buff, "  peak=%2d", peak);
+  sprintf(buff, "  %4s=%2s", getLabel(PEAK_PRES), toString(PEAK_PRES, peak));
   write(elements_[PEAK_PRES].row, elements_[PEAK_PRES].col, buff);
 }
 
 void Display::writePlateauP(const int& plat) {
   char buff[10];
-  sprintf(buff, "  plat=%2d", plat);
+  sprintf(buff, "  %4s=%2s", getLabel(PLATEAU_PRES), toString(PLATEAU_PRES, plat));
   write(elements_[PLATEAU_PRES].row, elements_[PLATEAU_PRES].col, buff);
 }
 
 void Display::writePEEP(const int& peep) {
   char buff[10];
-  sprintf(buff, "  PEEP=%2d", peep);
+  sprintf(buff, "  %4s=%2s", getLabel(PEEP_PRES), toString(PEEP_PRES, peep));
   write(elements_[PEEP_PRES].row, elements_[PEEP_PRES].col, buff);
+}
+
+template <typename T>
+String Display::toString(const DisplayKey& key, const T& value) const {
+  switch (key) {
+    case VOLUME:
+      return String(value);
+    case BPM:
+      return String(value);
+    case IE_RATIO:
+      return String(value, 1);
+    case AC_TRIGGER:
+      return (value > trigger_threshold_) ? String(value, 1) : "OFF";
+    case PEAK_PRES:
+      return String(value);
+    case PLATEAU_PRES:
+      return String(value);
+    case PEEP_PRES:
+      return String(value);
+    default:
+      // Not meant to be used for other keys
+      return "N/A";
+  }
 }
 
 template <typename T>

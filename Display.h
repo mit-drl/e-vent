@@ -74,13 +74,15 @@ class Display {
   struct Element {
     Element() = default;
 
-    Element(const int& r, const int& c, const int& w): row(r), col(c), width(w) {
+    Element(const int& r, const int& c, const int& w, const String& l = ""):
+        row(r), col(c), width(w), label(l) {
       String blank;
       while (blank.length() < width) blank += " ";
     }
     int row;
     int col;
     int width;  
+    String label;
     String blank;
   };
 
@@ -91,14 +93,14 @@ public:
       trigger_threshold_(trigger_threshold),
       animation_(1000, 0.5) {
     elements_[HEADER]       = Element{0, 0, 20};
-    elements_[VOLUME]       = Element{0, 0, 11};
-    elements_[BPM]          = Element{1, 0, 11};
-    elements_[IE_RATIO]     = Element{2, 0, 11};
-    elements_[AC_TRIGGER]   = Element{3, 0, 11};
+    elements_[VOLUME]       = Element{0, 0, 11, "V"};
+    elements_[BPM]          = Element{1, 0, 11, "RR"};
+    elements_[IE_RATIO]     = Element{2, 0, 11, "I:E"};
+    elements_[AC_TRIGGER]   = Element{3, 0, 11, "AC"};
     elements_[PRES_LABEL]   = Element{0, 11, 9};
-    elements_[PEAK_PRES]    = Element{1, 11, 9};
-    elements_[PLATEAU_PRES] = Element{2, 11, 9};
-    elements_[PEEP_PRES]    = Element{3, 11, 9};
+    elements_[PEAK_PRES]    = Element{1, 11, 9, "peak"};
+    elements_[PLATEAU_PRES] = Element{2, 11, 9, "plat"};
+    elements_[PEEP_PRES]    = Element{3, 11, 9, "PEEP"};
   }
 
   // Setup during arduino setup()
@@ -143,6 +145,13 @@ public:
 
   // PEEP pressure in cm of H2O
   void writePEEP(const int& peep);
+
+  // Convert value e.g. RR from numeric to string for displaying.
+  template <typename T>
+  String toString(const DisplayKey& key, const T& value) const;
+
+  // Get label of given element (empty string for elements without label, e.g. HEADER)
+  inline String getLabel(const DisplayKey& key) const { return elements_[key].label; };
 
 private:
   LiquidCrystal* lcd_;
