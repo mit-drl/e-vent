@@ -76,27 +76,27 @@ void Display::writeHeader() {
 void Display::writeVolume(const int& vol) {
   if(animation_.empty()) {
     char buff[12];
-    sprintf(buff, "%1s=%3s mL   ", getLabel(VOLUME), toString(VOLUME, vol));
+    sprintf(buff, "%1s=%3s mL   ", getLabel(VOLUME).c_str(), toString(VOLUME, vol).c_str());
     write(elements_[VOLUME].row, elements_[VOLUME].col, buff);
   }
 }
 
 void Display::writeBPM(const int& bpm) {
   char buff[12];
-  sprintf(buff, "%2s=%2s/min  ", getLabel(BPM), toString(VOLUME, bpm));
+  sprintf(buff, "%2s=%2s/min  ", getLabel(BPM).c_str(), toString(VOLUME, bpm).c_str());
   write(elements_[BPM].row, elements_[BPM].col, buff);
 }
 
 void Display::writeIEratio(const float& ie) {
   char buff[12];
-  sprintf(buff, "%3s=1:%3s  ", getLabel(IE_RATIO), toString(IE_RATIO, ie));
+  sprintf(buff, "%3s=1:%3s  ", getLabel(IE_RATIO).c_str(), toString(IE_RATIO, ie).c_str());
   write(elements_[IE_RATIO].row, elements_[IE_RATIO].col, buff);
 }
 
 void Display::writeACTrigger(const float& ac_trigger) {
   char buff[12];
   const String trigger_str = toString(AC_TRIGGER, ac_trigger);
-  sprintf(buff, "%2s=%3s%5s", getLabel(AC_TRIGGER), trigger_str,
+  sprintf(buff, "%2s=%3s%5s", getLabel(AC_TRIGGER).c_str(), trigger_str.c_str(),
           trigger_str == "OFF" ? "     " : "cmH2O");
   write(elements_[AC_TRIGGER].row, elements_[AC_TRIGGER].col, buff);
 }
@@ -107,19 +107,19 @@ void Display::writePresLabel() {
 
 void Display::writePeakP(const int& peak) {
   char buff[10];
-  sprintf(buff, "  %4s=%2s", getLabel(PEAK_PRES), toString(PEAK_PRES, peak));
+  sprintf(buff, "  %4s=%2s", getLabel(PEAK_PRES).c_str(), toString(PEAK_PRES, peak).c_str());
   write(elements_[PEAK_PRES].row, elements_[PEAK_PRES].col, buff);
 }
 
 void Display::writePlateauP(const int& plat) {
   char buff[10];
-  sprintf(buff, "  %4s=%2s", getLabel(PLATEAU_PRES), toString(PLATEAU_PRES, plat));
+  sprintf(buff, "  %4s=%2s", getLabel(PLATEAU_PRES).c_str(), toString(PLATEAU_PRES, plat).c_str());
   write(elements_[PLATEAU_PRES].row, elements_[PLATEAU_PRES].col, buff);
 }
 
 void Display::writePEEP(const int& peep) {
   char buff[10];
-  sprintf(buff, "  %4s=%2s", getLabel(PEEP_PRES), toString(PEEP_PRES, peep));
+  sprintf(buff, "  %4s=%2s", getLabel(PEEP_PRES).c_str(), toString(PEEP_PRES, peep).c_str());
   write(elements_[PEEP_PRES].row, elements_[PEEP_PRES].col, buff);
 }
 
