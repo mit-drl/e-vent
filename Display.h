@@ -63,7 +63,7 @@ enum DisplayKey {
  *              1111111111    
  *    01234567890123456789    
  *    ____________________ 
- * 0 |V=### mL   P(cmH2O):|
+ * 0 |TV=###mL   P(cmH2O):|
  * 1 |RR=##/min    peak=##|
  * 2 |I:E=1:#.#    plat=##|
  * 3 |AC=#.#cmH20  PEEP=##|
@@ -93,7 +93,7 @@ public:
       trigger_threshold_(trigger_threshold),
       animation_(1000, 0.5) {
     elements_[HEADER]       = Element{0, 0, 20};
-    elements_[VOLUME]       = Element{0, 0, 11, "V"};
+    elements_[VOLUME]       = Element{0, 0, 11, "TV"};
     elements_[BPM]          = Element{1, 0, 11, "RR"};
     elements_[IE_RATIO]     = Element{2, 0, 11, "I:E"};
     elements_[AC_TRIGGER]   = Element{3, 0, 11, "AC"};

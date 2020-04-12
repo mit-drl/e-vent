@@ -76,7 +76,7 @@ void Display::writeHeader() {
 void Display::writeVolume(const int& vol) {
   if(animation_.empty()) {
     char buff[12];
-    sprintf(buff, "%1s=%3s mL   ", getLabel(VOLUME).c_str(), toString(VOLUME, vol).c_str());
+    sprintf(buff, "%2s=%3smL   ", getLabel(VOLUME).c_str(), toString(VOLUME, vol).c_str());
     write(elements_[VOLUME].row, elements_[VOLUME].col, buff);
   }
 }
@@ -102,7 +102,7 @@ void Display::writeACTrigger(const float& ac_trigger) {
 }
 
 void Display::writePresLabel() {
-  write(elements_[PRES_LABEL].row, elements_[PRES_LABEL].col, " P(cmH2O):");
+  write(elements_[PRES_LABEL].row, elements_[PRES_LABEL].col, "P(cmH2O):");
 }
 
 void Display::writePeakP(const int& peak) {

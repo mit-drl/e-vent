@@ -49,6 +49,7 @@ int PRESS_SENSE_PIN = A4;
 int HOME_PIN = 10;
 const int BEEPER_PIN = 11;
 const int SNOOZE_PIN = 43;
+const int CONFIRM_PIN = 0; // TODO get correct pin (41 or 45)
 const int SD_SELECT = 53;
 
 // Safety settings
