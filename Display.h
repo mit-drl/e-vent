@@ -72,9 +72,16 @@ enum DisplayKey {
 class Display {
 
   struct Element {
+    Element() = default;
+
+    Element(const int& r, const int& c, const int& w): row(r), col(c), width(w) {
+      String blank;
+      while (blank.length() < width) blank += " ";
+    }
     int row;
     int col;
     int width;  
+    String blank;
   };
 
 public:
@@ -105,6 +112,9 @@ public:
   // Write value corresponding to key'ed element
   template <typename T>
   void write(const DisplayKey& key, const T& value);
+
+  // Write blank in the space corresponding to `key`
+  void writeBlank(const DisplayKey& key);
 
   // Write current header
   void writeHeader();
