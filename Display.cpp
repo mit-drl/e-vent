@@ -42,8 +42,6 @@ const String TextAnimation::getLine(){
 
 /// Display ///
 
-Display::Display(LiquidCrystal* lcd): lcd_(lcd) {}
-
 void Display::begin() {
   lcd_->begin(kWidth, kHeight);
   lcd_->noCursor(); 
@@ -52,11 +50,22 @@ void Display::begin() {
 
 void Display::update(){
   if(animation_.empty()){
-    write(0, 10, " P(cmH2O):");
+    write(PRES_LABEL, " P(cmH2O):");
   } 
   else {
-    write(0, 0, animation_.getLine());
+    write(HEADER, animation_.getLine());
   }
+}
+
+void Display::write(const DisplayKey& key, const String& printable){
+  String s = printable;
+  if (printable.length() > elements_[key].width) {
+    s = s.substring(0, elements_[key].width);
+  }
+  while (s.length() < elements_[key].width) {
+    s += " ";
+  }
+  write(elements_[key].row, elements_[key].col, s);
 }
 
 void Display::writeAlarmText(const String& alarm){
@@ -67,16 +76,16 @@ void Display::writeAlarmText(const String& alarm){
 
 void Display::writeVolume(const int& vol){
   if(animation_.empty()){
-    char buff[11];
-    sprintf(buff, "V=%3d mL  ", vol);
-    write(0, 0, buff);
+    char buff[12];
+    sprintf(buff, "V=%3d mL   ", vol);
+    write(VOLUME, buff);
   }
 }
 
 void Display::writeBPM(const int& bpm){
   char buff[12];
   sprintf(buff, "RR=%2d/min  ", bpm);
-  write(1, 0, buff);
+  write(BPM, buff);
 }
 
 void Display::writeIEratio(const float& ie){
@@ -84,37 +93,37 @@ void Display::writeIEratio(const float& ie){
   dtostrf(ie, 3, 1, ie_buff);
   char buff[12];
   sprintf(buff, "I:E=1:%s  ", ie_buff);
-  write(2, 0, buff);
+  write(IE_RATIO, buff);
 }
 
 void Display::writeACTrigger(const float& ac_trigger, const float& lower_threshold){
-  char buff[13];
+  char buff[12];
   if(ac_trigger > lower_threshold){
     char ac_buff[4];
     dtostrf(ac_trigger, 3, 1, ac_buff);
-    sprintf(buff, "AC=%scmH20 ", ac_buff);
+    sprintf(buff, "AC=%scmH20", ac_buff);
   } else {
-    sprintf(buff, "AC=OFF     ");
+    sprintf(buff, "AC=OFF    ");
   }
-  write(3, 0, buff);
+  write(AC_TRIGGER, buff);
 }
 
 void Display::writePeakP(const int& peak){
   char buff[10];
   sprintf(buff, "  peak=%2d", peak);
-  write(1, 11, buff);
+  write(PEAK_PRES, buff);
 }
 
 void Display::writePlateauP(const int& plat){
   char buff[10];
   sprintf(buff, "  plat=%2d", plat);
-  write(2, 11, buff);
+  write(PLATEAU_PRES, buff);
 }
 
 void Display::writePEEP(const int& peep){
   char buff[10];
   sprintf(buff, "  PEEP=%2d", peep);
-  write(3, 11, buff);
+  write(PEEP_PRES, buff);
 }
 
 template <typename T>
