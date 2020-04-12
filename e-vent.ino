@@ -127,7 +127,6 @@ display::Display displ(&lcd);
 alarms::AlarmManager alarm(BEEPER_PIN, SNOOZE_PIN, &displ, &cycleCount);
 
 // Logger
-
 logging::Logger logger(true,    // log_to_serial,
                        true,    // log_to_SD, 
                        true,    // serial_labels, 
@@ -138,6 +137,9 @@ Pressure pressureReader(PRESS_SENSE_PIN);
 
 // Knobs
 input::Knob<int> volumeKnob;
+input::Knob<int> bpmKnob;
+input::Knob<float> ieRatioKnob;
+input::Knob<float> triggerKnob;
 
 // TODO: move function definitions after loop() or to classes if they don't use global vars
 // Functions
@@ -165,20 +167,39 @@ int volume2ticks(const int& vol_cc) {
   return map((vol_cc - VOL_INT) / VOL_SLOPE, 0, 100, VOL_MIN, VOL_MAX);
 }
 
-// Reads volume from the volume pin in mL
+// Reads set volume (in mL) from the volume pot
 int readVolume() {
   const int volTicks = map(analogRead(VOL_PIN), 0, ANALOG_PIN_MAX, VOL_MIN, VOL_MAX);
   return ticks2Volume(volTicks);
 }
 
+// Reads set bpm from the bpm pot
+int readBpm() { 
+  return map(analogRead(BPM_PIN), 0, ANALOG_PIN_MAX, BPM_MIN, BPM_MAX); 
+}
+
+// Reads set IE ratio from the IE pot
+float readIeRatio() {
+  return map(analogRead(IE_PIN), 0, ANALOG_PIN_MAX,
+             IE_MIN*10, IE_MAX*10) / 10.0; // Carry one decimal place
+}
+
+// Reads set trigger sensitivity from the trigger pot
+float readTriggerSens() {
+  return map(analogRead(PRESS_POT_PIN), 0, ANALOG_PIN_MAX,
+             TRIGGERSENSITIVITY_MIN*100,
+             TRIGGERSENSITIVITY_MAX*100) / 100.0; //Carry two decimal places
+}
+
 // Reads user settings to set the waveform parameters
 void readInput(){
+  // Read knobs
   setVolumeTicks = volume2ticks(volumeKnob.read());
-  bpm = map(analogRead(BPM_PIN), 0, ANALOG_PIN_MAX, BPM_MIN, BPM_MAX);
-  ieRatio = map(analogRead(IE_PIN), 0, ANALOG_PIN_MAX, IE_MIN*10, IE_MAX*10)/10.0; // Carry one decimal place
-  triggerSensitivity = map(analogRead(PRESS_POT_PIN), 0, ANALOG_PIN_MAX, TRIGGERSENSITIVITY_MIN*100, TRIGGERSENSITIVITY_MAX*100)/100.0; //Carry two decimal places
+  bpm = bpmKnob.read();
+  ieRatio = ieRatioKnob.read();
+  triggerSensitivity = triggerKnob.read();
 
-  tPeriod = 60.0/bpm; // seconds in each breathing cycle period
+  tPeriod = 60.0 / bpm; // seconds in each breathing cycle period
   tHoldIn = tPeriod / (1 + ieRatio);
   tIn = tHoldIn - tHoldInDuration;
   tEx = min(tHoldIn + tExMax, tPeriod - tMinPeepPause);
@@ -188,7 +209,8 @@ void readInput(){
   vIn = setVolumeTicks / tIn; // Velocity in (clicks/s)
   vEx = setVolumeTicks / (tEx - tHoldIn); // Velocity out (clicks/s)
 
-  displ.writeVolume(volumeKnob.read());  // TODO volumeKnob should handle this
+  // TODO knobs should handle these
+  displ.writeVolume(volumeKnob.read());  
   displ.writeBPM(bpm);
   displ.writeIEratio(ieRatio);
   displ.writeACTrigger(triggerSensitivity, TRIGGER_LOWER_THRESHOLD);
@@ -328,7 +350,13 @@ void setup() {
   alarm.begin();
   pinMode(HOME_PIN, INPUT_PULLUP); // Pull up the limit switch
   displ.begin();
-  volumeKnob.begin(&readVolume);  // Pass the read function to the knob handler
+
+  // Set up knobs with their respective read functions
+  volumeKnob.begin(&readVolume);
+  bpmKnob.begin(&readBpm);
+  ieRatioKnob.begin(&readIeRatio);
+  triggerKnob.begin(&readTriggerSens);
+
   setState(PREHOME_STATE); // Initial state
   roboclaw.begin(38400); // Roboclaw
   roboclaw.SetM1MaxCurrent(address, 5000); // Current limit is 5A
