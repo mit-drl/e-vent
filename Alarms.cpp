@@ -6,15 +6,20 @@ namespace alarms {
 
 /// Tone ///
 
-Tone::Tone(const Note notes[], const int* pin): 
+Tone::Tone(const Note notes[], const int& notes_length, const int* pin): 
     notes_(notes),
     pin_(pin),
-    length_(sizeof(notes) / sizeof(notes[0])),
+    length_(notes_length),
     tone_step_(length_) {}
 
 void Tone::play() {
   if (length_ == 0) {
     return;
+  }
+  if (!playing_) {  // Do once when tone starts
+    tone_timer_ = millis();
+    tone_step_ = 0;
+    playing_ = true;
   }
   tone_step_ %= length_; // Start again if tone finished
   if(millis() > tone_timer_){
@@ -167,7 +172,9 @@ String AlarmManager::getText() const {
 AlarmLevel AlarmManager::getHighestLevel() const {
   AlarmLevel alarm_level = NO_ALARM;
   for (int i = 0; i < NUM_ALARMS; i++) {
-    alarm_level = max(alarm_level, alarms_[i].alarmLevel());
+    if (alarms_[i].isON()) {
+      alarm_level = max(alarm_level, alarms_[i].alarmLevel());
+    }
   }
   return alarm_level;
 }

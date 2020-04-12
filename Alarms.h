@@ -41,9 +41,9 @@ static const Note kEmergencyNotes[] = {
 
 // Notifiation notes
 static const Note kNotifyNotes[] = {
-  {NOTE_G4, 300, 200},  // TODO design notes
-  {NOTE_G4, 300, 200},
-  {NOTE_G4, 300, 400}
+  {NOTE_B4, 200, 100},  // TODO design notes
+  {NOTE_B4, 200, 100},
+  {NOTE_B4, 200, 1500}
 };
 
 
@@ -55,18 +55,19 @@ class Tone {
 public:
   Tone(): length_(0) {}
 
-  Tone(const Note notes[], const int* pin);
+  Tone(const Note notes[], const int& notes_length, const int* pin);
 
   // Play the tone, if any
   void play();
 
   // Stop playing
-  inline void stop() { tone_step_ = length_; }
+  inline void stop() { playing_ = false; }
 
 private:
   Note* notes_;
-  int* pin_;
   int length_;
+  int* pin_;
+  bool playing_ = false;
   int tone_step_;
   unsigned long tone_timer_ = 0;
 };
@@ -108,8 +109,11 @@ public:
   Beeper(const int& beeper_pin, const int& snooze_pin):
     beeper_pin_(beeper_pin), 
     snooze_button_(snooze_pin) {
-      tones_[NOTIFY] = Tone(kNotifyNotes, &beeper_pin_);
-      tones_[EMERGENCY] = Tone(kEmergencyNotes, &beeper_pin_);
+      const int notify_notes_length = sizeof(kNotifyNotes) / sizeof(kNotifyNotes[0]);
+      tones_[NOTIFY] = Tone(kNotifyNotes, notify_notes_length, &beeper_pin_);
+
+      const int emergency_notes_length = sizeof(kEmergencyNotes) / sizeof(kEmergencyNotes[0]);
+      tones_[EMERGENCY] = Tone(kEmergencyNotes, emergency_notes_length, &beeper_pin_);
     }
 
   // Setup during arduino setup()
