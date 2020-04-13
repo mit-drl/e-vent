@@ -11,6 +11,39 @@ namespace display {
 static const int kWidth = 20;  // Width of the display
 static const int kHeight = 4;  // Height of the display
 
+// Define indicator icons
+static const byte patientIcon[8] = {
+  	B01110,
+  	B01110,
+  	B00100,
+  	B11111,
+  	B11111,
+  	B11111,
+  	B01010,
+    B01010,
+	};
+
+static const byte timeIcon[8] = {
+    B00000,
+  	B11111,
+  	B11111,
+  	B01110,
+  	B00100,
+  	B01110,
+    B11111,
+    B11111,
+	};
+
+static const byte noIcon[8] = {
+    B00000,
+  	B00000,
+  	B00000,
+  	B00000,
+  	B00000,
+  	B00000,
+    B00000,
+    B00000,
+	};
 
 /**
  * TextAnimation
