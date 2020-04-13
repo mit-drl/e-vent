@@ -28,6 +28,8 @@ public:
 
   void begin(T (*read_fun)()) {
     read_fun_ = read_fun;
+    // don't require confirmation the on the very first reading
+    set_value_ = read_fun_();
   }
 
   virtual void update() = 0;
@@ -83,7 +85,7 @@ template <typename T>
 class SafeKnob : public Input<T> {
 
   // Time to sound alarm if knob is changed and not confirmed
-  static const unsigned long kAlarmTime = 10 * 1000UL;
+  static const unsigned long kAlarmTime = 5 * 1000UL;
 
 public:
   SafeKnob(Display* displ, const display::DisplayKey& key,
@@ -100,7 +102,7 @@ public:
 
   void update() {
     unconfirmed_value_ = read_fun_();
-    if (unconfirmed_value_ == this->set_value_) {  // TODO add tolerance
+    if (!isSignificant(unconfirmed_value_ - this->set_value_)) {
       this->display(read());
     }
     else if (confirm_button_.is_LOW()) {
@@ -137,6 +139,11 @@ private:
     while (s.length() < display::kWidth) s += " ";
     return s;
   }
+
+  // Functions to check, for each implemented type,
+  // if a setting change is big enough to request confirmation
+  inline bool isSignificant(const int& change) { return abs(change) > 1; }
+  inline bool isSignificant(const float& change) { return abs(change) > 0.2; }
 };
 
 

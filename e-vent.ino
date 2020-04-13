@@ -49,7 +49,7 @@ int PRESS_SENSE_PIN = A4;
 int HOME_PIN = 10;
 const int BEEPER_PIN = 11;
 const int SNOOZE_PIN = 43;
-const int CONFIRM_PIN = 0; // TODO get correct pin (41 or 45)
+const int CONFIRM_PIN = 41;
 const int SD_SELECT = 53;
 
 // Safety settings
@@ -128,7 +128,7 @@ display::Display displ(&lcd, TRIGGER_LOWER_THRESHOLD);
 alarms::AlarmManager alarm(BEEPER_PIN, SNOOZE_PIN, &displ, &cycleCount);
 
 // Logger
-logging::Logger logger(true,    // log_to_serial,
+logging::Logger logger(false,    // log_to_serial,
                        true,    // log_to_SD, 
                        true,    // serial_labels, 
                        ",\t");   // delim
@@ -140,10 +140,10 @@ Pressure pressureReader(PRESS_SENSE_PIN);
 struct Knobs {
   void begin();
   void update();
-  input::Knob<int> volume     = input::Knob<int>(&displ, display::VOLUME);
-  input::Knob<int> bpm        = input::Knob<int>(&displ, display::BPM);
-  input::Knob<float> ie       = input::Knob<float>(&displ, display::IE_RATIO);
-  input::Knob<float> trigger  = input::Knob<float>(&displ, display::AC_TRIGGER);
+  input::SafeKnob<int> volume     = input::SafeKnob<int>(&displ, display::VOLUME, CONFIRM_PIN, &alarm);
+  input::SafeKnob<int> bpm        = input::SafeKnob<int>(&displ, display::BPM, CONFIRM_PIN, &alarm);
+  input::SafeKnob<float> ie       = input::SafeKnob<float>(&displ, display::IE_RATIO, CONFIRM_PIN, &alarm);
+  input::SafeKnob<float> trigger  = input::SafeKnob<float>(&displ, display::AC_TRIGGER, CONFIRM_PIN, &alarm);
 } knobs;
 
 // TODO: move function definitions after loop() or to classes if they don't use global vars

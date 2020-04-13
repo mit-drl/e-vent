@@ -19,6 +19,7 @@ enum AlarmLevel {
   NO_ALARM,
   NOTIFY,
   EMERGENCY,
+  OFF_LEVEL,
   NUM_LEVELS
 };
 
@@ -31,6 +32,12 @@ struct Note {
 };
 
 
+// Notifiation notes
+static const Note kNotifyNotes[] = {
+  {NOTE_B4, 200, 100},
+  {NOTE_B4, 200, 2000}
+};
+
 // Emergency notes
 static const Note kEmergencyNotes[] = {
   {NOTE_G4, 300, 200},
@@ -41,10 +48,24 @@ static const Note kEmergencyNotes[] = {
 };
 
 // Notifiation notes
-static const Note kNotifyNotes[] = {
-  {NOTE_B4, 200, 100},  // TODO design notes
-  {NOTE_B4, 200, 100},
-  {NOTE_B4, 200, 1500}
+static const Note kOffNotes[] = {
+  {NOTE_B4, 200, 100},  // 1
+  {NOTE_B4, 200, 100},  // 2
+  {NOTE_B4, 200, 100},  // 3
+  {NOTE_B4, 200, 100},  // 4
+  {NOTE_B4, 200, 100},  // 5
+  {NOTE_B4, 200, 100},  // 6
+  {NOTE_B4, 200, 100},  // 7
+  {NOTE_B4, 200, 100},  // 8
+  {NOTE_B4, 200, 100},  // 9
+  {NOTE_B4, 200, 100},  // 10
+  {NOTE_B4, 200, 100},  // 11
+  {NOTE_B4, 200, 100},  // 12
+  {NOTE_B4, 200, 100},  // 13
+  {NOTE_B4, 200, 100},  // 14
+  {NOTE_B4, 200, 100},  // 15
+  {NOTE_B4, 200, 100},  // 16
+  {NOTE_B4, 200, 2000}  // 17
 };
 
 
@@ -92,6 +113,9 @@ public:
 
       const int emergency_notes_length = sizeof(kEmergencyNotes) / sizeof(kEmergencyNotes[0]);
       tones_[EMERGENCY] = Tone(kEmergencyNotes, emergency_notes_length, &beeper_pin_);
+
+      const int off_notes_length = sizeof(kOffNotes) / sizeof(kOffNotes[0]);
+      tones_[OFF_LEVEL] = Tone(kEmergencyNotes, off_notes_length, &beeper_pin_);
     }
 
   // Setup during arduino setup()

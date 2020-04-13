@@ -76,7 +76,6 @@ class Display {
 
     Element(const int& r, const int& c, const int& w, const String& l = ""):
         row(r), col(c), width(w), label(l) {
-      String blank;
       while (blank.length() < width) blank += " ";
     }
     int row;
