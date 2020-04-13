@@ -10,7 +10,7 @@ enum States {
 };
 
 #include <LiquidCrystal.h>
-#include <RoboClaw.h>
+#include "src/thirdparty/RoboClaw/RoboClaw.h"
 
 #include "Alarms.h"
 #include "Display.h"
@@ -19,7 +19,6 @@ enum States {
 
 // General Settings
 ////////////
-
 bool DEBUG = false; // For controlling and displaying via serial
 int maxPwm = 255; // Maximum for PWM is 255 but this can be set lower
 float tLoopPeriod = 0.025; // The period (s) of the control loop
@@ -29,7 +28,7 @@ float tExMax = 1.00; // Maximum exhale timef
 float Vhome = 300; // The speed (clicks/s) to use during homing
 float voltHome = 30; // The speed (0-255) in volts to use during homing
 int goalTol = 10; // The tolerance to start stopping on reaching goal
-int bagHome = 100; // The bag-specific position of the bag edge
+int bagHome = 50; // The bag-specific position of the bag edge
 float tPauseHome = 2.0*bagHome/Vhome; // The pause time (s) during homing to ensure stability
 
 // Assist Control Flags and Settings
@@ -53,11 +52,13 @@ const int SD_SELECT = 53;
 
 // Safety settings
 ////////////////////
-const float MAX_PRESSURE = 40.0;
+const float MAX_PRESSURE = 45.0;
+const float MAX_PRESSURE_ALARM = 40.0;
 const float MIN_PLATEAU_PRESSURE = 5.0;
-const float MAX_DRIVING_PRESSURE = 2.0;
+const float MAX_RESIST_PRESSURE = 2.0;
 const float MIN_TIDAL_PRESSURE = 5.0;
 const float VOLUME_ERROR_THRESH = 50.0;  // mL
+const int MAX_MOTOR_CURRENT = 1000; // Max motor current
 
 // Initialize Vars
 ////////////////////
@@ -80,7 +81,7 @@ float BPM_MAX = 40;
 float IE_MIN = 1;
 float IE_MAX = 4;
 float VOL_MIN = 150;
-float VOL_MAX = 630; // 900; // For full 
+float VOL_MAX = 650; // 900; // For full 
 float TRIGGERSENSITIVITY_MIN = 0;
 float TRIGGERSENSITIVITY_MAX = 5;
 float TRIGGERSENSITIVITY_OFF = 2;
@@ -98,6 +99,7 @@ float tStateTimer;
 // Roboclaw
 RoboClaw roboclaw(&Serial3, 10000);
 #define address 0x80
+int16_t motorCurrent;
 
 // auto-tuned PID values for PG188
 #define Kp 6.38650
@@ -127,8 +129,8 @@ alarms::AlarmManager alarm(BEEPER_PIN, SNOOZE_PIN, &displ, &cycleCount);
 
 logging::Logger logger(true,    // log_to_serial,
                        true,    // log_to_SD, 
-                       false,    // serial_labels, 
-                       ",");   // delim
+                       true,    // serial_labels, 
+                       ",\t");   // delim
 
 // Pressure
 Pressure pressureReader(PRESS_SENSE_PIN);
@@ -188,6 +190,11 @@ int readEncoder() {
   return valid;
 }
 
+bool readMotorCurrent() {
+  int noSecondMotor;
+  bool valid = roboclaw.ReadCurrents(address, motorCurrent, noSecondMotor);
+  return valid;
+}
 // goToPosition goes to a desired position at the given speed,
 void goToPosition(int pos, int vel){
   bool valid = readEncoder();
@@ -220,11 +227,12 @@ bool homeSwitchPressed() {
 // check for errors
 void checkErrors() {
   // Pressure alarms
-  alarm.highPressure(pressureReader.get() >= MAX_PRESSURE);
-
+  alarm.highPressure(pressureReader.get() >= MAX_PRESSURE_ALARM);
+  if(pressureReader.get() >= MAX_PRESSURE) setState(EX_STATE);  // TODO this should not be in checkErrors
+  
   // These pressure alarms only make sense after homing 
   if (enteringState && state == IN_STATE) {
-    alarm.badPlateau(pressureReader.peak() - pressureReader.plateau() > MAX_DRIVING_PRESSURE);
+    alarm.badPlateau(pressureReader.peak() - pressureReader.plateau() > MAX_RESIST_PRESSURE);
     alarm.lowPressure(pressureReader.plateau() < MIN_PLATEAU_PRESSURE);
     alarm.noTidalPres(pressureReader.peak() - pressureReader.peep() < MIN_TIDAL_PRESSURE);
   }
@@ -234,6 +242,14 @@ void checkErrors() {
     alarm.unmetVolume(ticks2Volume(Volume - motorPosition) > VOLUME_ERROR_THRESH);
   }
 
+  // Check if maximum motor current was exceeded
+  if(motorCurrent >= MAX_MOTOR_CURRENT){
+    setState(EX_STATE);
+    alarm.overCurrent(true);
+  } else {
+    alarm.overCurrent(false);
+  }
+  
   if(DEBUG){ //TODO integrate these into the alarm system
     // check for roboclaw errors
     bool valid;
@@ -263,7 +279,8 @@ void setupLogger() {
   logger.addVar("tCycle", &tCycleDuration);
   logger.addVar("State", (int*)&state);
   logger.addVar("Mode", (int*)&patientTriggered);
-  logger.addVar("Pos", &motorPosition);
+  logger.addVar("Pos", &motorPosition, 3);
+  logger.addVar("Current", &motorCurrent, 3);
   logger.addVar("Vol", &Volume);
   logger.addVar("BPM", &bpm);
   logger.addVar("IE", &ieRatio);
@@ -302,7 +319,7 @@ void setup() {
   displ.begin();
   setState(PREHOME_STATE); // Initial state
   roboclaw.begin(38400); // Roboclaw
-  roboclaw.SetM1MaxCurrent(address, 10000); // Current limit is 10A
+  roboclaw.SetM1MaxCurrent(address, 5000); // Current limit is 5A
   roboclaw.SetM1VelocityPID(address,Kd,Kp,Ki,qpps); // Set Velocity PID Coefficients
   roboclaw.SetM1PositionPID(address,pKp,pKi,pKd,kiMax,deadzone,minPos,maxPos); // Set Position PID Coefficients
   roboclaw.SetEncM1(address, 0); // Zero the encoder
@@ -325,6 +342,7 @@ void loop() {
   tLoopTimer = now(); // Start the loop timer
   readPots();
   readEncoder();
+  readMotorCurrent();
   pressureReader.read();
   checkErrors();
   alarm.update();
@@ -461,4 +479,3 @@ void loop() {
   tLoopBuffer = max(0, tLoopPeriod - tLoopTimer);
   delay(tLoopBuffer);
 }
-
