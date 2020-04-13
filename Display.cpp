@@ -23,6 +23,10 @@ void Display::setAlarmText(const String& alarm) {
 
 template <typename T>
 void Display::write(const DisplayKey& key, const T& value) {
+  // Do not write on top of alarms
+  if (alarmsON() && elements_[key].row == 0 && key != HEADER) {
+    return;
+  }
   switch (key) {
     case HEADER:
       writeHeader();
@@ -55,11 +59,15 @@ void Display::write(const DisplayKey& key, const T& value) {
 }
 
 void Display::writeBlank(const DisplayKey& key) {
+  // Do not write on top of alarms
+  if (alarmsON() && elements_[key].row == 0 && key != HEADER) {
+    return;
+  }
   write(elements_[key].row, elements_[key].col, elements_[key].blank);
 }
 
 void Display::writeHeader() {
-  if(animation_.empty()) {
+  if(!alarmsON()) {
     writePresLabel();
   } 
   else {

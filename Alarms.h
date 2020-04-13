@@ -259,7 +259,9 @@ public:
 
   // Setting not confirmed
   inline void unconfirmedChange(const bool& value, const String& message = "") {
-    alarms_[NOT_CONFIRM].setText(message);
+    if (alarms_[NOT_CONFIRM].text().length() == 0) {
+      alarms_[NOT_CONFIRM].setText(message);
+    }
     alarms_[NOT_CONFIRM].setCondition(value, *cycle_count_);
   }
 

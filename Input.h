@@ -84,7 +84,7 @@ public:
 template <typename T>
 class SafeKnob : public Input<T> {
 
-  // Time to sound alarm if knob is changed and not confirmed
+  // Time to wait to sound alarm after knob is changed if not confirmed
   static const unsigned long kAlarmTime = 5 * 1000UL;
 
 public:
@@ -104,11 +104,13 @@ public:
     unconfirmed_value_ = read_fun_();
     if (!isSignificant(unconfirmed_value_ - this->set_value_)) {
       this->display(read());
+      if (!confirmed_) {
+        confirmed_ = true;
+        alarms_->unconfirmedChange(false);
+      }
     }
     else if (confirm_button_.is_LOW()) {
       this->set_value_ = unconfirmed_value_;
-      alarms_->unconfirmedChange(false);
-      confirmed_ = true;
     }
     else {
       const unsigned long time_now = millis();

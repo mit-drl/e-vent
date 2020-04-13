@@ -161,6 +161,8 @@ private:
   // Write printable starting at (row, col)
   template <typename T>
   void write(const int& row, const int& col, const T& printable);
+
+  inline bool alarmsON() const { return !animation_.empty(); }
 };
 
 
