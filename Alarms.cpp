@@ -30,29 +30,6 @@ void Tone::play() {
 }
 
 
-/// DebouncedButton ///
-
-DebouncedButton::DebouncedButton(const int& pin): pin_(pin) {}
-
-void DebouncedButton::begin() {
-  pinMode(pin_, INPUT_PULLUP);
-}
-
-bool DebouncedButton::is_LOW() {
-  int reading = digitalRead(pin_);
-
-  bool low_value = false;
-  const unsigned long time_now = millis();
-  if (reading == LOW) {
-    if ((time_now - last_low_time_) > kDebounceDelay) {
-      low_value = true;
-    }
-    last_low_time_ = time_now;
-  }
-  return low_value;
-}
-
-
 /// Beeper ///
 
 void Beeper::begin() {
@@ -106,9 +83,9 @@ void Beeper::stop() {
 
 /// Alarm ///
 
-Alarm::Alarm(const String& text, const AlarmLevel& alarm_level,
-             const int& min_bad_to_trigger, const int& min_good_to_clear):
-  text_(text),
+Alarm::Alarm(const String& default_text, const int& min_bad_to_trigger,
+             const int& min_good_to_clear, const AlarmLevel& alarm_level):
+  text_(default_text),
   alarm_level_(alarm_level),
   min_bad_to_trigger_(min_bad_to_trigger),
   min_good_to_clear_(min_good_to_clear) {}
@@ -131,6 +108,21 @@ void Alarm::setCondition(const bool& bad, const unsigned long& seq) {
   }
 }
 
+void Alarm::setText(const String& text) {
+  if (text.length() == display::kWidth) {
+    text_ = text;
+  }
+  else if (text.length() > display::kWidth) {
+    text_ = text.substring(0, display::kWidth);
+  }
+  else {
+    text_ = text;
+    while (text_.length() < display::kWidth) {
+      text_ += " ";
+    }
+  }
+}
+
 
 /// AlarmManager ///
 
@@ -139,7 +131,7 @@ void AlarmManager::begin() {
 }
 
 void AlarmManager::update() {
-  displ_->writeAlarmText(getText());
+  displ_->setAlarmText(getText());
   beeper_.update(getHighestLevel());
 }
 

@@ -134,13 +134,13 @@ private:
 };
 
 // Instantiation of template methods
-#define ADDVAR(vartype) \
+#define INSTANTIATE_ADDVAR(vartype) \
   template void Logger::addVar(const char var_name[], const vartype* var, \
                                const int& min_digits, const int& float_precision);
-ADDVAR(int)
-ADDVAR(float)
-ADDVAR(double)
-#undef ADDVAR
+INSTANTIATE_ADDVAR(int)
+INSTANTIATE_ADDVAR(float)
+INSTANTIATE_ADDVAR(double)
+#undef INSTANTIATE
 
 
 }  // namespace logging

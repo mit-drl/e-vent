@@ -5,6 +5,7 @@
 
 #include "Display.h"
 #include "pitches.h"
+#include "Utilities.h"
 
 
 namespace alarms {
@@ -18,6 +19,7 @@ enum AlarmLevel {
   NO_ALARM,
   NOTIFY,
   EMERGENCY,
+  OFF_LEVEL,
   NUM_LEVELS
 };
 
@@ -30,6 +32,12 @@ struct Note {
 };
 
 
+// Notifiation notes
+static const Note kNotifyNotes[] = {
+  {NOTE_B4, 200, 100},
+  {NOTE_B4, 200, 2000}
+};
+
 // Emergency notes
 static const Note kEmergencyNotes[] = {
   {NOTE_G4, 300, 200},
@@ -40,10 +48,24 @@ static const Note kEmergencyNotes[] = {
 };
 
 // Notifiation notes
-static const Note kNotifyNotes[] = {
-  {NOTE_B4, 200, 100},  // TODO design notes
-  {NOTE_B4, 200, 100},
-  {NOTE_B4, 200, 1500}
+static const Note kOffNotes[] = {
+  {NOTE_B4, 200, 100},  // 1
+  {NOTE_B4, 200, 100},  // 2
+  {NOTE_B4, 200, 100},  // 3
+  {NOTE_B4, 200, 100},  // 4
+  {NOTE_B4, 200, 100},  // 5
+  {NOTE_B4, 200, 100},  // 6
+  {NOTE_B4, 200, 100},  // 7
+  {NOTE_B4, 200, 100},  // 8
+  {NOTE_B4, 200, 100},  // 9
+  {NOTE_B4, 200, 100},  // 10
+  {NOTE_B4, 200, 100},  // 11
+  {NOTE_B4, 200, 100},  // 12
+  {NOTE_B4, 200, 100},  // 13
+  {NOTE_B4, 200, 100},  // 14
+  {NOTE_B4, 200, 100},  // 15
+  {NOTE_B4, 200, 100},  // 16
+  {NOTE_B4, 200, 2000}  // 17
 };
 
 
@@ -74,29 +96,6 @@ private:
 
 
 /**
- * DebouncedButton
- * Represents a pullup button that filters out unintended LOW readings.
- */
-class DebouncedButton {
-
-  const unsigned long kDebounceDelay = 100;
-
-public:
-  DebouncedButton(const int& pin);
-
-  // Setup during arduino setup()
-  void begin();
-
-  // Check if button is low
-  bool is_LOW();
-
-private:
-  int pin_;
-  unsigned long last_low_time_ = 0;
-};
-
-
-/**
  * Beeper
  * Represents the alarm speaker/buzzer. Handles playing of tones and snoozing.
  */
@@ -114,6 +113,9 @@ public:
 
       const int emergency_notes_length = sizeof(kEmergencyNotes) / sizeof(kEmergencyNotes[0]);
       tones_[EMERGENCY] = Tone(kEmergencyNotes, emergency_notes_length, &beeper_pin_);
+
+      const int off_notes_length = sizeof(kOffNotes) / sizeof(kOffNotes[0]);
+      tones_[OFF_LEVEL] = Tone(kEmergencyNotes, off_notes_length, &beeper_pin_);
     }
 
   // Setup during arduino setup()
@@ -124,7 +126,7 @@ public:
 
 private:
   const int beeper_pin_;
-  DebouncedButton snooze_button_;
+  utilities::DebouncedButton snooze_button_;
   Tone tones_[NUM_LEVELS];
 
   unsigned long snooze_time_ = 0;
@@ -148,13 +150,16 @@ class Alarm {
 public:
   Alarm(){};
   
-  Alarm(const String& text, const AlarmLevel& alarm_level,
-        const int& min_bad_to_trigger, const int& min_good_to_clear);
+  Alarm(const String& default_text, const int& min_bad_to_trigger,
+        const int& min_good_to_clear, const AlarmLevel& alarm_level);
 
   // Set the ON value of this alarm, but only turn ON if `bad == true` for at least 
   // `min_bad_to_trigger_` consecutive calls with different `seq` and OFF if `bad == false` 
   // for at least `min_good_to_clear_` consecutive calls with different `seq`.   
   void setCondition(const bool& bad, const unsigned long& seq);
+
+  // Set the alarm text (trim or pad to display width)
+  void setText(const String& text);
 
   // Check if this alarm is on
   inline bool isON() const { return on_; }
@@ -197,6 +202,7 @@ class AlarmManager {
     UNMET_VOLUM,
     NO_TIDAL_PR,
     OVER_CURREN,
+    NOT_CONFIRM,
     NUM_ALARMS 
   };
 
@@ -206,12 +212,13 @@ public:
       displ_(displ),
       beeper_(beeper_pin, snooze_pin),
       cycle_count_(cycle_count) {
-    alarms_[HIGH_PRESSU] = Alarm("    HIGH PRESURE    ", 1, 2, EMERGENCY);
+    alarms_[HIGH_PRESSU] = Alarm("   HIGH PRESSURE    ", 1, 2, EMERGENCY);
     alarms_[LOW_PRESSUR] = Alarm("LOW PRES DISCONNECT?", 1, 1, EMERGENCY);
     alarms_[BAD_PLATEAU] = Alarm("  HIGH RESIST PRES  ", 1, 1, NOTIFY);
     alarms_[UNMET_VOLUM] = Alarm(" UNMET TIDAL VOLUME ", 1, 1, EMERGENCY);
     alarms_[NO_TIDAL_PR] = Alarm(" NO TIDAL PRESSURE  ", 2, 1, EMERGENCY);
     alarms_[OVER_CURREN] = Alarm(" OVER CURRENT FAULT ", 1, 2, EMERGENCY);
+    alarms_[NOT_CONFIRM] = Alarm("      CONFIRM?      ", 1, 1, NOTIFY);
   }
 
   // Setup during arduino setup()
@@ -248,6 +255,14 @@ public:
   // Current too high alarm
   inline void overCurrent(const bool& value) {
     alarms_[OVER_CURREN].setCondition(value, *cycle_count_);
+  }
+
+  // Setting not confirmed
+  inline void unconfirmedChange(const bool& value, const String& message = "") {
+    if (alarms_[NOT_CONFIRM].text().length() != 0) {
+      alarms_[NOT_CONFIRM].setText(message);
+    }
+    alarms_[NOT_CONFIRM].setCondition(value, *cycle_count_);
   }
 
 private:

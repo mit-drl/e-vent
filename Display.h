@@ -2,8 +2,9 @@
 #define Display_h
 
 #include "Arduino.h"
-
 #include <LiquidCrystal.h>
+
+#include "Utilities.h"
 
 
 namespace display {
@@ -17,38 +18,89 @@ static const int kHeight = 4;  // Height of the display
  * Handles the blinking of text in the display.
  */
 class TextAnimation {
-  const char* kBlankLine = "                    ";  // One blank line of display width
-  const int kBlinkPeriod = 1000;        // Blinks this often in milliseconds
-  const float kBlinkOnFraction = 0.5;   // Text shows for this fraction of the blinking period
-
 public:
+  TextAnimation(const unsigned long& period, const float& on_fraction):
+      pulse_(period, on_fraction) {}
 
   // Reset the text of the animation
-  void reset(const String& text = "");
+  inline void reset(const String& text = "") { text_ = text; }
 
   // Check if the animation text is empty
-  bool empty();
+  inline bool empty() { return text_.length() == 0; }
 
-  // Get the animation text
-  const String& text();
+  // Get the animation text (original text passed to reset)
+  inline const String& text() { return text_; }
 
-  // Get the current string to display (text or blank line)
-  const String getLine();
+  // Get the current string to display (empty string for blank)
+  inline const String getLine() { return pulse_.read() ? text_ : ""; }
 
 private:
   String text_;
+  utilities::Pulse pulse_;
   unsigned long reset_time_;
+};
+
+
+enum DisplayKey {
+  HEADER,
+  VOLUME,
+  BPM,
+  IE_RATIO,
+  AC_TRIGGER,
+  PRES_LABEL,
+  PEAK_PRES,
+  PLATEAU_PRES,
+  PEEP_PRES,
+  NUM_KEYS
 };
 
 
 /**
  * Display
- * Handles writing ventilator-specific things to the display.
+ * Handles writing ventilator-specific elements to the display.
+ * Default format (without alarms) is as follows:
+ *
+ *              1111111111    
+ *    01234567890123456789    
+ *    ____________________ 
+ * 0 |TV=###mL   P(cmH2O):|
+ * 1 |RR=##/min    peak=##|
+ * 2 |I:E=1:#.#    plat=##|
+ * 3 |AC=#.#cmH20  PEEP=##|
+ *    ____________________ 
  */
 class Display {
+
+  struct Element {
+    Element() = default;
+
+    Element(const int& r, const int& c, const int& w, const String& l = ""):
+        row(r), col(c), width(w), label(l) {
+      while (blank.length() < width) blank += " ";
+    }
+    int row;
+    int col;
+    int width;  
+    String label;
+    String blank;
+  };
+
 public:
   // Constructor, save a pointer to the (global) display object
-  Display(LiquidCrystal* lcd);
+  Display(LiquidCrystal* lcd, const float& trigger_threshold):
+      lcd_(lcd),
+      trigger_threshold_(trigger_threshold),
+      animation_(1000, 0.5) {
+    elements_[HEADER]       = Element{0, 0, 20};
+    elements_[VOLUME]       = Element{0, 0, 11, "TV"};
+    elements_[BPM]          = Element{1, 0, 11, "RR"};
+    elements_[IE_RATIO]     = Element{2, 0, 11, "I:E"};
+    elements_[AC_TRIGGER]   = Element{3, 0, 11, "AC"};
+    elements_[PRES_LABEL]   = Element{0, 11, 9};
+    elements_[PEAK_PRES]    = Element{1, 11, 9, "peak"};
+    elements_[PLATEAU_PRES] = Element{2, 11, 9, "plat"};
+    elements_[PEEP_PRES]    = Element{3, 11, 9, "PEEP"};
+  }
 
   // Setup during arduino setup()
   void begin();
@@ -57,7 +109,17 @@ public:
   void update();
   
   // Write arbitrary alarm in the header
-  void writeAlarmText(const String& alarm);
+  void setAlarmText(const String& alarm);
+
+  // Write value corresponding to key'ed element
+  template <typename T>
+  void write(const DisplayKey& key, const T& value);
+
+  // Write blank in the space corresponding to `key`
+  void writeBlank(const DisplayKey& key);
+
+  // Write current header
+  void writeHeader();
 
   // Write volume in mL
   void writeVolume(const int& vol);
@@ -69,7 +131,10 @@ public:
   void writeIEratio(const float& ie);
 
   // AC trigger pressure
-  void writeACTrigger(const float& ac_trigger, const float& lower_threshold);
+  void writeACTrigger(const float& ac_trigger);
+
+  // Label for pressure units
+  void writePresLabel();
 
   // Peak pressure in cm of H2O
   void writePeakP(const int& peak);
@@ -80,14 +145,33 @@ public:
   // PEEP pressure in cm of H2O
   void writePEEP(const int& peep);
 
+  // Convert value e.g. RR from numeric to string for displaying.
+  template <typename T>
+  String toString(const DisplayKey& key, const T& value) const;
+
+  // Get label of given element (empty string for elements without label, e.g. HEADER)
+  inline String getLabel(const DisplayKey& key) const { return elements_[key].label; };
+
 private:
   LiquidCrystal* lcd_;
+  const float trigger_threshold_;
   TextAnimation animation_;
+  Element elements_[NUM_KEYS];
 
   // Write printable starting at (row, col)
   template <typename T>
   void write(const int& row, const int& col, const T& printable);
+
+  inline bool alarmsON() const { return !animation_.empty(); }
 };
+
+
+// Instantiation of template methods
+#define INSTANTIATE_WRITE(type) \
+  template void Display::write(const DisplayKey& key, const type& value);
+INSTANTIATE_WRITE(int)
+INSTANTIATE_WRITE(float)
+#undef INSTANTIATE
 
 
 }  // namespace display
