@@ -509,7 +509,7 @@ void Knobs::update() {
 }
 
 int ticks2Volume(const int& vol_ticks) {
-  return max(0,map(vol_ticks, VOL_MIN, VOL_MAX, 0, 100) * VOL_SLOPE + VOL_INT);
+  return max(0, map(vol_ticks, VOL_MIN, VOL_MAX, 0, 100 * 100) / 100.0 * VOL_SLOPE + VOL_INT);
 }
 
 int volume2ticks(const int& vol_cc) {
