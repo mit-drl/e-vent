@@ -3,46 +3,7 @@
 namespace display {
 
 
-/// TextAntimation ///
-
-void TextAnimation::reset(const String& text){
-  reset_time_ = millis();
-  text_ = text;
-}
-
-bool TextAnimation::empty(){
-  return text_.length() == 0;
-}
-
-const String& TextAnimation::text(){
-  return text_;
-}
-
-const String TextAnimation::getLine(){
-  String new_text;
-  unsigned long time_now = millis();
-  if(time_now - reset_time_ < kBlinkOnFraction * kBlinkPeriod){
-    new_text = text_;
-    while(new_text.length() < kWidth){
-      new_text += " ";
-    }
-    if(new_text.length() > kWidth){
-      new_text = new_text.substring(0, 20);
-    }
-  }
-  else if(time_now - reset_time_ < kBlinkPeriod){
-    new_text = kBlankLine;
-  }
-  else {
-    reset_time_ = time_now;
-  }
-  return new_text;
-}
-
-
 /// Display ///
-
-Display::Display(LiquidCrystal* lcd): lcd_(lcd) {}
 
 void Display::begin() {
   lcd_->begin(kWidth, kHeight);
@@ -50,71 +11,147 @@ void Display::begin() {
   update();
 }
 
-void Display::update(){
-  if(animation_.empty()){
-    write(0, 10, " P(cmH2O):");
-  } 
-  else {
-    write(0, 0, animation_.getLine());
-  }
+void Display::update() {
+  writeHeader();
 }
 
-void Display::writeAlarmText(const String& alarm){
-  if(animation_.text() != alarm){
+void Display::setAlarmText(const String& alarm) {
+  if(animation_.text() != alarm) {
     animation_.reset(alarm);
   }
 }
 
-void Display::writeVolume(const int& vol){
-  if(animation_.empty()){
-    char buff[7];
-    sprintf(buff, "V=%3d mL", vol);
-    write(0, 0, buff);
+template <typename T>
+void Display::write(const DisplayKey& key, const T& value) {
+  // Do not write on top of alarms
+  if (alarmsON() && elements_[key].row == 0 && key != HEADER) {
+    return;
+  }
+  switch (key) {
+    case HEADER:
+      writeHeader();
+      break;
+    case VOLUME:
+      writeVolume(value);
+      break;
+    case BPM:
+      writeBPM(value);
+      break;
+    case IE_RATIO:
+      writeIEratio(value);
+      break;
+    case AC_TRIGGER:
+      writeACTrigger(value);
+      break;
+    case PRES_LABEL:
+      writePresLabel();
+      break;
+    case PEAK_PRES:
+      writePeakP(value);
+      break;
+    case PLATEAU_PRES:
+      writePlateauP(value);
+      break;
+    case PEEP_PRES:
+      writePEEP(value);
+      break;
   }
 }
 
-void Display::writeBPM(const int& bpm){
-  char buff[12];
-  sprintf(buff, "RR=%2d/min  ", bpm);
-  write(1, 0, buff);
-}
-
-void Display::writeIEratio(const float& ie){
-  char ie_buff[4];
-  dtostrf(ie, 3, 1, ie_buff);
-  char buff[12];
-  sprintf(buff, "I:E=1:%s  ", ie_buff);
-  write(2, 0, buff);
-}
-
-void Display::writeACTrigger(const float& ac_trigger, const bool& ac_enabled){
-  char buff[13];
-  if(ac_enabled){
-    char ac_buff[4];
-    dtostrf(ac_trigger, 3, 1, ac_buff);
-    sprintf(buff, "AC=%scmH20 ", ac_buff);
-  } else {
-    sprintf(buff, "AC=OFF     ");
+void Display::writeBlank(const DisplayKey& key) {
+  // Do not write on top of alarms
+  if (alarmsON() && elements_[key].row == 0 && key != HEADER) {
+    return;
   }
-  write(3, 0, buff);
+  write(elements_[key].row, elements_[key].col, elements_[key].blank);
 }
 
-void Display::writePeakP(const int& peak){
-  char buff[10];
-  sprintf(buff, "  peak=%2d", peak);
-  write(1, 11, buff);
+void Display::writeHeader() {
+  if(!alarmsON()) {
+    writePresLabel();
+  } 
+  else {
+    const String line = animation_.getLine();
+    if (line.length() > 0) {
+      write(elements_[HEADER].row, elements_[HEADER].col, animation_.getLine());
+    }
+    else {
+      writeBlank(HEADER);
+    }
+  }
 }
 
-void Display::writePlateauP(const int& plat){
-  char buff[10];
-  sprintf(buff, "  plat=%2d", plat);
-  write(2, 11, buff);
+void Display::writeVolume(const int& vol) {
+  if(animation_.empty()) {
+    char buff[12];
+    sprintf(buff, "%2s=%3smL   ", getLabel(VOLUME).c_str(), toString(VOLUME, vol).c_str());
+    write(elements_[VOLUME].row, elements_[VOLUME].col, buff);
+  }
 }
 
-void Display::writePEEP(const int& peep){
+void Display::writeBPM(const int& bpm) {
+  char buff[12];
+  sprintf(buff, "%2s=%2s/min  ", getLabel(BPM).c_str(), toString(VOLUME, bpm).c_str());
+  write(elements_[BPM].row, elements_[BPM].col, buff);
+}
+
+void Display::writeIEratio(const float& ie) {
+  char buff[12];
+  sprintf(buff, "%3s=1:%3s  ", getLabel(IE_RATIO).c_str(), toString(IE_RATIO, ie).c_str());
+  write(elements_[IE_RATIO].row, elements_[IE_RATIO].col, buff);
+}
+
+void Display::writeACTrigger(const float& ac_trigger) {
+  char buff[12];
+  const String trigger_str = toString(AC_TRIGGER, ac_trigger);
+  sprintf(buff, "%2s=%3s%5s", getLabel(AC_TRIGGER).c_str(), trigger_str.c_str(),
+          trigger_str == "OFF" ? "     " : "cmH2O");
+  write(elements_[AC_TRIGGER].row, elements_[AC_TRIGGER].col, buff);
+}
+
+void Display::writePresLabel() {
+  write(elements_[PRES_LABEL].row, elements_[PRES_LABEL].col, "P(cmH2O):");
+}
+
+void Display::writePeakP(const int& peak) {
   char buff[10];
-  sprintf(buff, "  PEEP=%2d", peep);
-  write(3, 11, buff);
+  sprintf(buff, "  %4s=%2s", getLabel(PEAK_PRES).c_str(), toString(PEAK_PRES, peak).c_str());
+  write(elements_[PEAK_PRES].row, elements_[PEAK_PRES].col, buff);
+}
+
+void Display::writePlateauP(const int& plat) {
+  char buff[10];
+  sprintf(buff, "  %4s=%2s", getLabel(PLATEAU_PRES).c_str(), toString(PLATEAU_PRES, plat).c_str());
+  write(elements_[PLATEAU_PRES].row, elements_[PLATEAU_PRES].col, buff);
+}
+
+void Display::writePEEP(const int& peep) {
+  char buff[10];
+  sprintf(buff, "  %4s=%2s", getLabel(PEEP_PRES).c_str(), toString(PEEP_PRES, peep).c_str());
+  write(elements_[PEEP_PRES].row, elements_[PEEP_PRES].col, buff);
+}
+
+template <typename T>
+String Display::toString(const DisplayKey& key, const T& value) const {
+  switch (key) {
+    case VOLUME:
+      return String(value);
+    case BPM:
+      return String(value);
+    case IE_RATIO:
+      return String(value, 1);
+    case AC_TRIGGER:
+      return (value > trigger_threshold_) ? String(value, 1) : "OFF";
+    case PEAK_PRES:
+      return String(value);
+    case PLATEAU_PRES:
+      return String(value);
+    case PEEP_PRES:
+      return String(value);
+    default:
+      // Not meant to be used for other keys
+      return "N/A";
+  }
 }
 
 // This displays a patient icon
@@ -139,7 +176,7 @@ void Display::hideIcon(const int& row, const int& col) {
 }
 
 template <typename T>
-void Display::write(const int& row, const int& col, const T& printable){
+void Display::write(const int& row, const int& col, const T& printable) {
   lcd_->setCursor(col, row);
   lcd_->print(printable);
 }
