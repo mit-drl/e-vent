@@ -212,7 +212,7 @@ public:
       displ_(displ),
       beeper_(beeper_pin, snooze_pin),
       cycle_count_(cycle_count) {
-    alarms_[HIGH_PRESSU] = Alarm("    HIGH PRESURE    ", 1, 2, EMERGENCY);
+    alarms_[HIGH_PRESSU] = Alarm("   HIGH PRESSURE    ", 1, 2, EMERGENCY);
     alarms_[LOW_PRESSUR] = Alarm("LOW PRES DISCONNECT?", 1, 1, EMERGENCY);
     alarms_[BAD_PLATEAU] = Alarm("  HIGH RESIST PRES  ", 1, 1, NOTIFY);
     alarms_[UNMET_VOLUM] = Alarm(" UNMET TIDAL VOLUME ", 1, 1, EMERGENCY);

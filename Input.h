@@ -142,10 +142,8 @@ private:
     return s;
   }
 
-  // Functions to check, for each implemented type,
-  // if a setting change is big enough to request confirmation
-  inline bool isSignificant(const int& change) { return abs(change) > 1; }
-  inline bool isSignificant(const float& change) { return abs(change) > 0.2; }
+  // Check if a setting change is big enough to request confirmation
+  inline bool isSignificant(const T& change) { return abs(change) > 0.2; }
 };
 
 
