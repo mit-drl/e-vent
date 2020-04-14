@@ -83,8 +83,8 @@ void Beeper::stop() {
 
 /// Alarm ///
 
-Alarm::Alarm(const String& default_text, const AlarmLevel& alarm_level,
-             const int& min_bad_to_trigger, const int& min_good_to_clear):
+Alarm::Alarm(const String& default_text, const int& min_bad_to_trigger,
+             const int& min_good_to_clear, const AlarmLevel& alarm_level):
   text_(default_text),
   alarm_level_(alarm_level),
   min_bad_to_trigger_(min_bad_to_trigger),

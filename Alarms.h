@@ -150,8 +150,8 @@ class Alarm {
 public:
   Alarm(){};
   
-  Alarm(const String& default_text, const AlarmLevel& alarm_level,
-        const int& min_bad_to_trigger, const int& min_good_to_clear);
+  Alarm(const String& default_text, const int& min_bad_to_trigger,
+        const int& min_good_to_clear, const AlarmLevel& alarm_level);
 
   // Set the ON value of this alarm, but only turn ON if `bad == true` for at least 
   // `min_bad_to_trigger_` consecutive calls with different `seq` and OFF if `bad == false` 
