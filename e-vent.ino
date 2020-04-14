@@ -40,15 +40,15 @@ float DP; // Driving Pressure = Plateau - PEEP
 
 // Pins
 ////////////
-int VOL_PIN = A0;
-int BPM_PIN = A1;
-int IE_PIN = A2;
-int PRESS_POT_PIN = A3;
-int PRESS_SENSE_PIN = A4;
-int HOME_PIN = 10;
-const int BEEPER_PIN = 11;
-const int SNOOZE_PIN = 43;
-const int SD_SELECT = 53;
+int VOL_PIN = A4;
+int BPM_PIN = A5;
+int IE_PIN = A6;
+int PRESS_POT_PIN = A7;
+int PRESS_SENSE_PIN = A0;
+int HOME_PIN = 25;
+const int BEEPER_PIN = 2;
+const int SNOOZE_PIN = 41;
+const int SD_SELECT = 38;
 
 // Safety settings
 ////////////////////
@@ -118,7 +118,7 @@ int motorPosition = 0;
 #define maxPos 1000
 
 // LCD Screen
-const int rs = 9, en = 8, d4 = 7, d5 = 6, d6 = 5, d7 = 4;
+const int rs = 13, en = 12, d4 = 11, d5 = 10, d6 = 9, d7 = 8;
 LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 display::Display displ(&lcd);
 
