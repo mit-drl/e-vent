@@ -406,7 +406,7 @@ void loop() {
       //consider changing PID tunings
       enteringState = false;
       goToPosition(0, vEx);
-      displ.hideIcon(0,9);
+      displ.hideIcon(3,11);
     }
 
     // go to LISTEN_STATE 
@@ -449,9 +449,9 @@ void loop() {
 
       // An indicator that shows patient-triggered or time-triggered cycles
       if(patientTriggered) {
-        displ.showPatientIcon(0,9);
+        displ.showPatientIcon(3,11);
       } else {
-        displ.showTimeIcon(0,9);
+        displ.showTimeIcon(3,11);
       }
     }
   }
