@@ -61,7 +61,6 @@ public:
 /**
  * SafeKnob
  * Safe knob that requires confirmation via 'confirm' button before setting a value.
- * TODO move definitions to cpp
  */
 template <typename T>
 class SafeKnob : public Input<T> {
