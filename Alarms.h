@@ -3,9 +3,9 @@
 
 #include "Arduino.h"
 
+#include "Buttons.h"
 #include "Display.h"
 #include "pitches.h"
-#include "Utilities.h"
 
 
 namespace alarms {
@@ -126,7 +126,7 @@ public:
 
 private:
   const int beeper_pin_;
-  utilities::DebouncedButton snooze_button_;
+  buttons::DebouncedButton snooze_button_;
   Tone tones_[NUM_LEVELS];
 
   unsigned long snooze_time_ = 0;

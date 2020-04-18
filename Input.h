@@ -4,6 +4,7 @@
 #include "Arduino.h"
 
 #include "Alarms.h"
+#include "Buttons.h"
 #include "Display.h"
 #include "Utilities.h"
 
@@ -81,7 +82,7 @@ public:
   void update();
 
 private:
-  utilities::DebouncedButton confirm_button_;
+  buttons::DebouncedButton confirm_button_;
   AlarmManager* alarms_;
   utilities::Pulse pulse_;
   T unconfirmed_value_;
