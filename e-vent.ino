@@ -33,8 +33,6 @@ float tExMax = 1.00; // Maximum exhale timef
 float Vhome = 300; // The speed (clicks/s) to use during homing
 float voltHome = 30; // The speed (0-255) in volts to use during homing
 int goalTol = 10; // The tolerance to start stopping on reaching goal
-int bagHome = 50; // The bag-specific position of the bag edge TODO check this volume2ticks(0)
-float tPauseHome = 2.0*bagHome/Vhome; // The pause time (s) during homing to ensure stability
 
 // Assist Control Flags and Settings
 bool ASSIST_CONTROL = false; // Enable assist control
@@ -95,8 +93,26 @@ float TRIGGER_LOWER_THRESHOLD = 2;
 int ANALOG_PIN_MAX = 1023; // The maximum count on analog pins
 
 // Bag Calibration for AMBU Adult bag
-float VOL_SLOPE = 9.39;
-float VOL_INT = -102.2;
+const float VOL_SLOPE = 9.39;
+const float VOL_INT = -102.2;
+
+// Calibration-dependent functions
+/**
+ * Converts motor position in ticks to volume in mL
+ */
+int ticks2volume(const int& vol_ticks) {
+  return max(0, map(vol_ticks, VOL_MIN, VOL_MAX, 0, 100 * 100) / 100.0 * VOL_SLOPE + VOL_INT);
+}
+/**
+ * Converts volume in mL to motor position in ticks
+ */
+int volume2ticks(const int& vol_cc) {
+  return map((vol_cc - VOL_INT) / VOL_SLOPE, 0, 100, VOL_MIN, VOL_MAX);
+}
+
+// Calibration-dependent constants
+const int bagHome = volume2ticks(0); // The bag-specific position of the bag edge
+const float tPauseHome = 2.0*bagHome/Vhome; // The pause time (s) during homing to ensure stability
 
 //Setup States
 States state;
@@ -174,12 +190,6 @@ void setState(States newState){
   state = newState;
   tStateTimer = now();
 }
-
-// Converts motor position in ticks to volume in mL
-int ticks2volume(const int& vol_ticks);
-
-// Converts volume in mL to motor position in ticks
-int volume2ticks(const int& vol_cc);
 
 // For reading of pots
 int readVolume();         // Reads set volume (in mL) from the volume pot
@@ -602,14 +612,6 @@ void Knobs::update() {
   bpm.update();
   ie.update();
   trigger.update();
-}
-
-int ticks2volume(const int& vol_ticks) {
-  return max(0, map(vol_ticks, VOL_MIN, VOL_MAX, 0, 100 * 100) / 100.0 * VOL_SLOPE + VOL_INT);
-}
-
-int volume2ticks(const int& vol_cc) {
-  return map((vol_cc - VOL_INT) / VOL_SLOPE, 0, 100, VOL_MIN, VOL_MAX);
 }
 
 int readVolume() {
