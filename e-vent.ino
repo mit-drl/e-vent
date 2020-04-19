@@ -7,12 +7,14 @@ enum States {
   HOLD_EX_STATE,    // 5
   PREHOME_STATE,    // 6
   HOMING_STATE,     // 7
+  OFF_STATE         // 8
 };
 
 #include <LiquidCrystal.h>
 #include "src/thirdparty/RoboClaw/RoboClaw.h"
 
 #include "Alarms.h"
+#include "Buttons.h"
 #include "Display.h"
 #include "Input.h"
 #include "Logging.h"
@@ -51,6 +53,7 @@ const int BEEPER_PIN = 11;
 const int SNOOZE_PIN = 43;
 const int CONFIRM_PIN = 41;
 const int SD_SELECT = 53;
+const int OFF_PIN = 45;
 
 // Safety settings
 ////////////////////
@@ -68,7 +71,7 @@ const int MAX_MOTOR_CURRENT = 1000; // Max motor current
 unsigned long cycleCount = 0;
 float vIn, vEx, tIn, tHoldIn, tEx, tPeriod, setVolumeTicks;
 float tCycleTimer, tLoopTimer; // Timer starting at each breathing cycle, and each control loop iteration
-bool tLoopBuffer; // The amount of time left at the end of each loop
+float tLoopBuffer; // The amount of time left at the end of each loop
 float bpm;  // Respiratory rate
 float ieRatio;  // Inhale/exhale ratio
 
@@ -135,6 +138,10 @@ logging::Logger logger(false,    // log_to_serial,
 
 // Pressure
 Pressure pressureReader(PRESS_SENSE_PIN);
+
+// Buttons
+buttons::PressHoldButton offButton(OFF_PIN, 2000);
+buttons::DebouncedButton confirmButton(CONFIRM_PIN);
 
 // Knobs
 struct Knobs {
@@ -235,12 +242,12 @@ bool homeSwitchPressed() {
   return digitalRead(HOME_PIN) == LOW;
 }
 
-// check for errors
-void checkErrors() {
+// Check for errors and take appropriate action
+void handleErrors() {
   // Pressure alarms
   alarm.highPressure(pressureReader.get() >= MAX_PRESSURE_ALARM);
-  if(pressureReader.get() >= MAX_PRESSURE) setState(EX_STATE);  // TODO this should not be in checkErrors
-  
+  if(pressureReader.get() >= MAX_PRESSURE) setState(EX_STATE);
+
   // These pressure alarms only make sense after homing 
   if (enteringState && state == IN_STATE) {
     alarm.badPlateau(pressureReader.peak() - pressureReader.plateau() > MAX_RESIST_PRESSURE);
@@ -328,9 +335,10 @@ void setup() {
   alarm.begin();
   pinMode(HOME_PIN, INPUT_PULLUP); // Pull up the limit switch
   displ.begin();
-
-  // Set up knobs with their respective read functions
+  offButton.begin();
+  confirmButton.begin();
   knobs.begin();
+  tCycleTimer = now();
 
   setState(PREHOME_STATE); // Initial state
   roboclaw.begin(38400); // Roboclaw
@@ -360,14 +368,28 @@ void loop() {
   readEncoder();
   readMotorCurrent();
   pressureReader.read();
-  checkErrors();
+  handleErrors();
   alarm.update();
   displ.update();
+  offButton.update();
+
+  if (offButton.wasHeld()) {
+    goToPosition(0, Vhome);
+    setState(OFF_STATE);
+    alarm.allOff();
+  }
   
   // State Machine
   if(state == DEBUG_STATE){
     // Stop motor
     roboclaw.ForwardM1(address, 0);
+  }
+
+  else if (state == OFF_STATE) {
+    alarm.turningOFF(now() - tStateTimer < 5.0);
+    if (confirmButton.is_LOW()) {
+      setState(PREHOME_STATE);
+    }
   }
   
   else if(state == IN_STATE){

@@ -86,9 +86,13 @@ void Beeper::stop() {
 Alarm::Alarm(const String& default_text, const int& min_bad_to_trigger,
              const int& min_good_to_clear, const AlarmLevel& alarm_level):
   text_(default_text),
-  alarm_level_(alarm_level),
   min_bad_to_trigger_(min_bad_to_trigger),
-  min_good_to_clear_(min_good_to_clear) {}
+  min_good_to_clear_(min_good_to_clear),
+  alarm_level_(alarm_level) {}
+
+void Alarm::reset() {
+  *this = Alarm::Alarm(text_, min_bad_to_trigger_, min_good_to_clear_, alarm_level_);
+}
 
 void Alarm::setCondition(const bool& bad, const unsigned long& seq) {
   if (bad) {
@@ -133,6 +137,12 @@ void AlarmManager::begin() {
 void AlarmManager::update() {
   displ_->setAlarmText(getText());
   beeper_.update(getHighestLevel());
+}
+
+void AlarmManager::allOff() {
+  for (int i = 0; i < NUM_ALARMS; i++) {
+    alarms_[i].reset();
+  }
 }
 
 int AlarmManager::numON() const {
