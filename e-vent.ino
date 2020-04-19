@@ -20,9 +20,11 @@ enum States {
 #include "Logging.h"
 #include "Pressure.h"
 
+
 // General Settings
 ////////////
-bool DEBUG = false; // For controlling and displaying via serial
+bool DEBUG = false; // For controlling and displaying via serial TODO consolidate these two flags
+const bool ENABLE_SERIAL_OVERRIDE = true; // For controlling and via serial during automated testing
 int maxPwm = 255; // Maximum for PWM is 255 but this can be set lower
 float tLoopPeriod = 0.025; // The period (s) of the control loop
 float tHoldInDuration = 0.25; // Duration (s) to pause after inhalation
@@ -106,6 +108,7 @@ RoboClaw roboclaw(&Serial3, 10000);
 #define address 0x80
 int16_t motorCurrent;
 
+// TODO can we refactor all these #define's into consts?
 // auto-tuned PID values for PG188
 #define Kp 6.38650
 #define Ki 1.07623
@@ -131,7 +134,7 @@ display::Display displ(&lcd, TRIGGER_LOWER_THRESHOLD);
 alarms::AlarmManager alarm(BEEPER_PIN, SNOOZE_PIN, LED_ALARM_PIN, &displ, &cycleCount);
 
 // Logger
-logging::Logger logger(false,    // log_to_serial,
+logging::Logger logger(true,    // log_to_serial,
                        true,    // log_to_SD, 
                        true,    // serial_labels, 
                        ",\t");   // delim
@@ -152,6 +155,9 @@ struct Knobs {
   input::SafeKnob<float> ie       = input::SafeKnob<float>(&displ, display::IE_RATIO, CONFIRM_PIN, &alarm);
   input::SafeKnob<float> trigger  = input::SafeKnob<float>(&displ, display::AC_TRIGGER, CONFIRM_PIN, &alarm);
 } knobs;
+
+// Serial active for testing and validation
+bool serialActive = false;
 
 // TODO: move function definitions after loop() or to classes if they don't use global vars
 // Functions
@@ -188,7 +194,10 @@ void readInput(){
   bpm = knobs.bpm.read();
   ieRatio = knobs.ie.read();
   triggerSensitivity = knobs.trigger.read();
+}
 
+// Calculates the waveform parameters from the user inputs
+void calculateWaveform(){
   tPeriod = 60.0 / bpm; // seconds in each breathing cycle period
   tHoldIn = tPeriod / (1 + ieRatio);
   tIn = tHoldIn - tHoldInDuration;
@@ -315,6 +324,64 @@ void setupLogger() {
   logger.begin(&Serial, SD_SELECT);
 }
 
+// Check the serial for automated testing commands
+void readSerial() {
+  while (Serial.available() > 0)
+  {
+    char first = Serial.read();
+    int intVal;
+    float floatVal;
+
+    if(serialActive) {
+        switch (first) {
+            case '#':
+                // Two hashes in a row toggle "is_active_"
+                if (Serial.findUntil("#", "\n")) serialActive = false;
+                break;
+
+            case 'v':
+                intVal = volume2ticks(Serial.parseInt());
+                if (VOL_MIN <= intVal && intVal <= VOL_MAX){
+                  setVolumeTicks = intVal;
+                  displ.writeVolume(setVolumeTicks);
+                }
+                break;
+
+            case 'b':
+                intVal = Serial.parseInt();
+                if (BPM_MIN <= intVal && intVal <= BPM_MAX) {
+                  bpm = intVal;
+                  displ.writeBPM(bpm);
+                }
+                break;
+
+            case 'e':
+                floatVal = Serial.parseFloat();
+                if (IE_MIN <= floatVal && floatVal <= IE_MAX) {
+                  ieRatio = floatVal;
+                  displ.writeIEratio(ieRatio);
+                }
+                break;
+
+            case 't':
+                floatVal = Serial.parseFloat();
+                if (TRIGGERSENSITIVITY_MIN <= floatVal && floatVal <= TRIGGERSENSITIVITY_MAX) {
+                  triggerSensitivity = floatVal;
+                  displ.writeACTrigger(triggerSensitivity);
+                }
+                break;
+
+            case 's':
+                state = Serial.parseInt();
+                break;
+        }
+    } else if (first == '#') {
+        // Two hashes in a row toggle "is_active_"
+        if (Serial.findUntil("#", "\n")) serialActive = true;
+    }
+  }
+}
+
 ///////////////////
 ////// Setup //////
 ///////////////////
@@ -362,10 +429,14 @@ void loop() {
   }
 
   // All States
-  logger.update();
-  knobs.update();
   tLoopTimer = now(); // Start the loop timer
-  readInput();
+  logger.update();  
+  if (ENABLE_SERIAL_OVERRIDE) readSerial();
+  if (!serialActive) {
+    readInput();
+    knobs.update();
+  }
+  calculateWaveform();
   readEncoder();
   readMotorCurrent();
   pressureReader.read();
@@ -558,4 +629,3 @@ float readTriggerSens() {
              TRIGGERSENSITIVITY_MIN*100,
              TRIGGERSENSITIVITY_MAX*100) / 100.0; //Carry two decimal places
 }
-
