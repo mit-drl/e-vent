@@ -320,7 +320,7 @@ void setupLogger() {
   logger.addVar("vEx", &vEx);
   logger.addVar("TrigSens", &triggerSensitivity);
   logger.addVar("Pressure", &pressureReader.get(), 6);
-  logger.addVar("HighPresAlarm", (int*)&alarm.getHighPressure());
+  logger.addVar("HighPresAlarm", &alarm.getHighPressure());
   // begin called after all variables added to include them all in the header
   logger.begin(&Serial, SD_SELECT);
 }
@@ -462,6 +462,7 @@ void loop() {
     alarm.turningOFF(now() - tStateTimer < 5.0);
     if (confirmButton.is_LOW()) {
       setState(PREHOME_STATE);
+      alarm.turningOFF(false);
     }
   }
   
