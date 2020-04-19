@@ -181,7 +181,10 @@ void readInput(){
   bpm = knobs.bpm.read();
   ieRatio = knobs.ie.read();
   triggerSensitivity = knobs.trigger.read();
+}
 
+// Calculates the waveform parameters from the user inputs
+void calculateWaveform(){
   tPeriod = 60.0 / bpm; // seconds in each breathing cycle period
   tHoldIn = tPeriod / (1 + ieRatio);
   tIn = tHoldIn - tHoldInDuration;
@@ -357,6 +360,7 @@ void loop() {
   knobs.update();
   tLoopTimer = now(); // Start the loop timer
   readInput();
+  calculateWaveform();
   readEncoder();
   readMotorCurrent();
   pressureReader.read();
@@ -535,4 +539,3 @@ float readTriggerSens() {
              TRIGGERSENSITIVITY_MIN*100,
              TRIGGERSENSITIVITY_MAX*100) / 100.0; //Carry two decimal places
 }
-
