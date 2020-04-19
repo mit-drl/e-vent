@@ -32,6 +32,7 @@ float tMinPeepPause = 0.05; // Time (s) to pause after exhalation / before watch
 float tExMax = 1.00; // Maximum exhale timef
 float Vhome = 300; // The speed (clicks/s) to use during homing
 float voltHome = 30; // The speed (0-255) in volts to use during homing
+float tPauseHome = 1.0; // The pause time (s) during homing to ensure stability
 int goalTol = 10; // The tolerance to start stopping on reaching goal
 
 // Assist Control Flags and Settings
@@ -93,26 +94,23 @@ float TRIGGER_LOWER_THRESHOLD = 2;
 int ANALOG_PIN_MAX = 1023; // The maximum count on analog pins
 
 // Bag Calibration for AMBU Adult bag
-const float VOL_SLOPE = 9.39;
-const float VOL_INT = -102.2;
+const float VOL_SLOPE = 1;
+const float VOL_INT = 0;
 
 // Calibration-dependent functions
 /**
  * Converts motor position in ticks to volume in mL
  */
 int ticks2volume(const int& vol_ticks) {
-  return max(0, map(vol_ticks, VOL_MIN, VOL_MAX, 0, 100 * 100) / 100.0 * VOL_SLOPE + VOL_INT);
+  return (vol_ticks - VOL_INT) / VOL_SLOPE;
 }
 /**
  * Converts volume in mL to motor position in ticks
  */
-int volume2ticks(const int& vol_cc) {
-  return map((vol_cc - VOL_INT) / VOL_SLOPE, 0, 100, VOL_MIN, VOL_MAX);
+int volume2ticks(const int& vol_ml) {
+  return vol_ml * VOL_SLOPE + VOL_INT;
 }
 
-// Calibration-dependent constants
-const int bagHome = volume2ticks(0); // The bag-specific position of the bag edge
-const float tPauseHome = 2.0*bagHome/Vhome; // The pause time (s) during homing to ensure stability
 
 //Setup States
 States state;
@@ -457,7 +455,7 @@ void loop() {
   offButton.update();
 
   if (offButton.wasHeld()) {
-    goToPosition(0, Vhome);
+    goToPosition(volume2ticks(0), Vhome);
     setState(OFF_STATE);
     alarm.allOff();
   }
@@ -510,7 +508,7 @@ void loop() {
     if(enteringState){
       //consider changing PID tunings
       enteringState = false;
-      goToPosition(0, vEx);
+      goToPosition(volume2ticks(0), vEx);
     }
 
     // go to LISTEN_STATE 
@@ -580,12 +578,9 @@ void loop() {
     
     if(!homeSwitchPressed()) {
       roboclaw.ForwardM1(address, 0);
-      roboclaw.SetEncM1(address, 0); // Zero the encoder
-      delay(tPauseHome * 1000); // Wait for things to settle
-      goToPosition(bagHome, Vhome); // Stop motor
       delay(tPauseHome * 1000); // Wait for things to settle
       roboclaw.SetEncM1(address, 0); // Zero the encoder
-      setState(IN_STATE); 
+      setState(IN_STATE);
     }
     // TODO Consider a timeout to give up on homing
   }
