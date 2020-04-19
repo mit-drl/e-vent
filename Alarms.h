@@ -149,7 +149,7 @@ public:
   void setText(const String& text);
 
   // Check if this alarm is on
-  inline bool isON() const { return on_; }
+  inline const bool& isON() const { return on_; }
 
   // Get the text of this alarm
   inline String text() const { return text_; }
@@ -224,6 +224,10 @@ public:
   // Pressure too high alarm
   inline void highPressure(const bool& value) {
     alarms_[HIGH_PRESSU].setCondition(value, *cycle_count_);
+  }
+
+  inline const bool& getHighPressure() {
+    return alarms_[HIGH_PRESSU].isON();
   }
 
   // Pressure too low alarm

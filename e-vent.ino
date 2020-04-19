@@ -319,7 +319,8 @@ void setupLogger() {
   logger.addVar("vIn", &vIn);
   logger.addVar("vEx", &vEx);
   logger.addVar("TrigSens", &triggerSensitivity);
-  logger.addVar("Pressure", &pressureReader.get());
+  logger.addVar("Pressure", &pressureReader.get(), 6);
+  logger.addVar("HighPresAlarm", (int*)&alarm.getHighPressure());
   // begin called after all variables added to include them all in the header
   logger.begin(&Serial, SD_SELECT);
 }
