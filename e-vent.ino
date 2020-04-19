@@ -54,6 +54,7 @@ const int SNOOZE_PIN = 43;
 const int CONFIRM_PIN = 41;
 const int SD_SELECT = 53;
 const int OFF_PIN = 45;
+const int LED_ALARM_PIN = 12;
 
 // Safety settings
 ////////////////////
@@ -128,7 +129,7 @@ LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 display::Display displ(&lcd, TRIGGER_LOWER_THRESHOLD);
 
 // Alarms
-alarms::AlarmManager alarm(BEEPER_PIN, SNOOZE_PIN, &displ, &cycleCount);
+alarms::AlarmManager alarm(BEEPER_PIN, SNOOZE_PIN, LED_ALARM_PIN, &displ, &cycleCount);
 
 // Logger
 logging::Logger logger(false,    // log_to_serial,

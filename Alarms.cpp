@@ -132,11 +132,19 @@ void Alarm::setText(const String& text) {
 
 void AlarmManager::begin() {
   beeper_.begin();
+  pinMode(led_pin_, OUTPUT);
 }
 
 void AlarmManager::update() {
   displ_->setAlarmText(getText());
-  beeper_.update(getHighestLevel());
+  AlarmLevel highest_level = getHighestLevel();
+  beeper_.update(highest_level);
+  if (highest_level > NO_ALARM) {
+    digitalWrite(led_pin_, led_pulse_.read() ? HIGH : LOW);
+  }
+  else {
+    digitalWrite(led_pin_, LOW);
+  }
 }
 
 void AlarmManager::allOff() {
