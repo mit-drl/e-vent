@@ -58,8 +58,7 @@ const int LED_ALARM_PIN = 12;
 
 // Safety settings
 ////////////////////
-const float MAX_PRESSURE = 45.0;
-const float MAX_PRESSURE_ALARM = 40.0;
+const float MAX_PRESSURE = 40.0;
 const float MIN_PLATEAU_PRESSURE = 5.0;
 const float MAX_RESIST_PRESSURE = 2.0;
 const float MIN_TIDAL_PRESSURE = 5.0;
@@ -246,8 +245,9 @@ bool homeSwitchPressed() {
 // Check for errors and take appropriate action
 void handleErrors() {
   // Pressure alarms
-  alarm.highPressure(pressureReader.get() >= MAX_PRESSURE_ALARM);
-  if(pressureReader.get() >= MAX_PRESSURE) setState(EX_STATE);
+  const bool over_pressure = pressureReader.get() >= MAX_PRESSURE;
+  alarm.highPressure(over_pressure);
+  if(over_pressure) setState(EX_STATE);
 
   // These pressure alarms only make sense after homing 
   if (enteringState && state == IN_STATE) {
