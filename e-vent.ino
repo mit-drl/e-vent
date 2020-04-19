@@ -18,6 +18,7 @@ enum States {
 #include "Logging.h"
 #include "Pressure.h"
 
+
 // General Settings
 ////////////
 bool DEBUG = false; // For controlling and displaying via serial
@@ -145,6 +146,9 @@ struct Knobs {
   input::SafeKnob<float> ie       = input::SafeKnob<float>(&displ, display::IE_RATIO, CONFIRM_PIN, &alarm);
   input::SafeKnob<float> trigger  = input::SafeKnob<float>(&displ, display::AC_TRIGGER, CONFIRM_PIN, &alarm);
 } knobs;
+
+// Serial active for testing and validation
+bool serialActive = false;
 
 // TODO: move function definitions after loop() or to classes if they don't use global vars
 // Functions
@@ -310,6 +314,64 @@ void setupLogger() {
   logger.begin(&Serial, SD_SELECT);
 }
 
+// Check the serial for automated testing commands
+void readSerial() {
+  while (Serial.available() > 0)
+  {
+    char first = Serial.read();
+    int intVal;
+    float floatVal;
+
+    if(serialActive) {
+        switch (first) {
+            case '#':
+                // Two hashes in a row toggle "is_active_"
+                if (Serial.findUntil("#", "\n")) serialActive = false;
+                break;
+
+            case 'v':
+                intVal = volume2ticks(Serial.parseInt());
+                if (VOL_MIN <= intVal && intVal <= VOL_MAX){
+                  setVolumeTicks = intVal;
+                  displ.writeVolume(setVolumeTicks);
+                }
+                break;
+
+            case 'b':
+                intVal = Serial.parseInt();
+                if (BPM_MIN <= intVal && intVal <= BPM_MAX) {
+                  bpm = intVal;
+                  displ.writeBPM(bpm);
+                }
+                break;
+
+            case 'e':
+                floatVal = Serial.parseFloat();
+                if (IE_MIN <= floatVal && floatVal <= IE_MAX) {
+                  ieRatio = floatVal;
+                  displ.writeIEratio(ieRatio);
+                }
+                break;
+
+            case 't':
+                floatVal = Serial.parseFloat();
+                if (TRIGGERSENSITIVITY_MIN <= floatVal && floatVal <= TRIGGERSENSITIVITY_MAX) {
+                  triggerSensitivity = floatVal;
+                  displ.writeACTrigger(triggerSensitivity);
+                }
+                break;
+
+            case 's':
+                state = Serial.parseInt();
+                break;
+        }
+    } else if (first == '#') {
+        // Two hashes in a row toggle "is_active_"
+        if (Serial.findUntil("#", "\n")) serialActive = true;
+    }
+  }
+}
+
 ///////////////////
 ////// Setup //////
 ///////////////////
@@ -356,10 +418,13 @@ void loop() {
   }
 
   // All States
-  logger.update();
-  knobs.update();
   tLoopTimer = now(); // Start the loop timer
-  readInput();
+  logger.update();  
+  readSerial();
+  if (!serialActive) {
+    readInput();
+    knobs.update();
+  }
   calculateWaveform();
   readEncoder();
   readMotorCurrent();
