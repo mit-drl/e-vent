@@ -226,10 +226,6 @@ public:
     alarms_[HIGH_PRESSU].setCondition(value, *cycle_count_);
   }
 
-  inline const bool& getHighPressure() {
-    return alarms_[HIGH_PRESSU].isON();
-  }
-
   // Pressure too low alarm
   inline void lowPressure(const bool& value) {
     alarms_[LOW_PRESSUR].setCondition(value, *cycle_count_);
@@ -266,6 +262,16 @@ public:
   inline void turningOFF(const bool& value) {
     alarms_[TURNING_OFF].setCondition(value, *cycle_count_);
   }
+
+  // Get current state of each alarm
+  inline const bool& getHighPressure()      { return alarms_[HIGH_PRESSU].isON(); }
+  inline const bool& getLowPressure()       { return alarms_[LOW_PRESSUR].isON(); }
+  inline const bool& getBadPlateau()        { return alarms_[BAD_PLATEAU].isON(); }
+  inline const bool& getUnmetVolume()       { return alarms_[UNMET_VOLUM].isON(); }
+  inline const bool& getNoTidalPres()       { return alarms_[NO_TIDAL_PR].isON(); }
+  inline const bool& getOverCurrent()       { return alarms_[OVER_CURREN].isON(); }
+  inline const bool& getUnconfirmedChange() { return alarms_[NOT_CONFIRM].isON(); }
+  inline const bool& getTurningOFF()        { return alarms_[TURNING_OFF].isON(); }
 
 private:
   Display* displ_;
