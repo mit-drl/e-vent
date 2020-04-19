@@ -195,10 +195,12 @@ class AlarmManager {
   };
 
 public:
-  AlarmManager(const int& beeper_pin, const int& snooze_pin, 
+  AlarmManager(const int& beeper_pin, const int& snooze_pin, const int& led_pin,
                Display* displ, unsigned long const* cycle_count):
       displ_(displ),
       beeper_(beeper_pin, snooze_pin),
+      led_pin_(led_pin),
+      led_pulse_(500, 0.5),
       cycle_count_(cycle_count) {
     alarms_[HIGH_PRESSU] = Alarm("   HIGH PRESSURE    ", 1, 2, EMERGENCY);
     alarms_[LOW_PRESSUR] = Alarm("LOW PRES DISCONNECT?", 1, 1, EMERGENCY);
@@ -264,6 +266,8 @@ public:
 private:
   Display* displ_;
   Beeper beeper_;
+  int led_pin_;
+  utilities::Pulse led_pulse_;
   Alarm alarms_[NUM_ALARMS];
   unsigned long const* cycle_count_;
 
