@@ -21,7 +21,8 @@ enum States {
 
 // General Settings
 ////////////
-bool DEBUG = false; // For controlling and displaying via serial
+bool DEBUG = false; // For controlling and displaying via serial TODO consolidate these two flags
+const bool ENABLE_SERIAL_OVERRIDE = true; // For controlling and via serial during automated testing
 int maxPwm = 255; // Maximum for PWM is 255 but this can be set lower
 float tLoopPeriod = 0.025; // The period (s) of the control loop
 float tHoldInDuration = 0.25; // Duration (s) to pause after inhalation
@@ -104,6 +105,7 @@ RoboClaw roboclaw(&Serial3, 10000);
 #define address 0x80
 int16_t motorCurrent;
 
+// TODO can we refactor all these #define's into consts?
 // auto-tuned PID values for PG188
 #define Kp 6.38650
 #define Ki 1.07623
@@ -129,7 +131,7 @@ display::Display displ(&lcd, TRIGGER_LOWER_THRESHOLD);
 alarms::AlarmManager alarm(BEEPER_PIN, SNOOZE_PIN, &displ, &cycleCount);
 
 // Logger
-logging::Logger logger(false,    // log_to_serial,
+logging::Logger logger(true,    // log_to_serial,
                        true,    // log_to_SD, 
                        true,    // serial_labels, 
                        ",\t");   // delim
@@ -420,7 +422,7 @@ void loop() {
   // All States
   tLoopTimer = now(); // Start the loop timer
   logger.update();  
-  readSerial();
+  if (ENABLE_SERIAL_OVERRIDE) readSerial();
   if (!serialActive) {
     readInput();
     knobs.update();
