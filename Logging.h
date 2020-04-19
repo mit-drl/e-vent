@@ -32,12 +32,14 @@ private:
   int float_precision_;
 
   union {
+    bool* b;
     int* i;
     float* f;
     double* d;
   } var_;
 
   enum Type {
+    BOOL,
     INT,
     FLOAT,
     DOUBLE
@@ -45,11 +47,15 @@ private:
 
   String pad(String& s);
 
+  void setPtr(const bool* var);
+
   void setPtr(const int* var);
 
   void setPtr(const float* var);
 
   void setPtr(const double* var);
+
+  String serialize(bool* var) const;
 
   String serialize(int* var) const;
 
@@ -137,6 +143,7 @@ private:
 #define INSTANTIATE_ADDVAR(vartype) \
   template void Logger::addVar(const char var_name[], const vartype* var, \
                                const int& min_digits, const int& float_precision);
+INSTANTIATE_ADDVAR(bool)
 INSTANTIATE_ADDVAR(int)
 INSTANTIATE_ADDVAR(float)
 INSTANTIATE_ADDVAR(double)
