@@ -71,7 +71,7 @@ const int MAX_MOTOR_CURRENT = 1000; // Max motor current
 ////////////////////
 // Define cycle parameters
 unsigned long cycleCount = 0;
-float vIn, vEx, tIn, tHoldIn, tEx, tPeriod, setVolumeTicks;
+float vIn, vEx, tIn, tHoldIn, tEx, tPeriod, setVolume;
 float tCycleTimer, tLoopTimer; // Timer starting at each breathing cycle, and each control loop iteration
 float tLoopBuffer; // The amount of time left at the end of each loop
 float bpm;  // Respiratory rate
@@ -190,7 +190,7 @@ float readTriggerSens();  // Reads set trigger sensitivity from the trigger pot
 // Reads user settings to set the waveform parameters
 void readInput(){
   // Read knobs
-  setVolumeTicks = volume2ticks(knobs.volume.read());
+  setVolume = knobs.volume.read();
   bpm = knobs.bpm.read();
   ieRatio = knobs.ie.read();
   triggerSensitivity = knobs.trigger.read();
@@ -205,8 +205,8 @@ void calculateWaveform(){
   tExDuration = tEx - tHoldIn;  // For logging
   tPeriodDuration = tPeriod - tEx;  // For logging
   
-  vIn = setVolumeTicks / tIn; // Velocity in (clicks/s)
-  vEx = setVolumeTicks / (tEx - tHoldIn); // Velocity out (clicks/s)
+  vIn = volume2ticks(setVolume) / tIn; // Velocity in (clicks/s)
+  vEx = volume2ticks(setVolume) / (tEx - tHoldIn); // Velocity out (clicks/s)
 }
 
 int readEncoder() {
@@ -267,7 +267,7 @@ void handleErrors() {
 
   // Check if desired volume was reached
   if (enteringState && state == EX_STATE) {
-    alarm.unmetVolume(ticks2volume(setVolumeTicks - motorPosition) > VOLUME_ERROR_THRESH);
+    alarm.unmetVolume(setVolume - ticks2volume(motorPosition) > VOLUME_ERROR_THRESH);
   }
 
   // Check if maximum motor current was exceeded
@@ -309,7 +309,7 @@ void setupLogger() {
   logger.addVar("Mode", (int*)&patientTriggered);
   logger.addVar("Pos", &motorPosition, 3);
   logger.addVar("Current", &motorCurrent, 3);
-  logger.addVar("Vol", &setVolumeTicks);
+  logger.addVar("Vol", &setVolume);
   logger.addVar("BPM", &bpm);
   logger.addVar("IE", &ieRatio);
   logger.addVar("tIn", &tIn);
@@ -341,10 +341,10 @@ void readSerial() {
                 break;
 
             case 'v':
-                intVal = volume2ticks(Serial.parseInt());
+                intVal = Serial.parseInt();
                 if (VOL_MIN <= intVal && intVal <= VOL_MAX){
-                  setVolumeTicks = intVal;
-                  displ.writeVolume(setVolumeTicks);
+                  setVolume = intVal;
+                  displ.writeVolume(setVolume);
                 }
                 break;
 
@@ -474,7 +474,7 @@ void loop() {
       const float tNow = now();
       tCycleDuration = tNow - tCycleTimer;  // For logging
       tCycleTimer = tNow; // The cycle begins at the start of inspiration
-      goToPosition(setVolumeTicks, vIn);
+      goToPosition(volume2ticks(setVolume), vIn);
       cycleCount++;
     }
 
