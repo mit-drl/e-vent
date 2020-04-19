@@ -24,7 +24,7 @@ enum States {
 // General Settings
 ////////////
 bool DEBUG = false; // For controlling and displaying via serial TODO consolidate these two flags
-const bool ENABLE_SERIAL_OVERRIDE = true; // For controlling and via serial during automated testing
+const bool ENABLE_SERIAL_OVERRIDE = true; // For controlling via serial during automated testing
 int maxPwm = 255; // Maximum for PWM is 255 but this can be set lower
 float tLoopPeriod = 0.025; // The period (s) of the control loop
 float tHoldInDuration = 0.25; // Duration (s) to pause after inhalation
@@ -33,7 +33,7 @@ float tExMax = 1.00; // Maximum exhale timef
 float Vhome = 300; // The speed (clicks/s) to use during homing
 float voltHome = 30; // The speed (0-255) in volts to use during homing
 int goalTol = 10; // The tolerance to start stopping on reaching goal
-int bagHome = 50; // The bag-specific position of the bag edge
+int bagHome = 50; // The bag-specific position of the bag edge TODO check this volume2ticks(0)
 float tPauseHome = 2.0*bagHome/Vhome; // The pause time (s) during homing to ensure stability
 
 // Assist Control Flags and Settings
@@ -87,8 +87,8 @@ float BPM_MIN = 10;
 float BPM_MAX = 40;
 float IE_MIN = 1;
 float IE_MAX = 4;
-float VOL_MIN = 150;
-float VOL_MAX = 650; // 900; // For full 
+float VOL_MIN = 100;
+float VOL_MAX = 800; // 900; // For full 
 float TRIGGERSENSITIVITY_MIN = 0;
 float TRIGGERSENSITIVITY_MAX = 5;
 float TRIGGER_LOWER_THRESHOLD = 2;
@@ -176,7 +176,7 @@ void setState(States newState){
 }
 
 // Converts motor position in ticks to volume in mL
-int ticks2Volume(const int& vol_ticks);
+int ticks2volume(const int& vol_ticks);
 
 // Converts volume in mL to motor position in ticks
 int volume2ticks(const int& vol_cc);
@@ -267,7 +267,7 @@ void handleErrors() {
 
   // Check if desired volume was reached
   if (enteringState && state == EX_STATE) {
-    alarm.unmetVolume(ticks2Volume(setVolumeTicks - motorPosition) > VOLUME_ERROR_THRESH);
+    alarm.unmetVolume(ticks2volume(setVolumeTicks - motorPosition) > VOLUME_ERROR_THRESH);
   }
 
   // Check if maximum motor current was exceeded
@@ -604,7 +604,7 @@ void Knobs::update() {
   trigger.update();
 }
 
-int ticks2Volume(const int& vol_ticks) {
+int ticks2volume(const int& vol_ticks) {
   return max(0, map(vol_ticks, VOL_MIN, VOL_MAX, 0, 100 * 100) / 100.0 * VOL_SLOPE + VOL_INT);
 }
 
@@ -613,8 +613,7 @@ int volume2ticks(const int& vol_cc) {
 }
 
 int readVolume() {
-  const int volTicks = map(analogRead(VOL_PIN), 0, ANALOG_PIN_MAX, VOL_MIN, VOL_MAX);
-  return ticks2Volume(volTicks);
+  return map(analogRead(VOL_PIN), 0, ANALOG_PIN_MAX, VOL_MIN, VOL_MAX);
 }
 
 int readBpm() {
