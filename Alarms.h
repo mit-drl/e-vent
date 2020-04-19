@@ -3,9 +3,9 @@
 
 #include "Arduino.h"
 
+#include "Buttons.h"
 #include "Display.h"
 #include "pitches.h"
-#include "Utilities.h"
 
 
 namespace alarms {
@@ -49,23 +49,7 @@ static const Note kEmergencyNotes[] = {
 
 // Notifiation notes
 static const Note kOffNotes[] = {
-  {NOTE_B4, 200, 100},  // 1
-  {NOTE_B4, 200, 100},  // 2
-  {NOTE_B4, 200, 100},  // 3
-  {NOTE_B4, 200, 100},  // 4
-  {NOTE_B4, 200, 100},  // 5
-  {NOTE_B4, 200, 100},  // 6
-  {NOTE_B4, 200, 100},  // 7
-  {NOTE_B4, 200, 100},  // 8
-  {NOTE_B4, 200, 100},  // 9
-  {NOTE_B4, 200, 100},  // 10
-  {NOTE_B4, 200, 100},  // 11
-  {NOTE_B4, 200, 100},  // 12
-  {NOTE_B4, 200, 100},  // 13
-  {NOTE_B4, 200, 100},  // 14
-  {NOTE_B4, 200, 100},  // 15
-  {NOTE_B4, 200, 100},  // 16
-  {NOTE_B4, 200, 2000}  // 17
+  {NOTE_G4, 200, 200}
 };
 
 
@@ -115,7 +99,7 @@ public:
       tones_[EMERGENCY] = Tone(kEmergencyNotes, emergency_notes_length, &beeper_pin_);
 
       const int off_notes_length = sizeof(kOffNotes) / sizeof(kOffNotes[0]);
-      tones_[OFF_LEVEL] = Tone(kEmergencyNotes, off_notes_length, &beeper_pin_);
+      tones_[OFF_LEVEL] = Tone(kOffNotes, off_notes_length, &beeper_pin_);
     }
 
   // Setup during arduino setup()
@@ -126,7 +110,7 @@ public:
 
 private:
   const int beeper_pin_;
-  utilities::DebouncedButton snooze_button_;
+  buttons::DebouncedButton snooze_button_;
   Tone tones_[NUM_LEVELS];
 
   unsigned long snooze_time_ = 0;
@@ -152,6 +136,9 @@ public:
   
   Alarm(const String& default_text, const int& min_bad_to_trigger,
         const int& min_good_to_clear, const AlarmLevel& alarm_level);
+
+  // Reset to default state
+  void reset();
 
   // Set the ON value of this alarm, but only turn ON if `bad == true` for at least 
   // `min_bad_to_trigger_` consecutive calls with different `seq` and OFF if `bad == false` 
@@ -203,6 +190,7 @@ class AlarmManager {
     NO_TIDAL_PR,
     OVER_CURREN,
     NOT_CONFIRM,
+    TURNING_OFF,
     NUM_ALARMS 
   };
 
@@ -219,6 +207,7 @@ public:
     alarms_[NO_TIDAL_PR] = Alarm(" NO TIDAL PRESSURE  ", 2, 1, EMERGENCY);
     alarms_[OVER_CURREN] = Alarm(" OVER CURRENT FAULT ", 1, 2, EMERGENCY);
     alarms_[NOT_CONFIRM] = Alarm("      CONFIRM?      ", 1, 1, NOTIFY);
+    alarms_[TURNING_OFF] = Alarm("    TURNING OFF     ", 1, 1, OFF_LEVEL);
   }
 
   // Setup during arduino setup()
@@ -226,6 +215,9 @@ public:
 
   // Update alarms, should be called every loop
   void update();
+
+  // Clear all alarms
+  void allOff();
 
   // Pressure too high alarm
   inline void highPressure(const bool& value) {
@@ -259,10 +251,14 @@ public:
 
   // Setting not confirmed
   inline void unconfirmedChange(const bool& value, const String& message = "") {
-    if (alarms_[NOT_CONFIRM].text().length() != 0) {
+    if (value) {
       alarms_[NOT_CONFIRM].setText(message);
     }
     alarms_[NOT_CONFIRM].setCondition(value, *cycle_count_);
+  }
+
+  inline void turningOFF(const bool& value) {
+    alarms_[TURNING_OFF].setCondition(value, *cycle_count_);
   }
 
 private:

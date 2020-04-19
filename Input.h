@@ -4,6 +4,7 @@
 #include "Arduino.h"
 
 #include "Alarms.h"
+#include "Buttons.h"
 #include "Display.h"
 #include "Utilities.h"
 
@@ -61,7 +62,6 @@ public:
 /**
  * SafeKnob
  * Safe knob that requires confirmation via 'confirm' button before setting a value.
- * TODO move definitions to cpp
  */
 template <typename T>
 class SafeKnob : public Input<T> {
@@ -82,7 +82,7 @@ public:
   void update();
 
 private:
-  utilities::DebouncedButton confirm_button_;
+  buttons::DebouncedButton confirm_button_;
   AlarmManager* alarms_;
   utilities::Pulse pulse_;
   T unconfirmed_value_;
