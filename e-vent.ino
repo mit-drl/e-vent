@@ -26,7 +26,7 @@ enum States {
 bool DEBUG = false; // For controlling and displaying via serial TODO consolidate these two flags
 const bool ENABLE_SERIAL_OVERRIDE = true; // For controlling via serial during automated testing
 int maxPwm = 255; // Maximum for PWM is 255 but this can be set lower
-float tLoopPeriod = 0.025; // The period (s) of the control loop
+float tLoopPeriod = 0.05; // The period (s) of the control loop
 float tHoldInDuration = 0.25; // Duration (s) to pause after inhalation
 float tMinPeepPause = 0.05; // Time (s) to pause after exhalation / before watching for an assisted inhalation
 float tExMax = 1.00; // Maximum exhale timef
@@ -589,8 +589,8 @@ void loop() {
   }
 
   // Add a delay if there's still time in the loop period
-  tLoopBuffer = max(0, tLoopPeriod - tLoopTimer);
-  delay(tLoopBuffer);
+  tLoopBuffer = max(0, tLoopTimer + tLoopPeriod - now());
+  delay(tLoopBuffer*1000.0);
 }
 
 
