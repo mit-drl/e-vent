@@ -22,6 +22,8 @@ using display::Display;
  */
 template <typename T>
 class Input {
+  static const unsigned long kDisplayUpdatePeriod = 250;
+
 public:
   Input(Display* displ, const display::DisplayKey& key): displ_(displ), disp_key_(key) {}
 
@@ -37,6 +39,7 @@ protected:
   display::DisplayKey disp_key_;
 
   T set_value_;  // Dial value displayed and used for operation
+  unsigned long last_display_update_time_ = 0;
 
   void display(const T& value, const bool& blank = false);
 

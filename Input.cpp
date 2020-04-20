@@ -15,6 +15,11 @@ void Input<T>::begin(T (*read_fun)()) {
 
 template <typename T>
 void Input<T>::display(const T& value, const bool& blank) {
+  // throttle display rate
+  const unsigned long time_now = millis();
+  if (time_now - last_display_update_time_ < kDisplayUpdatePeriod) return;
+  last_display_update_time_ = time_now;
+
   if (blank) {
     displ_->writeBlank(disp_key_);
   }
