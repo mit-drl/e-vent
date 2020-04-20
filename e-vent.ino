@@ -34,6 +34,7 @@ float Vhome = 300; // The speed (clicks/s) to use during homing
 float voltHome = 30; // The speed (0-255) in volts to use during homing
 float tPauseHome = 1.0; // The pause time (s) during homing to ensure stability
 int goalTol = 10; // The tolerance to start stopping on reaching goal
+float tAccel = 0.2; // Time for ramp up and ramp down (s)
 
 // Assist Control Flags and Settings
 bool ASSIST_CONTROL = false; // Enable assist control
@@ -207,8 +208,8 @@ void calculateWaveform(){
   tExDuration = tEx - tHoldIn;  // For logging
   tPeriodDuration = tPeriod - tEx;  // For logging
   
-  vIn = volume2ticks(setVolume) / tIn; // Velocity in (clicks/s)
-  vEx = volume2ticks(setVolume) / (tEx - tHoldIn); // Velocity out (clicks/s)
+  vIn = volume2ticks(setVolume) / (tIn - tAccel); // Velocity in (clicks/s)
+  vEx = volume2ticks(setVolume) / (tEx - tHoldIn - tAccel); // Velocity out (clicks/s)
 }
 
 int readEncoder() {
