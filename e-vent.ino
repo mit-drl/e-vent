@@ -147,12 +147,6 @@ display::Display displ(&lcd, TRIGGER_LOWER_THRESHOLD);
 // Alarms
 alarms::AlarmManager alarm(BEEPER_PIN, SNOOZE_PIN, LED_ALARM_PIN, &displ, &cycleCount);
 
-// Logger
-logging::Logger logger(true,    // log_to_serial,
-                       true,    // log_to_SD, 
-                       true,    // serial_labels, 
-                       ",\t");   // delim
-
 // Pressure
 Pressure pressureReader(PRESS_SENSE_PIN);
 
@@ -309,25 +303,34 @@ void handleErrors() {
   }
 }
 
+
+// Logger
+logging::Logger logger(true,    // log_to_serial,
+                       false,    // log_to_SD, 
+                       false,    // serial_labels, 
+                       ",\t");   // delim
+
 // Set up logger variables
 void setupLogger() {
-  logger.addVar("Time", &tCycleTimer);
-  logger.addVar("tCycle", &tCycleDuration);
+  // logger.addVar("Time", &tLoopTimer);
+  // logger.addVar("CycleStart", &tCycleTimer);
+  // logger.addVar("Period", &tCycleDuration);
+  // logger.addVar("tLoopBuffer", &tLoopBuffer, 6, 4);
   logger.addVar("State", (int*)&state);
-  logger.addVar("Mode", (int*)&patientTriggered);
   logger.addVar("Pos", &motorPosition, 3);
-  logger.addVar("Current", &motorCurrent, 3);
-  logger.addVar("Vol", &setVolume);
-  logger.addVar("BPM", &bpm);
-  logger.addVar("IE", &ieRatio);
-  logger.addVar("tIn", &tIn);
-  logger.addVar("tHoldIn", &tHoldInDuration);
-  logger.addVar("tEx", &tExDuration);
-  logger.addVar("tHoldOut", &tPeriodDuration);
-  logger.addVar("vIn", &vIn);
-  logger.addVar("vEx", &vEx);
-  logger.addVar("TrigSens", &triggerSensitivity);
+  // logger.addVar("Current", &motorCurrent, 3);
   logger.addVar("Pressure", &pressureReader.get(), 6);
+  // logger.addVar("Vol", &setVolume);
+  // logger.addVar("BPM", &bpm);
+  // logger.addVar("IE", &ieRatio);
+  // logger.addVar("tIn", &tIn);
+  // logger.addVar("tHoldIn", &tHoldInDuration);
+  // logger.addVar("tEx", &tExDuration);
+  // logger.addVar("tHoldOut", &tPeriodDuration);
+  // logger.addVar("vIn", &vIn);
+  // logger.addVar("vEx", &vEx);
+  // logger.addVar("Mode", (int*)&patientTriggered);
+  // logger.addVar("TrigSens", &triggerSensitivity);
   logger.addVar("HighPresAlarm", &alarm.getHighPressure());
   // begin called after all variables added to include them all in the header
   logger.begin(&Serial, SD_SELECT);
