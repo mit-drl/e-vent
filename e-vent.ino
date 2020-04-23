@@ -425,7 +425,7 @@ void setup() {
 
   setState(PREHOME_STATE); // Initial state
   roboclaw.begin(38400); // Roboclaw
-  roboclaw.SetM1MaxCurrent(address, 5000); // Current limit is 5A
+  roboclaw.SetM1MaxCurrent(address, 7000); // Current limit is 7A
   roboclaw.SetM1VelocityPID(address,Kd,Kp,Ki,qpps); // Set Velocity PID Coefficients
   roboclaw.SetM1PositionPID(address,pKp,pKi,pKd,kiMax,deadzone,minPos,maxPos); // Set Position PID Coefficients
   roboclaw.SetEncM1(address, 0); // Zero the encoder
