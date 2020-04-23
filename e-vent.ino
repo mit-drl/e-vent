@@ -95,22 +95,28 @@ float TRIGGERSENSITIVITY_MAX = 5;
 float TRIGGER_LOWER_THRESHOLD = 2;
 int ANALOG_PIN_MAX = 1023; // The maximum count on analog pins
 
-// Bag Calibration for AMBU Adult bag
-const float VOL_SLOPE = 1;
-const float VOL_INT = 0;
-
 // Calibration-dependent functions
 /**
  * Converts motor position in ticks to volume in mL
  */
 int ticks2volume(const int& vol_ticks) {
-  return (vol_ticks - VOL_INT) / VOL_SLOPE;
+  // float coeffs[] = {1.29083271e-03,  4.72985182e-01, -7.35403067e+01}; //Ambu Adult
+  // float coeffs[] = {1.75220643e-03,  8.50636905e-02, -3.71875333e+01}; //Ambu Adult C:30,R:20 Machine 1
+  // float coeffs[] = {1.78634433e-03, -4.09987400e-02, -3.07715167e+01}; //Ambu Adult C:30,R:20 Machine 2
+  float coeffs[] = {1.88839524e-03,  4.82143429e-02, -1.83213133e+01}; //Ambu Adult C:30,R:20 Machine 3
+  return coeffs[0] * vol_ticks * vol_ticks + coeffs[1] * vol_ticks + coeffs[2];
+  // return vol_ticks;
 }
 /**
  * Converts volume in mL to motor position in ticks
  */
 int volume2ticks(const int& vol_ml) {
-  return vol_ml * VOL_SLOPE + VOL_INT;
+  // float coeffs[] = {-3.72767718e-04,  9.37047660e-01,  1.36124799e+02}; //Ambu Adult
+  // float coeffs[] = {-5.18153235e-04,  1.02092210e+00,  1.55102450e+02}; //Ambu Adult C:30,R20 Machine 1
+  // float coeffs[] = {-6.47493124e-04,  1.10746556e+00,  1.70417265e+02}; //Ambu Adult C:30,R20 Machine 2
+  float coeffs[] = {-4.85757433e-04,  9.97665861e-01,  1.40458988e+02}; //Ambu Adult C:30,R20 Machine 3
+  return coeffs[0] * vol_ml * vol_ml + coeffs[1] * vol_ml + coeffs[2];
+  // return vol_ml;
 }
 
 
