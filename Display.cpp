@@ -82,11 +82,9 @@ void Display::writeHeader() {
 }
 
 void Display::writeVolume(const int& vol) {
-  if(animation_.empty()) {
-    char buff[12];
-    sprintf(buff, "%2s=%3smL   ", getLabel(VOLUME).c_str(), toString(VOLUME, vol).c_str());
-    write(elements_[VOLUME].row, elements_[VOLUME].col, buff);
-  }
+  char buff[12];
+  sprintf(buff, "%2s=%3smL   ", getLabel(VOLUME).c_str(), toString(VOLUME, vol).c_str());
+  write(elements_[VOLUME].row, elements_[VOLUME].col, buff);
 }
 
 void Display::writeBPM(const int& bpm) {
@@ -102,11 +100,14 @@ void Display::writeIEratio(const float& ie) {
 }
 
 void Display::writeACTrigger(const float& ac_trigger) {
-  char buff[12];
-  const String trigger_str = toString(AC_TRIGGER, ac_trigger);
-  sprintf(buff, "%2s=%3s%5s", getLabel(AC_TRIGGER).c_str(), trigger_str.c_str(),
-          trigger_str == "OFF" ? "     " : "cmH2O");
-  write(elements_[AC_TRIGGER].row, elements_[AC_TRIGGER].col, buff);
+  if(animation_.empty()) {
+    char buff[12];
+    const String trigger_str = toString(AC_TRIGGER, ac_trigger);
+    sprintf(buff, "%2s=%3s%5s", getLabel(AC_TRIGGER).c_str(), trigger_str.c_str(),
+            trigger_str == "OFF" ? "     " : "cmH2O");
+    write(elements_[AC_TRIGGER].row, elements_[AC_TRIGGER].col, buff);
+  }
+
 }
 
 void Display::writePresLabel() {
