@@ -118,25 +118,24 @@ float tStateTimer;
 
 // Roboclaw
 RoboClaw roboclaw(&Serial3, 10000);
-#define address 0x80
+const uint8_t address = 0x80;
 int16_t motorCurrent;
 
-// TODO can we refactor all these #define's into consts?
 // auto-tuned PID values for PG188
-#define Kp 6.38650
-#define Ki 1.07623
-#define Kd 0.0
-#define qpps 3000
+const float Kp = 6.38650;
+const float Ki = 1.07623;
+const float Kd = 0.0;
+const int qpps = 3000;
 int motorPosition = 0;
 
 // position PID values for PG188
-#define pKp 9.0
-#define pKi 0.0
-#define pKd 0.0
-#define kiMax 10.0
-#define deadzone 0
-#define minPos 0
-#define maxPos 1000
+const float pKp = 9.0;
+const float pKi = 0.0;
+const float pKd = 0.0;
+const float kiMax = 10.0;
+const float deadzone = 0;
+const float minPos = 0;
+const float maxPos = 1000;
 
 // LCD Screen
 const int rs = 9, en = 8, d4 = 7, d5 = 6, d6 = 5, d7 = 4;
