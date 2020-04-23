@@ -96,23 +96,22 @@ float TRIGGER_LOWER_THRESHOLD = 2;
 int ANALOG_PIN_MAX = 1023; // The maximum count on analog pins
 
 // Bag Calibration for AMBU Adult bag
-const float VOL_SLOPE = 1;
-const float VOL_INT = 0;
+const struct{float a, b, c;} COEFFS{1.29083271e-03, 4.72985182e-01, -7.35403067e+01};
 
 // Calibration-dependent functions
 /**
  * Converts motor position in ticks to volume in mL
  */
 int ticks2volume(const int& vol_ticks) {
-  return (vol_ticks - VOL_INT) / VOL_SLOPE;
+  return COEFFS.a * sq(vol_ticks) + COEFFS.b * vol_ticks + COEFFS.c;
 }
+
 /**
  * Converts volume in mL to motor position in ticks
  */
 int volume2ticks(const int& vol_ml) {
-  return vol_ml * VOL_SLOPE + VOL_INT;
+  return (-COEFFS.b + sqrt(sq(COEFFS.b) -4 * COEFFS.a * (COEFFS.c - vol_ml))) / (2 * COEFFS.a);
 }
-
 
 //Setup States
 States state;
