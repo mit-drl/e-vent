@@ -80,7 +80,7 @@ float ieRatio;  // Inhale/exhale ratio
 // Durations
 float tCycleDuration;   // Duration of each cycle
 float tExDuration;      // tEx - tHoldIn
-float tPeriodDuration;  // tPeriod - tEx
+float tExPauseDuration;  // tPeriod - tEx
 
 // Define pot mappings
 float BPM_MIN = 10;
@@ -206,7 +206,7 @@ void calculateWaveform(){
   tIn = tHoldIn - tHoldInDuration;
   tEx = min(tHoldIn + tExMax, tPeriod - tMinPeepPause);
   tExDuration = tEx - tHoldIn;  // For logging
-  tPeriodDuration = tPeriod - tEx;  // For logging
+  tExPauseDuration = tPeriod - tEx;  // For logging
   
   vIn = volume2ticks(setVolume) / (tIn - tAccel); // Velocity in (clicks/s)
   vEx = volume2ticks(setVolume) / (tEx - tHoldIn - tAccel); // Velocity out (clicks/s)
@@ -328,7 +328,7 @@ void setupLogger() {
   // logger.addVar("tIn", &tIn);
   // logger.addVar("tHoldIn", &tHoldInDuration);
   // logger.addVar("tEx", &tExDuration);
-  // logger.addVar("tHoldOut", &tPeriodDuration);
+  // logger.addVar("tHoldOut", &tExPauseDuration);
   // logger.addVar("vIn", &vIn);
   // logger.addVar("vEx", &vEx);
   // logger.addVar("Mode", (int*)&patientTriggered);
