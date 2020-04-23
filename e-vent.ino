@@ -355,9 +355,10 @@ void readSerial() {
 
     if(serialActive) {
         switch (first) {
-            case '#':
-                // Two hashes in a row toggle "is_active_"
-                if (Serial.findUntil("#", "\n")) serialActive = false;
+            case '*':
+                // Two * in a row give back control
+                if (Serial.findUntil("*", "\n")) serialActive = false;
+                Serial.println("=**"); // Confirm
                 break;
 
             case 'v':
@@ -365,6 +366,7 @@ void readSerial() {
                 if (VOL_MIN <= intVal && intVal <= VOL_MAX){
                   setVolume = intVal;
                   displ.writeVolume(setVolume);
+                  Serial.print("=v"); Serial.println(intVal); // Confirm
                 }
                 break;
 
@@ -373,6 +375,7 @@ void readSerial() {
                 if (BPM_MIN <= intVal && intVal <= BPM_MAX) {
                   bpm = intVal;
                   displ.writeBPM(bpm);
+                  Serial.print("=b"); Serial.println(intVal); // Confirm
                 }
                 break;
 
@@ -381,6 +384,7 @@ void readSerial() {
                 if (IE_MIN <= floatVal && floatVal <= IE_MAX) {
                   ieRatio = floatVal;
                   displ.writeIEratio(ieRatio);
+                  Serial.print("=e"); Serial.println(floatVal); // Confirm
                 }
                 break;
 
@@ -389,16 +393,20 @@ void readSerial() {
                 if (TRIGGERSENSITIVITY_MIN <= floatVal && floatVal <= TRIGGERSENSITIVITY_MAX) {
                   triggerSensitivity = floatVal;
                   displ.writeACTrigger(triggerSensitivity);
+                  Serial.print("=t"); Serial.println(floatVal); // Confirm
                 }
                 break;
 
             case 's':
                 state = Serial.parseInt();
+                Serial.print("=s"); Serial.println(state); // Confirm
                 break;
         }
-    } else if (first == '#') {
-        // Two hashes in a row toggle "is_active_"
+    } 
+    else if (first == '#') {
+        // Two # in a row take control
         if (Serial.findUntil("#", "\n")) serialActive = true;
+        Serial.println("=##"); // Confirm
     }
   }
 }
