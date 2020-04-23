@@ -236,8 +236,8 @@ bool readMotorCurrent() {
 void goToPosition(int pos, int vel){
   bool valid = readEncoder();
 
-  int accel = 10000;
-  int deccel = 10000;
+  int accel = 0;
+  int deccel = 0;
   
   if(valid){
     roboclaw.SpeedAccelDeccelPositionM1(address,accel,vel,deccel,pos,1);
