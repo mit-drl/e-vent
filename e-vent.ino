@@ -321,6 +321,7 @@ void setupLogger() {
   logger.addVar("Pos", &motorPosition, 3);
   // logger.addVar("Current", &motorCurrent, 3);
   logger.addVar("Pressure", &pressureReader.get(), 6);
+  logger.addVar("Peep", &pressureReader.peep(), 6);
   // logger.addVar("Vol", &setVolume);
   // logger.addVar("BPM", &bpm);
   // logger.addVar("IE", &ieRatio);

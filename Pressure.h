@@ -50,9 +50,9 @@ public:
     peep_ = get();
   }
 
-  float peak() { return peak_; }
-  float plateau() { return plateau_; }
-  float peep() { return peep_; }
+  const float& peak() { return peak_; }
+  const float& plateau() { return plateau_; }
+  const float& peep() { return peep_; }
 
 private:
   int sense_pin_;
