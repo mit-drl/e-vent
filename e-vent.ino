@@ -529,7 +529,7 @@ void loop() {
       enteringState = false;
     }
     
-    if(now()-tStateTimer > tMinPeepPause){
+    if(now() - tCycleTimer > tEx + tMinPeepPause){
       pressureReader.set_peep();
       
       setState(HOLD_EX_STATE);
