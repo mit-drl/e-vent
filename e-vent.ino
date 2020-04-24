@@ -102,14 +102,14 @@ const struct{float a, b, c;} COEFFS{1.29083271e-03, 4.72985182e-01, -7.35403067e
 /**
  * Converts motor position in ticks to volume in mL
  */
-int ticks2volume(const int& vol_ticks) {
+float ticks2volume(const float& vol_ticks) {
   return COEFFS.a * sq(vol_ticks) + COEFFS.b * vol_ticks + COEFFS.c;
 }
 
 /**
  * Converts volume in mL to motor position in ticks
  */
-int volume2ticks(const int& vol_ml) {
+float volume2ticks(const float& vol_ml) {
   return (-COEFFS.b + sqrt(sq(COEFFS.b) -4 * COEFFS.a * (COEFFS.c - vol_ml))) / (2 * COEFFS.a);
 }
 
