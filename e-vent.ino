@@ -23,8 +23,7 @@ enum States {
 
 // General Settings
 ////////////
-bool DEBUG = false; // For controlling and displaying via serial TODO consolidate these two flags
-const bool ENABLE_SERIAL_OVERRIDE = true; // For controlling via serial during automated testing
+bool DEBUG = false; // For controlling and displaying via serial
 int maxPwm = 255; // Maximum for PWM is 255 but this can be set lower
 float tLoopPeriod = 0.03; // The period (s) of the control loop
 float tHoldInDuration = 0.25; // Duration (s) to pause after inhalation
@@ -163,9 +162,6 @@ struct Knobs {
   input::SafeKnob<float> ie       = input::SafeKnob<float>(&displ, display::IE_RATIO, CONFIRM_PIN, &alarm);
   input::SafeKnob<float> trigger  = input::SafeKnob<float>(&displ, display::AC_TRIGGER, CONFIRM_PIN, &alarm);
 } knobs;
-
-// Serial active for testing and validation
-bool serialActive = false;
 
 // TODO: move function definitions after loop() or to classes if they don't use global vars
 // Functions
@@ -337,64 +333,6 @@ void setupLogger() {
   logger.begin(&Serial, SD_SELECT);
 }
 
-// Check the serial for automated testing commands
-void readSerial() {
-  while (Serial.available() > 0)
-  {
-    char first = Serial.read();
-    int intVal;
-    float floatVal;
-
-    if(serialActive) {
-        switch (first) {
-            case '#':
-                // Two hashes in a row toggle "is_active_"
-                if (Serial.findUntil("#", "\n")) serialActive = false;
-                break;
-
-            case 'v':
-                intVal = Serial.parseInt();
-                if (VOL_MIN <= intVal && intVal <= VOL_MAX){
-                  setVolume = intVal;
-                  displ.writeVolume(setVolume);
-                }
-                break;
-
-            case 'b':
-                intVal = Serial.parseInt();
-                if (BPM_MIN <= intVal && intVal <= BPM_MAX) {
-                  bpm = intVal;
-                  displ.writeBPM(bpm);
-                }
-                break;
-
-            case 'e':
-                floatVal = Serial.parseFloat();
-                if (IE_MIN <= floatVal && floatVal <= IE_MAX) {
-                  ieRatio = floatVal;
-                  displ.writeIEratio(ieRatio);
-                }
-                break;
-
-            case 't':
-                floatVal = Serial.parseFloat();
-                if (TRIGGERSENSITIVITY_MIN <= floatVal && floatVal <= TRIGGERSENSITIVITY_MAX) {
-                  triggerSensitivity = floatVal;
-                  displ.writeACTrigger(triggerSensitivity);
-                }
-                break;
-
-            case 's':
-                state = Serial.parseInt();
-                break;
-        }
-    } else if (first == '#') {
-        // Two hashes in a row toggle "is_active_"
-        if (Serial.findUntil("#", "\n")) serialActive = true;
-    }
-  }
-}
-
 ///////////////////
 ////// Setup //////
 ///////////////////
@@ -443,12 +381,9 @@ void loop() {
 
   // All States
   tLoopTimer = now(); // Start the loop timer
-  logger.update();  
-  if (ENABLE_SERIAL_OVERRIDE) readSerial();
-  if (!serialActive) {
-    readInput();
-    knobs.update();
-  }
+  logger.update();
+  readInput();
+  knobs.update();
   calculateWaveform();
   readEncoder();
   readMotorCurrent();
@@ -547,9 +482,9 @@ void loop() {
     if(patientTriggered || now() - tCycleTimer > tPeriod) {
       if(!patientTriggered) pressureReader.set_peep(); // Set peep again if time triggered
       pressureReader.set_peak_and_reset();
-      displ.writePeakP(round(pressureReader.peak()));
-      displ.writePEEP(round(pressureReader.peep()));
-      displ.writePlateauP(round(pressureReader.plateau()));
+      // displ.writePeakP(round(pressureReader.peak()));
+      // displ.writePEEP(round(pressureReader.peep()));
+      // displ.writePlateauP(round(pressureReader.plateau()));
       setState(IN_STATE);
     }
   }
