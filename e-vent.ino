@@ -13,6 +13,9 @@ enum States {
 #include <LiquidCrystal.h>
 #include "src/thirdparty/RoboClaw/RoboClaw.h"
 
+#include "cpp_utils.h"  // Redefines macros min, max, abs, etc. into proper functions,
+                        // should be included after third-party code, before E-Vent includes
+
 #include "Alarms.h"
 #include "Buttons.h"
 #include "Display.h"
@@ -101,14 +104,14 @@ const struct{float a, b, c;} COEFFS{1.29083271e-03, 4.72985182e-01, -7.35403067e
  * Converts motor position in ticks to volume in mL
  */
 float ticks2volume(const float& vol_ticks) {
-  return COEFFS.a * sq(vol_ticks) + COEFFS.b * vol_ticks + COEFFS.c;
+  return COEFFS.a * sqr(vol_ticks) + COEFFS.b * vol_ticks + COEFFS.c;
 }
 
 /**
  * Converts volume in mL to motor position in ticks
  */
 float volume2ticks(const float& vol_ml) {
-  return (-COEFFS.b + sqrt(sq(COEFFS.b) -4 * COEFFS.a * (COEFFS.c - vol_ml))) / (2 * COEFFS.a);
+  return (-COEFFS.b + sqrt(sqr(COEFFS.b) -4 * COEFFS.a * (COEFFS.c - vol_ml))) / (2 * COEFFS.a);
 }
 
 //Setup States
