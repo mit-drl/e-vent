@@ -416,7 +416,6 @@ void loop() {
   else if(state == IN_STATE){
     //Entering
     if(enteringState){
-      // Consider changing PID tunings
       enteringState = false;
       const float tNow = now();
       tCycleDuration = tNow - tCycleTimer;  // For logging
@@ -437,7 +436,7 @@ void loop() {
       enteringState = false;
     }
     if(now()-tCycleTimer > tHoldIn){
-      pressureReader.set_plateau(); //Consider using some signal processing to better catch this value
+      pressureReader.set_plateau();
       setState(EX_STATE);
     }
   }
@@ -445,7 +444,6 @@ void loop() {
   else if(state == EX_STATE){
     //Entering
     if(enteringState){
-      //consider changing PID tunings
       enteringState = false;
       goToPosition(clearBag, vEx);
     }
@@ -493,7 +491,6 @@ void loop() {
     //Entering
     if(enteringState){
       enteringState = false;
-      // TODO Consider displaying homing status on the screen
       roboclaw.BackwardM1(address, voltHome);
     }
 
@@ -501,15 +498,12 @@ void loop() {
     if(homeSwitchPressed()) {
       setState(HOMING_STATE); 
     }
-
-    // TODO Consider a timeout to give up on homing
   }
 
   else if(state == HOMING_STATE){
     //Entering
     if(enteringState){
       enteringState = false;
-      // TODO Consider displaying homing status on the screen
       roboclaw.ForwardM1(address, voltHome);
     }
     
@@ -519,7 +513,6 @@ void loop() {
       roboclaw.SetEncM1(address, 0); // Zero the encoder
       setState(IN_STATE);
     }
-    // TODO Consider a timeout to give up on homing
   }
 
   // Add a delay if there's still time in the loop period
