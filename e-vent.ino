@@ -482,9 +482,9 @@ void loop() {
     if(patientTriggered || now() - tCycleTimer > tPeriod) {
       if(!patientTriggered) pressureReader.set_peep(); // Set peep again if time triggered
       pressureReader.set_peak_and_reset();
-      // displ.writePeakP(round(pressureReader.peak()));
-      // displ.writePEEP(round(pressureReader.peep()));
-      // displ.writePlateauP(round(pressureReader.plateau()));
+      displ.writePeakP(round(pressureReader.peak()));
+      displ.writePEEP(round(pressureReader.peep()));
+      displ.writePlateauP(round(pressureReader.plateau()));
       setState(IN_STATE);
     }
   }
