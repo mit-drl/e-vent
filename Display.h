@@ -92,10 +92,10 @@ public:
       trigger_threshold_(trigger_threshold),
       animation_(1000, 0.5) {
     elements_[HEADER]       = Element{0, 0, 20};
-    elements_[VOLUME]       = Element{0, 0, 11, "TV"};
-    elements_[BPM]          = Element{1, 0, 11, "RR"};
-    elements_[IE_RATIO]     = Element{2, 0, 11, "I:E"};
-    elements_[AC_TRIGGER]   = Element{3, 0, 11, "AC"};
+    elements_[VOLUME]       = Element{1, 0, 11, "TV"};
+    elements_[BPM]          = Element{2, 0, 11, "RR"};
+    elements_[IE_RATIO]     = Element{3, 0, 11, "I:E"};
+    elements_[AC_TRIGGER]   = Element{0, 0, 11, "AC"};
     elements_[PRES_LABEL]   = Element{0, 11, 9};
     elements_[PEAK_PRES]    = Element{1, 11, 9, "peak"};
     elements_[PLATEAU_PRES] = Element{2, 11, 9, "plat"};
