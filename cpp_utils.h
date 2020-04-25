@@ -24,7 +24,7 @@
 #undef min
 #undef max
 #undef abs
-#undef constrain
+//#undef constrain // not working for float
 #undef radians
 #undef degrees
 #undef sq
@@ -65,13 +65,13 @@ inline long long abs(long long x) {
 // abs for int is defined by C library
 //inline int abs(int i)
 
-template<typename Tpa, typename Tpb, typename Tpc>
-inline auto constrain(
-        const Tpa& amt,
-        const Tpb& low,
-        const Tpc& high) -> decltype(min(max(amt, low), high)) {
-    return min(max(amt, low), high);
-}
+//template<typename Tpa, typename Tpb, typename Tpc>
+//inline auto constrain(
+//        const Tpa& amt,
+//        const Tpb& low,
+//        const Tpc& high) -> decltype(min(max(amt, low), high)) {
+//    return min(max(amt, low), high);
+//}
 
 inline float radians(float deg) {
     return deg * DEG_TO_RAD;
