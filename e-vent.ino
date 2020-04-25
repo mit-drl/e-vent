@@ -314,119 +314,122 @@ void loop() {
   }
   
   // State Machine
-  if(state == DEBUG_STATE){
-    // Stop motor
-    roboclaw.ForwardM1(ROBOCLAW_ADDR, 0);
-  }
+  switch (state) {
 
-  else if (state == OFF_STATE) {
-    alarm.turningOFF(now() - tStateTimer < 5.0);
-    if (confirmButton.is_LOW()) {
-      setState(PREHOME_STATE);
-      alarm.turningOFF(false);
-    }
-  }
-  
-  else if(state == IN_STATE){
-    //Entering
-    if(enteringState){
-      enteringState = false;
-      const float tNow = now();
-      tCycleDuration = tNow - tCycleTimer;  // For logging
-      tCycleTimer = tNow; // The cycle begins at the start of inspiration
-      goToPosition(volume2ticks(setVolume), vIn);
-      cycleCount++;
-    }
-
-    // We need to figure out how to account for the PAUSE TIME
-    if(now()-tCycleTimer > tIn){
-      setState(HOLD_IN_STATE);
-    }
-  }
-  
-  else if(state == HOLD_IN_STATE){
-    // Entering
-    if(enteringState){
-      enteringState = false;
-    }
-    if(now()-tCycleTimer > tHoldIn){
-      pressureReader.set_plateau();
-      setState(EX_STATE);
-    }
-  }
-  
-  else if(state == EX_STATE){
-    //Entering
-    if(enteringState){
-      enteringState = false;
-      goToPosition(BAG_CLEAR_POS, vEx);
-    }
-
-    // go to LISTEN_STATE 
-    if(abs(motorPosition - BAG_CLEAR_POS) < BAG_CLEAR_TOL){
-      setState(PEEP_PAUSE_STATE);
-    }
-  }
-
-  else if(state == PEEP_PAUSE_STATE){
-    // Entering
-    if(enteringState){
-      enteringState = false;
-    }
-    
-    if(now() - tCycleTimer > tEx + MIN_PEEP_PAUSE){
-      pressureReader.set_peep();
-      
-      setState(HOLD_EX_STATE);
-    }
-  }
-
-  else if(state == HOLD_EX_STATE){
-    // Entering
-    if(enteringState){
-      enteringState = false;
-    }
-
-    // Check if patient triggers inhale
-    patientTriggered = pressureReader.get() < (pressureReader.peep() - triggerSensitivity) 
-        && triggerSensitivity > AC_MIN;
-
-    if(patientTriggered || now() - tCycleTimer > tPeriod) {
-      if(!patientTriggered) pressureReader.set_peep(); // Set peep again if time triggered
-      pressureReader.set_peak_and_reset();
-      displ.writePeakP(round(pressureReader.peak()));
-      displ.writePEEP(round(pressureReader.peep()));
-      displ.writePlateauP(round(pressureReader.plateau()));
-      setState(IN_STATE);
-    }
-  }
-
-  else if(state == PREHOME_STATE){
-    //Entering
-    if(enteringState){
-      enteringState = false;
-      roboclaw.BackwardM1(ROBOCLAW_ADDR, HOMING_VOLTS);
-    }
-
-    // Check status of limit switch
-    if(homeSwitchPressed()) {
-      setState(HOMING_STATE); 
-    }
-  }
-
-  else if(state == HOMING_STATE){
-    //Entering
-    if(enteringState){
-      enteringState = false;
-      roboclaw.ForwardM1(ROBOCLAW_ADDR, HOMING_VOLTS);
-    }
-    
-    if(!homeSwitchPressed()) {
+    case DEBUG_STATE:
+      // Stop motor
       roboclaw.ForwardM1(ROBOCLAW_ADDR, 0);
-      delay(HOMING_PAUSE * 1000); // Wait for things to settle
-      roboclaw.SetEncM1(ROBOCLAW_ADDR, 0); // Zero the encoder
-      setState(IN_STATE);
-    }
+      break;
+
+    case OFF_STATE: 
+      alarm.turningOFF(now() - tStateTimer < 5.0);
+      if (confirmButton.is_LOW()) {
+        setState(PREHOME_STATE);
+        alarm.turningOFF(false);
+      }
+      break;
+  
+    case IN_STATE:
+      //Entering
+      if(enteringState){
+        enteringState = false;
+        const float tNow = now();
+        tCycleDuration = tNow - tCycleTimer;  // For logging
+        tCycleTimer = tNow; // The cycle begins at the start of inspiration
+        goToPosition(volume2ticks(setVolume), vIn);
+        cycleCount++;
+      }
+
+      // We need to figure out how to account for the PAUSE TIME
+      if(now()-tCycleTimer > tIn){
+        setState(HOLD_IN_STATE);
+      }
+      break;
+  
+    case HOLD_IN_STATE:
+      // Entering
+      if(enteringState){
+        enteringState = false;
+      }
+      if(now()-tCycleTimer > tHoldIn){
+        pressureReader.set_plateau();
+        setState(EX_STATE);
+      }
+      break;
+  
+    case EX_STATE:
+      //Entering
+      if(enteringState){
+        enteringState = false;
+        goToPosition(BAG_CLEAR_POS, vEx);
+      }
+
+      // go to LISTEN_STATE 
+      if(abs(motorPosition - BAG_CLEAR_POS) < BAG_CLEAR_TOL){
+        setState(PEEP_PAUSE_STATE);
+      }
+      break;
+
+    case PEEP_PAUSE_STATE:
+      // Entering
+      if(enteringState){
+        enteringState = false;
+      }
+      
+      if(now() - tCycleTimer > tEx + MIN_PEEP_PAUSE){
+        pressureReader.set_peep();
+        
+        setState(HOLD_EX_STATE);
+      }
+      break;
+
+    case HOLD_EX_STATE:
+      // Entering
+      if(enteringState){
+        enteringState = false;
+      }
+
+      // Check if patient triggers inhale
+      patientTriggered = pressureReader.get() < (pressureReader.peep() - triggerSensitivity) 
+          && triggerSensitivity > AC_MIN;
+
+      if(patientTriggered || now() - tCycleTimer > tPeriod) {
+        if(!patientTriggered) pressureReader.set_peep(); // Set peep again if time triggered
+        pressureReader.set_peak_and_reset();
+        displ.writePeakP(round(pressureReader.peak()));
+        displ.writePEEP(round(pressureReader.peep()));
+        displ.writePlateauP(round(pressureReader.plateau()));
+        setState(IN_STATE);
+      }
+      break;
+
+    case PREHOME_STATE:
+      //Entering
+      if(enteringState){
+        enteringState = false;
+        roboclaw.BackwardM1(ROBOCLAW_ADDR, HOMING_VOLTS);
+      }
+
+      // Check status of limit switch
+      if(homeSwitchPressed()) {
+        setState(HOMING_STATE); 
+      }
+      break;
+
+    case HOMING_STATE:
+      //Entering
+      if(enteringState){
+        enteringState = false;
+        roboclaw.ForwardM1(ROBOCLAW_ADDR, HOMING_VOLTS);
+      }
+      
+      if(!homeSwitchPressed()) {
+        roboclaw.ForwardM1(ROBOCLAW_ADDR, 0);
+        delay(HOMING_PAUSE * 1000); // Wait for things to settle
+        roboclaw.SetEncM1(ROBOCLAW_ADDR, 0); // Zero the encoder
+        setState(IN_STATE);
+      }
+      break;
   }
 
   // Add a delay if there's still time in the loop period
