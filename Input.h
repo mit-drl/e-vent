@@ -87,7 +87,7 @@ public:
 private:
   buttons::DebouncedButton confirm_button_;
   AlarmManager* alarms_;
-  utilities::Pulse pulse_;
+  utils::Pulse pulse_;
   T unconfirmed_value_;
   unsigned long time_changed_ = 0;
   bool confirmed_ = true;

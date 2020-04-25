@@ -277,7 +277,7 @@ private:
   Display* displ_;
   Beeper beeper_;
   int led_pin_;
-  utilities::Pulse led_pulse_;
+  utils::Pulse led_pulse_;
   Alarm alarms_[NUM_ALARMS];
   unsigned long const* cycle_count_;
 

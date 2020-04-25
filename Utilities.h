@@ -3,8 +3,10 @@
 
 #include "Arduino.h"
 
+#include "Constants.h"
 
-namespace utilities {
+
+namespace utils {
 
 
 /**
@@ -30,7 +32,7 @@ private:
 };
 
 
-}  // namespace utilities
+}  // namespace utils
 
 
 #endif

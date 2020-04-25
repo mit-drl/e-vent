@@ -1,10 +1,10 @@
-#include "Constants.h"
 #include "LiquidCrystal.h"
 #include "src/thirdparty/RoboClaw/RoboClaw.h"
 #include "cpp_utils.h"  // Redefines macros min, max, abs, etc. into proper functions,
                         // should be included after third-party code, before E-Vent includes
 #include "Alarms.h"
 #include "Buttons.h"
+#include "Constants.h"
 #include "Display.h"
 #include "Input.h"
 #include "Logging.h"

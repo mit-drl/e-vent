@@ -1,3 +1,6 @@
+#ifndef Constants_h
+#define Constants_h
+
 // States
 enum States {
   DEBUG_STATE,      // 0
@@ -87,3 +90,5 @@ const unsigned long MAX_POS = 1000;
 const unsigned int ROBOCLAW_ADDR = 0x80;
 const long ROBOCLAW_BAUD = 38400;
 const unsigned long ROBOCLAW_MAX_CURRENT = 7000;
+
+#endif

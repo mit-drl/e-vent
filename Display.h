@@ -36,7 +36,7 @@ public:
 
 private:
   String text_;
-  utilities::Pulse pulse_;
+  utils::Pulse pulse_;
   unsigned long reset_time_;
 };
 
