@@ -25,7 +25,10 @@ class Input {
   static const unsigned long kDisplayUpdatePeriod = 250;
 
 public:
-  Input(Display* displ, const display::DisplayKey& key): displ_(displ), disp_key_(key) {}
+  Input(Display* displ, const display::DisplayKey& key, const T& resolution):
+      displ_(displ),
+      disp_key_(key),
+      resolution_(resolution) {}
 
   void begin(T (*read_fun)());
 
@@ -37,9 +40,12 @@ protected:
   T (*read_fun_)();
   Display* displ_;
   display::DisplayKey disp_key_;
+  T resolution_;
 
   T set_value_;  // Dial value displayed and used for operation
   unsigned long last_display_update_time_ = 0;
+
+  inline T discretize(const T& raw_value) { return round(raw_value / resolution_) * resolution_; }
 
   void display(const T& value, const bool& blank = false);
 
@@ -56,10 +62,15 @@ protected:
 template <typename T>
 class Knob : public Input<T> {
 public:
-  Knob(Display* displ, const display::DisplayKey& key): Input<T>(displ, key) {}
+  Knob(Display* displ, const display::DisplayKey& key, const T& resolution):
+      Input<T>(displ, key, resolution) {}
 
   void update();
 };
+
+// Instantiate for types used
+template class Knob<int>;
+template class Knob<float>;
 
 
 /**
@@ -74,8 +85,8 @@ class SafeKnob : public Input<T> {
 
 public:
   SafeKnob(Display* displ, const display::DisplayKey& key,
-           const int& confirm_pin, AlarmManager* alarms): 
-      Input<T>(displ, key),
+           const int& confirm_pin, AlarmManager* alarms, const T& resolution): 
+      Input<T>(displ, key, resolution),
       confirm_button_(confirm_pin),
       alarms_(alarms),
       pulse_(1000, 0.5) {}
@@ -93,15 +104,9 @@ private:
   bool confirmed_ = true;
 
   String getConfirmPrompt() const;
-
-  // Check if a setting change is big enough to request confirmation
-  inline bool isSignificant(const T& change) { return abs(change) > 0.2; }
 };
 
-
-// Instantiation of template classes
-template class Knob<int>;
-template class Knob<float>;
+// Instantiate for types used
 template class SafeKnob<int>;
 template class SafeKnob<float>;
 

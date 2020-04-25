@@ -48,8 +48,8 @@ void SafeKnob<T>::begin(T (*read_fun)()) {
 
 template <typename T>
 void SafeKnob<T>::update() {
-  unconfirmed_value_ = read_fun_();
-  if (!isSignificant(unconfirmed_value_ - this->set_value_)) {
+  unconfirmed_value_ = discretize(read_fun_());
+  if (unconfirmed_value_ == this->set_value_) {
     this->display(read());
     if (!confirmed_) {
       confirmed_ = true;

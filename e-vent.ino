@@ -58,10 +58,10 @@ logging::Logger logger(true/*Serial*/, false/*SD*/, false/*labels*/, ",\t"/*deli
 struct Knobs {
   void begin();
   void update();
-  input::SafeKnob<int> volume     = input::SafeKnob<int>(&displ, display::VOLUME, CONFIRM_PIN, &alarm);
-  input::SafeKnob<int> bpm        = input::SafeKnob<int>(&displ, display::BPM, CONFIRM_PIN, &alarm);
-  input::SafeKnob<float> ie       = input::SafeKnob<float>(&displ, display::IE_RATIO, CONFIRM_PIN, &alarm);
-  input::SafeKnob<float> trigger  = input::SafeKnob<float>(&displ, display::AC_TRIGGER, CONFIRM_PIN, &alarm);
+  input::SafeKnob<int> volume     = input::SafeKnob<int>(&displ, display::VOLUME, CONFIRM_PIN, &alarm, 25);
+  input::SafeKnob<int> bpm        = input::SafeKnob<int>(&displ, display::BPM, CONFIRM_PIN, &alarm, 1);
+  input::SafeKnob<float> ie       = input::SafeKnob<float>(&displ, display::IE_RATIO, CONFIRM_PIN, &alarm, 0.1);
+  input::SafeKnob<float> trigger  = input::SafeKnob<float>(&displ, display::AC_TRIGGER, CONFIRM_PIN, &alarm, 0.1);
 } knobs;
 
 // Assist control
