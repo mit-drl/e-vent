@@ -1,18 +1,6 @@
-enum States {
-  DEBUG_STATE,      // 0
-  IN_STATE,         // 1
-  HOLD_IN_STATE,    // 2
-  EX_STATE,         // 3
-  PEEP_PAUSE_STATE, // 4
-  HOLD_EX_STATE,    // 5
-  PREHOME_STATE,    // 6
-  HOMING_STATE,     // 7
-  OFF_STATE         // 8
-};
-
-#include <LiquidCrystal.h>
+#include "Constants.h"
+#include "LiquidCrystal.h"
 #include "src/thirdparty/RoboClaw/RoboClaw.h"
-
 #include "Alarms.h"
 #include "Buttons.h"
 #include "Display.h"
@@ -21,53 +9,9 @@ enum States {
 #include "Pressure.h"
 
 
-// General Settings
-////////////
-bool DEBUG = false; // For controlling and displaying via serial
-int maxPwm = 255; // Maximum for PWM is 255 but this can be set lower
-float tLoopPeriod = 0.03; // The period (s) of the control loop
-float tHoldInDuration = 0.25; // Duration (s) to pause after inhalation
-float tMinPeepPause = 0.05; // Time (s) to pause after exhalation / before watching for an assisted inhalation
-float tExMax = 1.00; // Maximum exhale timef
-float Vhome = 300; // The speed (clicks/s) to use during homing
-float voltHome = 30; // The speed (0-255) in volts to use during homing
-float tPauseHome = 1.0; // The pause time (s) during homing to ensure stability
-int goalTol = 10; // The tolerance to start stopping on reaching goal
-int clearBag = 50;  // The value in clicks at which the fingers should retract to clear the bag
-
-// Assist Control Flags and Settings
-bool ASSIST_CONTROL = false; // Enable assist control
-bool patientTriggered = false;
-float triggerSensitivity;  // Tunable via a potentiometer. Its range is [2 cmH2O to 5 cmH2O] lower than PEEP
-bool DetectionWindow;
-float DP; // Driving Pressure = Plateau - PEEP
-
-// Pins
-////////////
-int VOL_PIN = A0;
-int BPM_PIN = A1;
-int IE_PIN = A2;
-int PRESS_POT_PIN = A3;
-int PRESS_SENSE_PIN = A4;
-int HOME_PIN = 10;
-const int BEEPER_PIN = 11;
-const int SNOOZE_PIN = 43;
-const int CONFIRM_PIN = 41;
-const int SD_SELECT = 53;
-const int OFF_PIN = 45;
-const int LED_ALARM_PIN = 12;
-
-// Safety settings
-////////////////////
-const float MAX_PRESSURE = 40.0;
-const float MIN_PLATEAU_PRESSURE = 5.0;
-const float MAX_RESIST_PRESSURE = 2.0;
-const float MIN_TIDAL_PRESSURE = 5.0;
-const float VOLUME_ERROR_THRESH = 50.0;  // mL
-const int MAX_MOTOR_CURRENT = 1000; // Max motor current
-
 // Initialize Vars
 ////////////////////
+
 // Define cycle parameters
 unsigned long cycleCount = 0;
 float vIn, vEx, tIn, tHoldIn, tEx, tPeriod, setVolume;
@@ -75,26 +19,9 @@ float tCycleTimer, tLoopTimer; // Timer starting at each breathing cycle, and ea
 float tLoopBuffer; // The amount of time left at the end of each loop
 float bpm;  // Respiratory rate
 float ieRatio;  // Inhale/exhale ratio
-
-// Durations
 float tCycleDuration;   // Duration of each cycle
 float tExDuration;      // tEx - tHoldIn
 float tExPauseDuration;  // tPeriod - tEx
-
-// Define pot mappings
-float BPM_MIN = 10;
-float BPM_MAX = 40;
-float IE_MIN = 1;
-float IE_MAX = 4;
-float VOL_MIN = 100;
-float VOL_MAX = 800; // 900; // For full 
-float TRIGGERSENSITIVITY_MIN = 0;
-float TRIGGERSENSITIVITY_MAX = 5;
-float TRIGGER_LOWER_THRESHOLD = 2;
-int ANALOG_PIN_MAX = 1023; // The maximum count on analog pins
-
-// Bag Calibration for AMBU Adult bag
-const struct{float a, b, c;} COEFFS{1.29083271e-03, 4.72985182e-01, -7.35403067e+01};
 
 // Calibration-dependent functions
 /**
@@ -118,29 +45,11 @@ float tStateTimer;
 
 // Roboclaw
 RoboClaw roboclaw(&Serial3, 10000);
-const uint8_t address = 0x80;
-int16_t motorCurrent;
-
-// auto-tuned PID values for PG188
-const float Kp = 6.38650;
-const float Ki = 1.07623;
-const float Kd = 0.0;
-const int qpps = 3000;
-int motorPosition = 0;
-
-// position PID values for PG188
-const float pKp = 9.0;
-const float pKi = 0.0;
-const float pKd = 0.0;
-const float kiMax = 10.0;
-const float deadzone = 0;
-const float minPos = 0;
-const float maxPos = 1000;
+int motorCurrent, motorPosition = 0;
 
 // LCD Screen
-const int rs = 9, en = 8, d4 = 7, d5 = 6, d6 = 5, d7 = 4;
-LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
-display::Display displ(&lcd, TRIGGER_LOWER_THRESHOLD);
+LiquidCrystal lcd(LCD_RS_PIN, LCD_EN_PIN, LCD_D4_PIN, dLCD_D5_PIN, LCD_D6_PIN, LCD_D7_PIN);
+display::Display displ(&lcd, AC_MIN);
 
 // Alarms
 alarms::AlarmManager alarm(BEEPER_PIN, SNOOZE_PIN, LED_ALARM_PIN, &displ, &cycleCount);
@@ -161,6 +70,11 @@ struct Knobs {
   input::SafeKnob<float> ie       = input::SafeKnob<float>(&displ, display::IE_RATIO, CONFIRM_PIN, &alarm);
   input::SafeKnob<float> trigger  = input::SafeKnob<float>(&displ, display::AC_TRIGGER, CONFIRM_PIN, &alarm);
 } knobs;
+
+// Assist Control Vars
+bool patientTriggered = false;
+float triggerSensitivity;  // Tunable via a potentiometer. Its range is [2 cmH2O to 5 cmH2O] lower than PEEP
+bool DetectionWindow;
 
 // TODO: move function definitions after loop() or to classes if they don't use global vars
 // Functions
@@ -197,25 +111,25 @@ void readInput(){
 void calculateWaveform(){
   tPeriod = 60.0 / bpm; // seconds in each breathing cycle period
   tHoldIn = tPeriod / (1 + ieRatio);
-  tIn = tHoldIn - tHoldInDuration;
-  tEx = min(tHoldIn + tExMax, tPeriod - tMinPeepPause);
+  tIn = tHoldIn - HOLD_IN_DURATION;
+  tEx = min(tHoldIn + MAX_EX_DURATION, tPeriod - MIN_PEEP_PAUSE);
   tExDuration = tEx - tHoldIn;  // For logging
   tExPauseDuration = tPeriod - tEx;  // For logging
   
-  vIn = (volume2ticks(setVolume) - clearBag) / (tIn); // Velocity in (clicks/s)
-  vEx = (volume2ticks(setVolume) - clearBag) / (tEx - tHoldIn); // Velocity out (clicks/s)
+  vIn = (volume2ticks(setVolume) - BAG_CLEAR_POS) / (tIn); // Velocity in (clicks/s)
+  vEx = (volume2ticks(setVolume) - BAG_CLEAR_POS) / (tEx - tHoldIn); // Velocity out (clicks/s)
 }
 
 int readEncoder() {
   uint8_t robot_status;
   bool valid;
-  motorPosition = roboclaw.ReadEncM1(address, &robot_status, &valid);
+  motorPosition = roboclaw.ReadEncM1(ROBOCLAW_ADDR, &robot_status, &valid);
   return valid;
 }
 
 bool readMotorCurrent() {
   int noSecondMotor;
-  bool valid = roboclaw.ReadCurrents(address, motorCurrent, noSecondMotor);
+  bool valid = roboclaw.ReadCurrents(ROBOCLAW_ADDR, motorCurrent, noSecondMotor);
   return valid;
 }
 
@@ -227,7 +141,7 @@ void goToPosition(int pos, int vel){
   int deccel = 10000;
   
   if(valid){
-    roboclaw.SpeedAccelDeccelPositionM1(address,accel,vel,deccel,pos,1);
+    roboclaw.SpeedAccelDeccelPositionM1(ROBOCLAW_ADDR,accel,vel,deccel,pos,1);
     if(DEBUG){
       Serial.print("CmdVel: ");  // TODO remove
       Serial.print(vel);
@@ -278,7 +192,7 @@ void handleErrors() {
   if(DEBUG){ //TODO integrate these into the alarm system
     // check for roboclaw errors
     bool valid;
-    uint32_t error_state = roboclaw.ReadError(address, &valid);
+    uint32_t error_state = roboclaw.ReadError(ROBOCLAW_ADDR, &valid);
     if(valid){
       if (error_state == 0x0001) { // M1 OverCurrent Warning
         Serial.println("TURN OFF DEVICE");
@@ -320,7 +234,6 @@ void setupLogger() {
   // logger.addVar("BPM", &bpm);
   // logger.addVar("IE", &ieRatio);
   // logger.addVar("tIn", &tIn);
-  // logger.addVar("tHoldIn", &tHoldInDuration);
   // logger.addVar("tEx", &tExDuration);
   // logger.addVar("tHoldOut", &tExPauseDuration);
   // logger.addVar("vIn", &vIn);
@@ -359,11 +272,11 @@ void setup() {
   tCycleTimer = now();
 
   setState(PREHOME_STATE); // Initial state
-  roboclaw.begin(38400); // Roboclaw
-  roboclaw.SetM1MaxCurrent(address, 7000); // Current limit is 7A
-  roboclaw.SetM1VelocityPID(address,Kd,Kp,Ki,qpps); // Set Velocity PID Coefficients
-  roboclaw.SetM1PositionPID(address,pKp,pKi,pKd,kiMax,deadzone,minPos,maxPos); // Set Position PID Coefficients
-  roboclaw.SetEncM1(address, 0); // Zero the encoder
+  roboclaw.begin(ROBOCLAW_BAUD); // Roboclaw
+  roboclaw.SetM1MaxCurrent(ROBOCLAW_ADDR, ROBOCLAW_MAX_CURRENT); // Current limit is 7A
+  roboclaw.SetM1VelocityPID(ROBOCLAW_ADDR,VKD,VKP,VKI, QPPS); // Set Velocity PID Coefficients
+  roboclaw.SetM1PositionPID(ROBOCLAW_ADDR,PKP,PKI,PKD,KI_MAX,DEADZONE,MIN_POS,MAX_POS); // Set Position PID Coefficients
+  roboclaw.SetEncM1(ROBOCLAW_ADDR, 0); // Zero the encoder
 }
 
 //////////////////
@@ -393,7 +306,7 @@ void loop() {
   offButton.update();
 
   if (offButton.wasHeld()) {
-    goToPosition(clearBag, Vhome);
+    goToPosition(BAG_CLEAR_POS, HOMING_VEL);
     setState(OFF_STATE);
     alarm.allOff();
   }
@@ -401,7 +314,7 @@ void loop() {
   // State Machine
   if(state == DEBUG_STATE){
     // Stop motor
-    roboclaw.ForwardM1(address, 0);
+    roboclaw.ForwardM1(ROBOCLAW_ADDR, 0);
   }
 
   else if (state == OFF_STATE) {
@@ -444,11 +357,11 @@ void loop() {
     //Entering
     if(enteringState){
       enteringState = false;
-      goToPosition(clearBag, vEx);
+      goToPosition(BAG_CLEAR_POS, vEx);
     }
 
     // go to LISTEN_STATE 
-    if(motorPosition - clearBag < goalTol){
+    if(abs(motorPosition - BAG_CLEAR_POS) < BAG_CLEAR_TOL){
       setState(PEEP_PAUSE_STATE);
     }
   }
@@ -459,7 +372,7 @@ void loop() {
       enteringState = false;
     }
     
-    if(now() - tCycleTimer > tEx + tMinPeepPause){
+    if(now() - tCycleTimer > tEx + MIN_PEEP_PAUSE){
       pressureReader.set_peep();
       
       setState(HOLD_EX_STATE);
@@ -474,7 +387,7 @@ void loop() {
 
     // Check if patient triggers inhale
     patientTriggered = pressureReader.get() < (pressureReader.peep() - triggerSensitivity) 
-        && triggerSensitivity > TRIGGER_LOWER_THRESHOLD;
+        && triggerSensitivity > AC_MIN;
 
     if(patientTriggered || now() - tCycleTimer > tPeriod) {
       if(!patientTriggered) pressureReader.set_peep(); // Set peep again if time triggered
@@ -490,7 +403,7 @@ void loop() {
     //Entering
     if(enteringState){
       enteringState = false;
-      roboclaw.BackwardM1(address, voltHome);
+      roboclaw.BackwardM1(ROBOCLAW_ADDR, HOMING_VOLTS);
     }
 
     // Check status of limit switch
@@ -503,19 +416,19 @@ void loop() {
     //Entering
     if(enteringState){
       enteringState = false;
-      roboclaw.ForwardM1(address, voltHome);
+      roboclaw.ForwardM1(ROBOCLAW_ADDR, HOMING_VOLTS);
     }
     
     if(!homeSwitchPressed()) {
-      roboclaw.ForwardM1(address, 0);
-      delay(tPauseHome * 1000); // Wait for things to settle
-      roboclaw.SetEncM1(address, 0); // Zero the encoder
+      roboclaw.ForwardM1(ROBOCLAW_ADDR, 0);
+      delay(HOMING_PAUSE * 1000); // Wait for things to settle
+      roboclaw.SetEncM1(ROBOCLAW_ADDR, 0); // Zero the encoder
       setState(IN_STATE);
     }
   }
 
   // Add a delay if there's still time in the loop period
-  tLoopBuffer = max(0, tLoopTimer + tLoopPeriod - now());
+  tLoopBuffer = max(0, tLoopTimer + LOOP_PERIOD - now());
   delay(tLoopBuffer*1000.0);
 }
 
@@ -552,7 +465,5 @@ float readIeRatio() {
 }
 
 float readTriggerSens() {
-  return map(analogRead(PRESS_POT_PIN), 0, ANALOG_PIN_MAX,
-             TRIGGERSENSITIVITY_MIN*100,
-             TRIGGERSENSITIVITY_MAX*100) / 100.0; //Carry two decimal places
+  return map(analogRead(AC_PIN), 0, ANALOG_PIN_MAX, 0, AC_MAX*100) / 100.0; //Carry two decimal places
 }
