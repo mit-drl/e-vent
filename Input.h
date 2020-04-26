@@ -31,7 +31,7 @@ public:
       resolution_(resolution) {}
 
   // Setup during arduino setup()
-  void begin(T (*read_fun)());
+  void begin(float (*read_fun)());
 
   // Update during arduino loop()
   virtual void update() = 0;
@@ -40,7 +40,7 @@ public:
   inline T read() const& { return set_value_; }
 
 protected:
-  T (*read_fun_)();
+  float (*read_fun_)();
   Display* displ_;
   display::DisplayKey disp_key_;
   T resolution_;
@@ -49,7 +49,7 @@ protected:
   unsigned long last_display_update_time_ = 0;
 
   // Discretize value into closest multiple of resolution
-  inline T discretize(const T& raw_value) { return round(raw_value / resolution_) * resolution_; }
+  T discretize(const float& raw_value) const;
 
   void display(const T& value, const bool& blank = false);
 

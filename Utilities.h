@@ -30,6 +30,9 @@ private:
 };
 
 
+// Define map for floats
+float map(float x, float in_min, float in_max, float out_min, float out_max);
+
 // Converts motor position in ticks to volume in mL
 float ticks2volume(const float& vol_ticks);
 
@@ -43,8 +46,8 @@ inline float now() { return millis()*1e-3; }
 inline bool homeSwitchPressed() { return digitalRead(HOME_PIN) == LOW; }
 
 /// Pots ///
-int readVolume();         // Reads set volume (in mL) from the volume pot
-int readBpm();            // Reads set bpm from the bpm pot
+float readVolume();       // Reads set volume (in mL) from the volume pot
+float readBpm();          // Reads set bpm from the bpm pot
 float readIeRatio();      // Reads set IE ratio from the IE pot
 float readAc();           // Reads set AC mode trigger sensitivity from the AC pot
 

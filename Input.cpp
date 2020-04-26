@@ -7,9 +7,14 @@ namespace input {
 /// Input ///
 
 template <typename T>
-void Input<T>::begin(T (*read_fun)()) {
+void Input<T>::begin(float (*read_fun)()) {
   read_fun_ = read_fun;
   set_value_ = discretize(read_fun_());
+}
+
+template <typename T>
+T Input<T>::discretize(const float& raw_value) const {
+  return round(raw_value / resolution_) * resolution_;
 }
 
 template <typename T>
@@ -32,7 +37,7 @@ void Input<T>::display(const T& value, const bool& blank) {
 
 template <typename T>
 void Knob<T>::update() {
-  this->set_value_ = read_fun_();
+  this->set_value_ = discretize(read_fun_());
   this->display(read());  
 }
 

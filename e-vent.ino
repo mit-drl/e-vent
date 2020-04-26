@@ -63,10 +63,10 @@ struct Knobs {
   int bpm();     // Respiratory rate
   float ie();    // Inhale/exhale ratio
   float ac();    // Assist control trigger sensitivity
-  SafeKnob<int> volume_ = SafeKnob<int>(&displ, display::VOLUME, CONFIRM_PIN, &alarm, 25);
-  SafeKnob<int> bpm_ = SafeKnob<int>(&displ, display::BPM, CONFIRM_PIN, &alarm, 1);
-  SafeKnob<float> ie_ = SafeKnob<float>(&displ, display::IE_RATIO, CONFIRM_PIN, &alarm, 0.1);
-  SafeKnob<float> ac_ = SafeKnob<float>(&displ, display::AC_TRIGGER, CONFIRM_PIN, &alarm, 0.1);
+  SafeKnob<int> volume_ = SafeKnob<int>(&displ, display::VOLUME, CONFIRM_PIN, &alarm, VOL_RES);
+  SafeKnob<int> bpm_ = SafeKnob<int>(&displ, display::BPM, CONFIRM_PIN, &alarm, BPM_RES);
+  SafeKnob<float> ie_ = SafeKnob<float>(&displ, display::IE_RATIO, CONFIRM_PIN, &alarm, IE_RES);
+  SafeKnob<float> ac_ = SafeKnob<float>(&displ, display::AC_TRIGGER, CONFIRM_PIN, &alarm, AC_RES);
   void begin();
   void update();
 } knobs;
