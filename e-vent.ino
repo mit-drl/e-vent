@@ -27,7 +27,7 @@ float tIn;             // Calculated time (s) since tCycleTimer for end of IN_ST
 float tHoldIn;         // Calculated time (s) since tCycleTimer for end of HOLD_IN_STATE
 float tEx;             // Calculated time (s) since tCycleTimer for end of EX_STATE
 float tPeriod;         // Calculated time (s) since tCycleTimer for end of cycle
-float tPeriodActual;    // Actual time (s) since tCycleTimer at end of cycle (for logging)
+float tPeriodActual;   // Actual time (s) since tCycleTimer at end of cycle (for logging)
 float tLoopTimer;      // Absolute time (s) at start of each control loop iteration
 float tLoopBuffer;     // Amount of time (s) left at end of each loop
 

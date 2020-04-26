@@ -28,11 +28,11 @@ const float MIN_PEEP_PAUSE = 0.05;    // Time (s) to pause after exhalation / be
 const float MAX_EX_DURATION = 1.00;   // Maximum exhale duration (s)
 
 // Homing Settings
-const float HOMING_VEL = 300; 	// The speed (clicks/s) to use during homing
-const float HOMING_VOLTS = 30;	// The speed (0-255) in volts to use during homing
+const float HOMING_VEL = 300;   // The speed (clicks/s) to use during homing
+const float HOMING_VOLTS = 30;  // The speed (0-255) in volts to use during homing
 const float HOMING_PAUSE = 1.0; // The pause time (s) during homing to ensure stability
-const int BAG_CLEAR_POS = 50;	  // The goal position (clicks) to retract to clear the bag
-const int BAG_CLEAR_TOL = 10;	  // The tolerance (clicks) to consider clear of bag
+const int BAG_CLEAR_POS = 50;   // The goal position (clicks) to retract to clear the bag
+const int BAG_CLEAR_TOL = 10;   // The tolerance (clicks) to consider clear of bag
 
 // Pins
 const int VOL_PIN = A0;
@@ -73,13 +73,13 @@ const int ANALOG_PIN_MAX = 1023; // The maximum count on analog pins
 const struct {float a, b, c;} COEFFS{1.29083271e-03, 4.72985182e-01, -7.35403067e+01};
 
 // Safety settings
-const float MAX_PRESSURE = 40.0;		     // Trigger high pressure alarm
-const float MIN_PLATEAU_PRESSURE = 5.0;	 // Trigger low pressure alarm
-const float MAX_RESIST_PRESSURE = 2.0;	 // Trigger high-resistance notification
-const float MIN_TIDAL_PRESSURE = 5.0;	   // Trigger no-tidal-pressure alarm
-const float VOLUME_ERROR_THRESH = 50.0;	 // Trigger incomplete breath alarm
-const int MAX_MOTOR_CURRENT = 1000;		   // Trigger mechanical failure alarm
-const float TURNING_OFF_DURATION = 5.0;  // Turning-off alarm is on for this duration (s)
+const float MAX_PRESSURE = 40.0;        // Trigger high pressure alarm
+const float MIN_PLATEAU_PRESSURE = 5.0; // Trigger low pressure alarm
+const float MAX_RESIST_PRESSURE = 2.0;  // Trigger high-resistance notification
+const float MIN_TIDAL_PRESSURE = 5.0;   // Trigger no-tidal-pressure alarm
+const float VOLUME_ERROR_THRESH = 50.0; // Trigger incomplete breath alarm
+const int MAX_MOTOR_CURRENT = 1000;     // Trigger mechanical failure alarm
+const float TURNING_OFF_DURATION = 5.0; // Turning-off alarm is on for this duration (s)
 
 // PID values for auto-tuned for PG188
 const float VKP = 6.38650;
