@@ -27,7 +27,7 @@ float tIn;             // Calculated time (s) since tCycleTimer for end of IN_ST
 float tHoldIn;         // Calculated time (s) since tCycleTimer for end of HOLD_IN_STATE
 float tEx;             // Calculated time (s) since tCycleTimer for end of EX_STATE
 float tPeriod;         // Calculated time (s) since tCycleTimer for end of cycle
-float tCycleDuration;  // Actual time (s) since tCycleTimer at end of cycle (for logging)
+float tPeriodActual;    // Actual time (s) since tCycleTimer at end of cycle (for logging)
 float tLoopTimer;      // Absolute time (s) at start of each control loop iteration
 float tLoopBuffer;     // Amount of time (s) left at end of each loop
 
@@ -176,7 +176,7 @@ void loop() {
       if (enteringState) {
         enteringState = false;
         const float tNow = now();
-        tCycleDuration = tNow - tCycleTimer;
+        tPeriodActual = tNow - tCycleTimer;
         tCycleTimer = tNow;  // The cycle begins at the start of inspiration
         goToPosition(roboclaw, volume2ticks(knobs.volume()), vIn);
         cycleCount++;
@@ -343,7 +343,7 @@ void setupLogger() {
   logger.addVar("State", (int*)&state);
   logger.addVar("Pos", &motorPosition, 3);
   logger.addVar("Pressure", &pressureReader.get(), 6);
-  // logger.addVar("Period", &tCycleDuration);
+  // logger.addVar("Period", &tPeriodActual);
   // logger.addVar("tLoopBuffer", &tLoopBuffer, 6, 4);
   // logger.addVar("Current", &motorCurrent, 3);
   // logger.addVar("Peep", &pressureReader.peep(), 6);
