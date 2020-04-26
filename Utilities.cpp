@@ -56,18 +56,6 @@ void goToPosition(const RoboClaw& roboclaw, const int& pos, const int& vel) {
   
   if (valid) {
     roboclaw.SpeedAccelDeccelPositionM1(ROBOCLAW_ADDR, accel, vel, deccel, pos, 1);
-    if (DEBUG) {
-      Serial.print("CmdVel: ");  // TODO remove
-      Serial.print(vel);
-      Serial.print("\tCmdDiff: ");
-      Serial.println(pos);
-    }
-  }
-  else{
-    if (DEBUG) {
-      Serial.println("encoder not valid; goToPosition command not sent");
-    }
-    // ELSE THROW AN ALARM
   }
 }
 
