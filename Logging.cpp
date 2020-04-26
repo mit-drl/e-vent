@@ -150,7 +150,7 @@ void Logger::makeFile() {
   // Open file with number of last saved file
   int num;
   File number_file = SD.open("number.txt", FILE_READ);
-  if(number_file){
+  if (number_file) {
     num = number_file.parseInt();  
     number_file.close();
   }
@@ -158,7 +158,7 @@ void Logger::makeFile() {
   // Replace old number with new number
   SD.remove("number.txt");
   number_file = SD.open("number.txt", FILE_WRITE);
-  if(number_file){
+  if (number_file) {
     number_file.println(num + 1);
     number_file.close();
   }

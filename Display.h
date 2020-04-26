@@ -36,7 +36,7 @@ public:
 
 private:
   String text_;
-  utilities::Pulse pulse_;
+  utils::Pulse pulse_;
   unsigned long reset_time_;
 };
 
@@ -63,10 +63,10 @@ enum DisplayKey {
  *              1111111111    
  *    01234567890123456789    
  *    ____________________ 
- * 0 |TV=###mL   P(cmH2O):|
- * 1 |RR=##/min    peak=##|
- * 2 |I:E=1:#.#    plat=##|
- * 3 |AC=#.#cmH20  PEEP=##|
+ * 0 |AC=#.#     Pressure:|
+ * 1 |TV=###       peak=##|
+ * 2 |RR=##        plat=##|
+ * 3 |IE=1:#.#     PEEP=##|
  *    ____________________ 
  */
 class Display {
@@ -94,7 +94,7 @@ public:
     elements_[HEADER]       = Element{0, 0, 20};
     elements_[VOLUME]       = Element{1, 0, 11, "TV"};
     elements_[BPM]          = Element{2, 0, 11, "RR"};
-    elements_[IE_RATIO]     = Element{3, 0, 11, "I:E"};
+    elements_[IE_RATIO]     = Element{3, 0, 11, "IE"};
     elements_[AC_TRIGGER]   = Element{0, 0, 11, "AC"};
     elements_[PRES_LABEL]   = Element{0, 11, 9};
     elements_[PEAK_PRES]    = Element{1, 11, 9, "peak"};

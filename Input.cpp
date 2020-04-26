@@ -7,10 +7,14 @@ namespace input {
 /// Input ///
 
 template <typename T>
-void Input<T>::begin(T (*read_fun)()) {
+void Input<T>::begin(float (*read_fun)()) {
   read_fun_ = read_fun;
-  // don't require confirmation the on the very first reading
-  set_value_ = read_fun_();
+  set_value_ = discretize(read_fun_());
+}
+
+template <typename T>
+T Input<T>::discretize(const float& raw_value) const {
+  return round(raw_value / resolution_) * resolution_;
 }
 
 template <typename T>
@@ -33,7 +37,7 @@ void Input<T>::display(const T& value, const bool& blank) {
 
 template <typename T>
 void Knob<T>::update() {
-  this->set_value_ = read_fun_();
+  this->set_value_ = discretize(read_fun_());
   this->display(read());  
 }
 
@@ -48,8 +52,8 @@ void SafeKnob<T>::begin(T (*read_fun)()) {
 
 template <typename T>
 void SafeKnob<T>::update() {
-  unconfirmed_value_ = read_fun_();
-  if (!isSignificant(unconfirmed_value_ - this->set_value_)) {
+  unconfirmed_value_ = discretize(read_fun_());
+  if (abs(unconfirmed_value_ - this->set_value_) <= this->resolution_ / 2) {
     this->display(read());
     if (!confirmed_) {
       confirmed_ = true;
