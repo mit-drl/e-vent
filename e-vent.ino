@@ -110,9 +110,9 @@ void setup() {
   delay(1000);
   
   //Initialize
+  pinMode(HOME_PIN, INPUT_PULLUP);  // Pull up the limit switch
   setupLogger();
   alarm.begin();
-  pinMode(HOME_PIN, INPUT_PULLUP);  // Pull up the limit switch
   displ.begin();
   offButton.begin();
   confirmButton.begin();
