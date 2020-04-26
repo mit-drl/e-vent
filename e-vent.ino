@@ -21,13 +21,15 @@ using namespace utils;
 
 // Cycle parameters
 unsigned long cycleCount = 0;
-float vIn, vEx, tIn, tHoldIn, tEx, tPeriod;
-float tCycleTimer;       // Timer starting at each breathing cycle
-float tLoopTimer;        // Timer starting at each control loop iteration
-float tLoopBuffer;       // The amount of time left at the end of each loop
-float tCycleDuration;    // Duration of each cycle
-float tExDuration;       // tEx - tHoldIn
-float tExPauseDuration;  // tPeriod - tEx
+float vIn, vEx;        // In/out velocities (clicks/s)
+float tCycleTimer;     // Absolute time (s) at start of each breathing cycle
+float tIn;             // Calculated time (s) since tCycleTimer for end of IN_STATE
+float tHoldIn;         // Calculated time (s) since tCycleTimer for end of HOLD_IN_STATE
+float tEx;             // Calculated time (s) since tCycleTimer for end of EX_STATE
+float tPeriod;         // Calculated time (s) since tCycleTimer for end of cycle
+float tCycleDuration;  // Actual time (s) since tCycleTimer at end of cycle (for logging)
+float tLoopTimer;      // Absolute time (s) at start of each control loop iteration
+float tLoopBuffer;     // Amount of time (s) left at end of each loop
 
 // States
 States state;
@@ -71,7 +73,6 @@ struct Knobs {
 
 // Assist control
 bool patientTriggered = false;
-bool DetectionWindow;
 
 
 ///////////////////////
@@ -96,7 +97,6 @@ void setupLogger();
 ///////////////////
 
 void setup() {
-  // setup serial coms
   Serial.begin(SERIAL_BAUD_RATE);
   while(!Serial);
 
@@ -104,7 +104,7 @@ void setup() {
     setState(DEBUG_STATE);
   }
 
-  // wait 1 sec for the roboclaw to boot up
+  // Wait for the roboclaw to boot up
   delay(1000);
   
   //Initialize
@@ -118,10 +118,10 @@ void setup() {
   tCycleTimer = now();
 
   setState(PREHOME_STATE);  // Initial state
-  roboclaw.begin(ROBOCLAW_BAUD);  // Roboclaw
-  roboclaw.SetM1MaxCurrent(ROBOCLAW_ADDR, ROBOCLAW_MAX_CURRENT);  // Current limit is 7A
-  roboclaw.SetM1VelocityPID(ROBOCLAW_ADDR,VKP,VKI,VKD, QPPS);  // Set Velocity PID Coefficients
-  roboclaw.SetM1PositionPID(ROBOCLAW_ADDR,PKP,PKI,PKD,KI_MAX,DEADZONE,MIN_POS,MAX_POS);  // Set Position PID Coefficients
+  roboclaw.begin(ROBOCLAW_BAUD);
+  roboclaw.SetM1MaxCurrent(ROBOCLAW_ADDR, ROBOCLAW_MAX_CURRENT);
+  roboclaw.SetM1VelocityPID(ROBOCLAW_ADDR, VKP, VKI, VKD, QPPS);
+  roboclaw.SetM1PositionPID(ROBOCLAW_ADDR, PKP, PKI, PKD, KI_MAX, DEADZONE, MIN_POS, MAX_POS);
   roboclaw.SetEncM1(ROBOCLAW_ADDR, 0);  // Zero the encoder
 }
 
@@ -173,48 +173,42 @@ void loop() {
       break;
   
     case IN_STATE:
-      //Entering
       if (enteringState) {
         enteringState = false;
         const float tNow = now();
-        tCycleDuration = tNow - tCycleTimer;  // For logging
+        tCycleDuration = tNow - tCycleTimer;
         tCycleTimer = tNow;  // The cycle begins at the start of inspiration
         goToPosition(roboclaw, volume2ticks(knobs.volume()), vIn);
         cycleCount++;
       }
 
-      // We need to figure out how to account for the PAUSE TIME
-      if (now()-tCycleTimer > tIn) {
+      if (now() - tCycleTimer > tIn) {
         setState(HOLD_IN_STATE);
       }
       break;
   
     case HOLD_IN_STATE:
-      // Entering
       if (enteringState) {
         enteringState = false;
       }
-      if (now()-tCycleTimer > tHoldIn) {
+      if (now() - tCycleTimer > tHoldIn) {
         pressureReader.set_plateau();
         setState(EX_STATE);
       }
       break;
   
     case EX_STATE:
-      //Entering
       if (enteringState) {
         enteringState = false;
         goToPosition(roboclaw, BAG_CLEAR_POS, vEx);
       }
 
-      // go to LISTEN_STATE 
       if (abs(motorPosition - BAG_CLEAR_POS) < BAG_CLEAR_TOL) {
         setState(PEEP_PAUSE_STATE);
       }
       break;
 
     case PEEP_PAUSE_STATE:
-      // Entering
       if (enteringState) {
         enteringState = false;
       }
@@ -227,7 +221,6 @@ void loop() {
       break;
 
     case HOLD_EX_STATE:
-      // Entering
       if (enteringState) {
         enteringState = false;
       }
@@ -247,20 +240,17 @@ void loop() {
       break;
 
     case PREHOME_STATE:
-      //Entering
       if (enteringState) {
         enteringState = false;
         roboclaw.BackwardM1(ROBOCLAW_ADDR, HOMING_VOLTS);
       }
 
-      // Check status of limit switch
       if (homeSwitchPressed()) {
         setState(HOMING_STATE); 
       }
       break;
 
     case HOMING_STATE:
-      //Entering
       if (enteringState) {
         enteringState = false;
         roboclaw.ForwardM1(ROBOCLAW_ADDR, HOMING_VOLTS);
@@ -315,11 +305,9 @@ void calculateWaveform() {
   tHoldIn = tPeriod / (1 + knobs.ie());
   tIn = tHoldIn - HOLD_IN_DURATION;
   tEx = min(tHoldIn + MAX_EX_DURATION, tPeriod - MIN_PEEP_PAUSE);
-  tExDuration = tEx - tHoldIn;  // For logging
-  tExPauseDuration = tPeriod - tEx;  // For logging
   
-  vIn = (volume2ticks(knobs.volume()) - BAG_CLEAR_POS) / (tIn);  // Velocity in (clicks/s)
-  vEx = (volume2ticks(knobs.volume()) - BAG_CLEAR_POS) / (tEx - tHoldIn);  // Velocity out (clicks/s)
+  vIn = (volume2ticks(knobs.volume()) - BAG_CLEAR_POS) / (tIn);
+  vEx = (volume2ticks(knobs.volume()) - BAG_CLEAR_POS) / (tEx - tHoldIn);
 }
 
 void handleErrors() {
@@ -346,28 +334,6 @@ void handleErrors() {
     alarm.overCurrent(true);
   } else {
     alarm.overCurrent(false);
-  }
-  
-  if (DEBUG) { //TODO integrate these into the alarm system
-    // check for roboclaw errors
-    bool valid;
-    uint32_t error_state = roboclaw.ReadError(ROBOCLAW_ADDR, &valid);
-    if (valid) {
-      if (error_state == 0x0001) { // M1 OverCurrent Warning
-        Serial.println("TURN OFF DEVICE");
-      }
-      else if (error_state == 0x0008) { // Temperature Error
-        Serial.println("OVERHEATED");
-      }
-      else if (error_state == 0x0100) { // M1 Driver Fault
-        Serial.println("RESTART DEVICE");
-      }
-      else if (error_state == 0x1000) { // Temperature Warning
-        Serial.println("TEMP HIGH");
-      }
-    } else {
-      Serial.println("RESTART DEVICE");
-    }
   }
 }
 
