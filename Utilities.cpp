@@ -16,6 +16,11 @@ bool Pulse::read() {
 }
 
 
+float map(float x, float in_min, float in_max, float out_min, float out_max) {
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+
+
 float ticks2volume(const float& vol_ticks) {
   return COEFFS.a * sqr(vol_ticks) + COEFFS.b * vol_ticks + COEFFS.c;
 }
@@ -26,22 +31,20 @@ float volume2ticks(const float& vol_ml) {
 }
 
 
-int readVolume() {
+float readVolume() {
   return map(analogRead(VOL_PIN), 0, ANALOG_PIN_MAX, VOL_MIN, VOL_MAX);
 }
 
-int readBpm() {
+float readBpm() {
   return map(analogRead(BPM_PIN), 0, ANALOG_PIN_MAX, BPM_MIN, BPM_MAX);
 }
 
 float readIeRatio() {
-  // Carry one decimal place
-  return map(analogRead(IE_PIN), 0, ANALOG_PIN_MAX, IE_MIN * 10, IE_MAX * 10) / 10.0;
+  return map(analogRead(IE_PIN), 0, ANALOG_PIN_MAX, IE_MIN, IE_MAX);
 }
 
 float readTriggerSens() {
-  // Carry two decimal places
-  return map(analogRead(AC_PIN), 0, ANALOG_PIN_MAX, 0, AC_MAX * 100) / 100.0;
+  return map(analogRead(AC_PIN), 0, ANALOG_PIN_MAX, AC_MIN - 0.1, AC_MAX);
 }
 
 
