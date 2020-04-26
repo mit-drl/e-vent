@@ -3,15 +3,15 @@
 
 // States
 enum States {
-  DEBUG_STATE,      // 0
-  IN_STATE,         // 1
-  HOLD_IN_STATE,    // 2
-  EX_STATE,         // 3
-  PEEP_PAUSE_STATE, // 4
-  HOLD_EX_STATE,    // 5
-  PREHOME_STATE,    // 6
-  HOMING_STATE,     // 7
-  OFF_STATE         // 8
+  DEBUG_STATE,       // 0
+  IN_STATE,          // 1
+  HOLD_IN_STATE,     // 2
+  EX_STATE,          // 3
+  PEEP_PAUSE_STATE,  // 4
+  HOLD_EX_STATE,     // 5
+  PREHOME_STATE,     // 6
+  HOMING_STATE,      // 7
+  OFF_STATE          // 8
 };
 
 // Serial baud rate

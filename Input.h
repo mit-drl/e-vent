@@ -34,7 +34,7 @@ public:
 
   virtual void update() = 0;
 
-  inline T read() const { return set_value_; }
+  inline T read() const& { return set_value_; }
 
 protected:
   T (*read_fun_)();

@@ -11,7 +11,9 @@
 #include "Pressure.h"
 
 
+using namespace input;
 using namespace utils;
+
 
 /////////////////////
 // Initialize Vars //
@@ -19,13 +21,12 @@ using namespace utils;
 
 // Cycle parameters
 unsigned long cycleCount = 0;
-float vIn, vEx, tIn, tHoldIn, tEx, tPeriod, setVolume;
-float tCycleTimer, tLoopTimer; // Timer starting at each breathing cycle, and each control loop iteration
-float tLoopBuffer; // The amount of time left at the end of each loop
-float bpm;  // Respiratory rate
-float ieRatio;  // Inhale/exhale ratio
-float tCycleDuration;   // Duration of each cycle
-float tExDuration;      // tEx - tHoldIn
+float vIn, vEx, tIn, tHoldIn, tEx, tPeriod;
+float tCycleTimer;       // Timer starting at each breathing cycle
+float tLoopTimer;        // Timer starting at each control loop iteration
+float tLoopBuffer;       // The amount of time left at the end of each loop
+float tCycleDuration;    // Duration of each cycle
+float tExDuration;       // tEx - tHoldIn
 float tExPauseDuration;  // tPeriod - tEx
 
 // States
@@ -56,17 +57,20 @@ logging::Logger logger(true/*Serial*/, false/*SD*/, false/*labels*/, ",\t"/*deli
 
 // Knobs
 struct Knobs {
+  int volume();  // Tidal volume
+  int bpm();     // Respiratory rate
+  float ie();    // Inhale/exhale ratio
+  float ac();    // Assist control trigger sensitivity
+  SafeKnob<int> volume_ = SafeKnob<int>(&displ, display::VOLUME, CONFIRM_PIN, &alarm, 25);
+  SafeKnob<int> bpm_ = SafeKnob<int>(&displ, display::BPM, CONFIRM_PIN, &alarm, 1);
+  SafeKnob<float> ie_ = SafeKnob<float>(&displ, display::IE_RATIO, CONFIRM_PIN, &alarm, 0.1);
+  SafeKnob<float> ac_ = SafeKnob<float>(&displ, display::AC_TRIGGER, CONFIRM_PIN, &alarm, 0.1);
   void begin();
   void update();
-  input::SafeKnob<int> volume     = input::SafeKnob<int>(&displ, display::VOLUME, CONFIRM_PIN, &alarm, 25);
-  input::SafeKnob<int> bpm        = input::SafeKnob<int>(&displ, display::BPM, CONFIRM_PIN, &alarm, 1);
-  input::SafeKnob<float> ie       = input::SafeKnob<float>(&displ, display::IE_RATIO, CONFIRM_PIN, &alarm, 0.1);
-  input::SafeKnob<float> trigger  = input::SafeKnob<float>(&displ, display::AC_TRIGGER, CONFIRM_PIN, &alarm, 0.1);
 } knobs;
 
 // Assist control
 bool patientTriggered = false;
-float triggerSensitivity;  // Tunable via a potentiometer. Its range is [2 cmH2O to 5 cmH2O] lower than PEEP
 bool DetectionWindow;
 
 
@@ -77,9 +81,6 @@ bool DetectionWindow;
 // Set the current state in the state machine
 void setState(States newState);
 
-// Reads user settings to set the waveform parameters
-void readInput();
-
 // Calculates the waveform parameters from the user inputs
 void calculateWaveform();
 
@@ -88,6 +89,7 @@ void handleErrors();
 
 // Set up logger variables
 void setupLogger();
+
 
 ///////////////////
 ////// Setup //////
@@ -108,19 +110,19 @@ void setup() {
   //Initialize
   setupLogger();
   alarm.begin();
-  pinMode(HOME_PIN, INPUT_PULLUP); // Pull up the limit switch
+  pinMode(HOME_PIN, INPUT_PULLUP);  // Pull up the limit switch
   displ.begin();
   offButton.begin();
   confirmButton.begin();
   knobs.begin();
   tCycleTimer = now();
 
-  setState(PREHOME_STATE); // Initial state
-  roboclaw.begin(ROBOCLAW_BAUD); // Roboclaw
-  roboclaw.SetM1MaxCurrent(ROBOCLAW_ADDR, ROBOCLAW_MAX_CURRENT); // Current limit is 7A
-  roboclaw.SetM1VelocityPID(ROBOCLAW_ADDR,VKP,VKI,VKD, QPPS); // Set Velocity PID Coefficients
-  roboclaw.SetM1PositionPID(ROBOCLAW_ADDR,PKP,PKI,PKD,KI_MAX,DEADZONE,MIN_POS,MAX_POS); // Set Position PID Coefficients
-  roboclaw.SetEncM1(ROBOCLAW_ADDR, 0); // Zero the encoder
+  setState(PREHOME_STATE);  // Initial state
+  roboclaw.begin(ROBOCLAW_BAUD);  // Roboclaw
+  roboclaw.SetM1MaxCurrent(ROBOCLAW_ADDR, ROBOCLAW_MAX_CURRENT);  // Current limit is 7A
+  roboclaw.SetM1VelocityPID(ROBOCLAW_ADDR,VKP,VKI,VKD, QPPS);  // Set Velocity PID Coefficients
+  roboclaw.SetM1PositionPID(ROBOCLAW_ADDR,PKP,PKI,PKD,KI_MAX,DEADZONE,MIN_POS,MAX_POS);  // Set Position PID Coefficients
+  roboclaw.SetEncM1(ROBOCLAW_ADDR, 0);  // Zero the encoder
 }
 
 //////////////////
@@ -136,9 +138,8 @@ void loop() {
   }
 
   // All States
-  tLoopTimer = now(); // Start the loop timer
+  tLoopTimer = now();  // Start the loop timer
   logger.update();
-  readInput();
   knobs.update();
   calculateWaveform();
   readEncoder(roboclaw, motorPosition);  // TODO handle invalid reading
@@ -177,8 +178,8 @@ void loop() {
         enteringState = false;
         const float tNow = now();
         tCycleDuration = tNow - tCycleTimer;  // For logging
-        tCycleTimer = tNow; // The cycle begins at the start of inspiration
-        goToPosition(roboclaw, volume2ticks(setVolume), vIn);
+        tCycleTimer = tNow;  // The cycle begins at the start of inspiration
+        goToPosition(roboclaw, volume2ticks(knobs.volume()), vIn);
         cycleCount++;
       }
 
@@ -232,11 +233,11 @@ void loop() {
       }
 
       // Check if patient triggers inhale
-      patientTriggered = pressureReader.get() < (pressureReader.peep() - triggerSensitivity) 
-          && triggerSensitivity > AC_MIN;
+      patientTriggered = pressureReader.get() < (pressureReader.peep() - knobs.ac()) 
+          && knobs.ac() > AC_MIN;
 
       if (patientTriggered || now() - tCycleTimer > tPeriod) {
-        if (!patientTriggered) pressureReader.set_peep(); // Set peep again if time triggered
+        if (!patientTriggered) pressureReader.set_peep();  // Set peep again if time triggered
         pressureReader.set_peak_and_reset();
         displ.writePeakP(round(pressureReader.peak()));
         displ.writePEEP(round(pressureReader.peep()));
@@ -267,8 +268,8 @@ void loop() {
       
       if (!homeSwitchPressed()) {
         roboclaw.ForwardM1(ROBOCLAW_ADDR, 0);
-        delay(HOMING_PAUSE * 1000); // Wait for things to settle
-        roboclaw.SetEncM1(ROBOCLAW_ADDR, 0); // Zero the encoder
+        delay(HOMING_PAUSE * 1000);  // Wait for things to settle
+        roboclaw.SetEncM1(ROBOCLAW_ADDR, 0);  // Zero the encoder
         setState(IN_STATE);
       }
       break;
@@ -285,18 +286,23 @@ void loop() {
 /////////////////
 
 void Knobs::begin() {
-  volume.begin(&readVolume);
-  bpm.begin(&readBpm);
-  ie.begin(&readIeRatio);
-  trigger.begin(&readTriggerSens);
+  volume_.begin(&readVolume);
+  bpm_.begin(&readBpm);
+  ie_.begin(&readIeRatio);
+  ac_.begin(&readTriggerSens);
 }
 
 void Knobs::update() {
-  volume.update();
-  bpm.update();
-  ie.update();
-  trigger.update();
+  volume_.update();
+  bpm_.update();
+  ie_.update();
+  ac_.update();
 }
+
+inline int Knobs::volume() { return volume_.read(); }
+inline int Knobs::bpm() { return bpm_.read(); }
+inline float Knobs::ie() { return ie_.read(); }
+inline float Knobs::ac() { return ac_.read(); }
 
 void setState(States newState) {
   enteringState = true;
@@ -304,24 +310,16 @@ void setState(States newState) {
   tStateTimer = now();
 }
 
-void readInput() {
-  // Read knobs
-  setVolume = knobs.volume.read();
-  bpm = knobs.bpm.read();
-  ieRatio = knobs.ie.read();
-  triggerSensitivity = knobs.trigger.read();
-}
-
 void calculateWaveform() {
-  tPeriod = 60.0 / bpm; // seconds in each breathing cycle period
-  tHoldIn = tPeriod / (1 + ieRatio);
+  tPeriod = 60.0 / knobs.bpm();  // seconds in each breathing cycle period
+  tHoldIn = tPeriod / (1 + knobs.ie());
   tIn = tHoldIn - HOLD_IN_DURATION;
   tEx = min(tHoldIn + MAX_EX_DURATION, tPeriod - MIN_PEEP_PAUSE);
   tExDuration = tEx - tHoldIn;  // For logging
   tExPauseDuration = tPeriod - tEx;  // For logging
   
-  vIn = (volume2ticks(setVolume) - BAG_CLEAR_POS) / (tIn); // Velocity in (clicks/s)
-  vEx = (volume2ticks(setVolume) - BAG_CLEAR_POS) / (tEx - tHoldIn); // Velocity out (clicks/s)
+  vIn = (volume2ticks(knobs.volume()) - BAG_CLEAR_POS) / (tIn);  // Velocity in (clicks/s)
+  vEx = (volume2ticks(knobs.volume()) - BAG_CLEAR_POS) / (tEx - tHoldIn);  // Velocity out (clicks/s)
 }
 
 void handleErrors() {
@@ -339,7 +337,7 @@ void handleErrors() {
 
   // Check if desired volume was reached
   if (enteringState && state == EX_STATE) {
-    alarm.unmetVolume(setVolume - ticks2volume(motorPosition) > VOLUME_ERROR_THRESH);
+    alarm.unmetVolume(knobs.volume() - ticks2volume(motorPosition) > VOLUME_ERROR_THRESH);
   }
 
   // Check if maximum motor current was exceeded
