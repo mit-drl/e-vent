@@ -44,7 +44,7 @@ float readIeRatio() {
 }
 
 float readTriggerSens() {
-  return map(analogRead(AC_PIN), 0, ANALOG_PIN_MAX, AC_MIN - 0.1, AC_MAX);
+  return map(analogRead(AC_PIN), 0, ANALOG_PIN_MAX, AC_MIN - AC_RES, AC_MAX);
 }
 
 

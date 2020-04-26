@@ -55,14 +55,18 @@ const int LCD_D6_PIN = 5;
 const int LCD_D7_PIN = 4;
 
 // Control knob mappings
-const float BPM_MIN = 10;
-const float BPM_MAX = 40;
+const int BPM_MIN = 10;
+const int BPM_MAX = 40;
+const int BPM_RES = 1;
 const float IE_MIN = 1;
 const float IE_MAX = 4;
-const float VOL_MIN = 100;
-const float VOL_MAX = 800; 
+const float IE_RES = 0.1;
+const int VOL_MIN = 100;
+const int VOL_MAX = 800; 
+const int VOL_RES = 25; 
 const float AC_MIN = 2;
 const float AC_MAX = 5;
+const float AC_RES = 0.1;
 const int ANALOG_PIN_MAX = 1023; // The maximum count on analog pins
 
 // Bag Calibration for AMBU Adult bag
