@@ -132,7 +132,7 @@ private:
  */
 class Alarm {
 public:
-  Alarm(){};
+  Alarm() {};
   
   Alarm(const String& default_text, const int& min_bad_to_trigger,
         const int& min_good_to_clear, const AlarmLevel& alarm_level);

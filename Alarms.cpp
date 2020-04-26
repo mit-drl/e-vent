@@ -22,7 +22,7 @@ void Tone::play() {
     playing_ = true;
   }
   tone_step_ %= length_; // Start again if tone finished
-  if(millis() > tone_timer_){
+  if (millis() > tone_timer_) {
     tone(*pin_, notes_[tone_step_].note, notes_[tone_step_].duration);
     tone_timer_ += notes_[tone_step_].duration + notes_[tone_step_].pause;
     tone_step_ ++;

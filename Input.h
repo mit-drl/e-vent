@@ -30,10 +30,13 @@ public:
       disp_key_(key),
       resolution_(resolution) {}
 
+  // Setup during arduino setup()
   void begin(T (*read_fun)());
 
+  // Update during arduino loop()
   virtual void update() = 0;
 
+  // Read confirmed value to use for operation
   inline T read() const& { return set_value_; }
 
 protected:
@@ -45,6 +48,7 @@ protected:
   T set_value_;  // Dial value displayed and used for operation
   unsigned long last_display_update_time_ = 0;
 
+  // Discretize value into closest multiple of resolution
   inline T discretize(const T& raw_value) { return round(raw_value / resolution_) * resolution_; }
 
   void display(const T& value, const bool& blank = false);
@@ -65,6 +69,7 @@ public:
   Knob(Display* displ, const display::DisplayKey& key, const T& resolution):
       Input<T>(displ, key, resolution) {}
 
+  // Update during arduino loop()
   void update();
 };
 
@@ -91,8 +96,10 @@ public:
       alarms_(alarms),
       pulse_(1000, 0.5) {}
 
+  // Setup during arduino setup()
   void begin(T (*read_fun)());
 
+  // Update during arduino loop()
   void update();
 
 private:

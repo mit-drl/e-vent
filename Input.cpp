@@ -9,8 +9,7 @@ namespace input {
 template <typename T>
 void Input<T>::begin(T (*read_fun)()) {
   read_fun_ = read_fun;
-  // don't require confirmation the on the very first reading
-  set_value_ = read_fun_();
+  set_value_ = discretize(read_fun_());
 }
 
 template <typename T>

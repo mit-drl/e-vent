@@ -16,7 +16,7 @@ void Display::update() {
 }
 
 void Display::setAlarmText(const String& alarm) {
-  if(animation_.text() != alarm) {
+  if (animation_.text() != alarm) {
     animation_.reset(alarm);
   }
 }
@@ -67,7 +67,7 @@ void Display::writeBlank(const DisplayKey& key) {
 }
 
 void Display::writeHeader() {
-  if(!alarmsON()) {
+  if (!alarmsON()) {
     writePresLabel();
   } 
   else {
@@ -103,7 +103,7 @@ void Display::writeIEratio(const float& ie) {
 }
 
 void Display::writeACTrigger(const float& ac_trigger) {
-  if(animation_.empty()) {
+  if (animation_.empty()) {
     const float ac_trigger_c = constrain(ac_trigger, 0.0, 9.9);
     char buff[12];
     const String trigger_str = toString(AC_TRIGGER, ac_trigger_c);
