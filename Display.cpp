@@ -84,21 +84,21 @@ void Display::writeHeader() {
 void Display::writeVolume(const int& vol) {
   const int vol_c = constrain(vol, 0, 999);
   char buff[12];
-  sprintf(buff, "%2s=%3smL   ", getLabel(VOLUME).c_str(), toString(VOLUME, vol_c).c_str());
+  sprintf(buff, "%2s=%3s     ", getLabel(VOLUME).c_str(), toString(VOLUME, vol_c).c_str());
   write(elements_[VOLUME].row, elements_[VOLUME].col, buff);
 }
 
 void Display::writeBPM(const int& bpm) {
   const int bpm_c = constrain(bpm, 0, 99);
   char buff[12];
-  sprintf(buff, "%2s=%2s/min  ", getLabel(BPM).c_str(), toString(VOLUME, bpm_c).c_str());
+  sprintf(buff, "%2s=%2s      ", getLabel(BPM).c_str(), toString(VOLUME, bpm_c).c_str());
   write(elements_[BPM].row, elements_[BPM].col, buff);
 }
 
 void Display::writeIEratio(const float& ie) {
   const float ie_c = constrain(ie, 0.0, 9.9);
   char buff[12];
-  sprintf(buff, "%3s=1:%3s  ", getLabel(IE_RATIO).c_str(), toString(IE_RATIO, ie_c).c_str());
+  sprintf(buff, "%2s=1:%3s   ", getLabel(IE_RATIO).c_str(), toString(IE_RATIO, ie_c).c_str());
   write(elements_[IE_RATIO].row, elements_[IE_RATIO].col, buff);
 }
 
@@ -107,15 +107,14 @@ void Display::writeACTrigger(const float& ac_trigger) {
     const float ac_trigger_c = constrain(ac_trigger, 0.0, 9.9);
     char buff[12];
     const String trigger_str = toString(AC_TRIGGER, ac_trigger_c);
-    sprintf(buff, "%2s=%3s%5s", getLabel(AC_TRIGGER).c_str(), trigger_str.c_str(),
-            trigger_str == "OFF" ? "     " : "cmH2O");
+    sprintf(buff, "%2s=%3s     ", getLabel(AC_TRIGGER).c_str(), trigger_str.c_str());
     write(elements_[AC_TRIGGER].row, elements_[AC_TRIGGER].col, buff);
   }
 
 }
 
 void Display::writePresLabel() {
-  write(elements_[PRES_LABEL].row, elements_[PRES_LABEL].col, "P(cmH2O):");
+  write(elements_[PRES_LABEL].row, elements_[PRES_LABEL].col, "Pressure:");
 }
 
 void Display::writePeakP(const int& peak) {
