@@ -149,7 +149,7 @@ String Display::toString(const DisplayKey& key, const T& value) const {
     case IE_RATIO:
       return String(value, 1);
     case AC_TRIGGER:
-      return (value > trigger_threshold_) ? String(value, 1) : "OFF";
+      return (value > trigger_threshold_ - 1e-2) ? String(value, 1) : "OFF";
     case PEAK_PRES:
       return String(value);
     case PLATEAU_PRES:
