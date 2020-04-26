@@ -15,16 +15,13 @@ bool Pulse::read() {
   return (millis() - offset_) % period_ < on_duration_;
 }
 
-
 float ticks2volume(const float& vol_ticks) {
   return COEFFS.a * sqr(vol_ticks) + COEFFS.b * vol_ticks + COEFFS.c;
 }
 
-
 float volume2ticks(const float& vol_ml) {
-  return (-COEFFS.b + sqrt(sqr(COEFFS.b) -4 * COEFFS.a * (COEFFS.c - vol_ml))) / (2 * COEFFS.a);
+  return (-COEFFS.b + sqrt(sqr(COEFFS.b) - 4 * COEFFS.a * (COEFFS.c - vol_ml))) / (2 * COEFFS.a);
 }
-
 
 int readVolume() {
   return map(analogRead(VOL_PIN), 0, ANALOG_PIN_MAX, VOL_MIN, VOL_MAX);
@@ -44,7 +41,6 @@ float readTriggerSens() {
   return map(analogRead(AC_PIN), 0, ANALOG_PIN_MAX, 0, AC_MAX * 100) / 100.0;
 }
 
-
 bool readEncoder(const RoboClaw& roboclaw, int& motorPosition) {
   uint8_t robot_status;
   bool valid;
@@ -52,11 +48,9 @@ bool readEncoder(const RoboClaw& roboclaw, int& motorPosition) {
   return valid;
 }
 
-
 void goToPosition(const RoboClaw& roboclaw, const int& pos, const int& vel) {
   int motor_position;
   const bool valid = readEncoder(roboclaw, motor_position);
-
   const int accel = 10000;
   const int deccel = 10000;
   
@@ -76,7 +70,6 @@ void goToPosition(const RoboClaw& roboclaw, const int& pos, const int& vel) {
     // ELSE THROW AN ALARM
   }
 }
-
 
 bool readMotorCurrent(const RoboClaw& roboclaw, int& motorCurrent) {
   int noSecondMotor;

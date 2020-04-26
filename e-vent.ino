@@ -21,7 +21,7 @@ using namespace utils;
 
 // Cycle parameters
 unsigned long cycleCount = 0;
-float vIn, vEx;        // In/out velocities (clicks/s)
+float vIn, vEx;        // Inhale/Exhale velocities (clicks/s)
 float tCycleTimer;     // Absolute time (s) at start of each breathing cycle
 float tIn;             // Calculated time (s) since tCycleTimer for end of IN_STATE
 float tHoldIn;         // Calculated time (s) since tCycleTimer for end of HOLD_IN_STATE
@@ -246,7 +246,7 @@ void loop() {
       }
 
       if (homeSwitchPressed()) {
-        setState(HOMING_STATE); 
+        setState(HOMING_STATE);
       }
       break;
 
@@ -351,4 +351,3 @@ void setupLogger() {
   // begin called after all variables added to include them all in the header
   logger.begin(&Serial, SD_SELECT);
 }
-
