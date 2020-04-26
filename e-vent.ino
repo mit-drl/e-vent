@@ -374,26 +374,16 @@ void handleErrors() {
 }
 
 void setupLogger() {
-  // logger.addVar("Time", &tLoopTimer);
-  // logger.addVar("CycleStart", &tCycleTimer);
-  // logger.addVar("Period", &tCycleDuration);
-  // logger.addVar("tLoopBuffer", &tLoopBuffer, 6, 4);
+  logger.addVar("Time", &tLoopTimer);
+  logger.addVar("CycleStart", &tCycleTimer);
   logger.addVar("State", (int*)&state);
   logger.addVar("Pos", &motorPosition, 3);
-  // logger.addVar("Current", &motorCurrent, 3);
   logger.addVar("Pressure", &pressureReader.get(), 6);
-  logger.addVar("Peep", &pressureReader.peep(), 6);
-  // logger.addVar("Vol", &setVolume);
-  // logger.addVar("BPM", &bpm);
-  // logger.addVar("IE", &ieRatio);
-  // logger.addVar("tIn", &tIn);
-  // logger.addVar("tEx", &tExDuration);
-  // logger.addVar("tHoldOut", &tExPauseDuration);
-  // logger.addVar("vIn", &vIn);
-  // logger.addVar("vEx", &vEx);
-  // logger.addVar("Mode", (int*)&patientTriggered);
-  // logger.addVar("TrigSens", &triggerSensitivity);
-  logger.addVar("HighPresAlarm", &alarm.getHighPressure());
+  // logger.addVar("Period", &tCycleDuration);
+  // logger.addVar("tLoopBuffer", &tLoopBuffer, 6, 4);
+  // logger.addVar("Current", &motorCurrent, 3);
+  // logger.addVar("Peep", &pressureReader.peep(), 6);
+  // logger.addVar("HighPresAlarm", &alarm.getHighPressure());
   // begin called after all variables added to include them all in the header
   logger.begin(&Serial, SD_SELECT);
 }
