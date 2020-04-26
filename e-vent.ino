@@ -102,6 +102,8 @@ void setup() {
 
   if (DEBUG) {
     setState(DEBUG_STATE);
+  } else {
+    setState(PREHOME_STATE);  // Initial state
   }
 
   // Wait for the roboclaw to boot up
@@ -117,7 +119,6 @@ void setup() {
   knobs.begin();
   tCycleTimer = now();
 
-  setState(PREHOME_STATE);  // Initial state
   roboclaw.begin(ROBOCLAW_BAUD);
   roboclaw.SetM1MaxCurrent(ROBOCLAW_ADDR, ROBOCLAW_MAX_CURRENT);
   roboclaw.SetM1VelocityPID(ROBOCLAW_ADDR, VKP, VKI, VKD, QPPS);
