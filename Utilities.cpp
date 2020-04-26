@@ -36,7 +36,7 @@ float readIeRatio() {
   return map(analogRead(IE_PIN), 0, ANALOG_PIN_MAX, IE_MIN * 10, IE_MAX * 10) / 10.0;
 }
 
-float readTriggerSens() {
+float readAc() {
   // Carry two decimal places
   return map(analogRead(AC_PIN), 0, ANALOG_PIN_MAX, 0, AC_MAX * 100) / 100.0;
 }

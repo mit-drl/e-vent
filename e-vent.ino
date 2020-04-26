@@ -280,7 +280,7 @@ void Knobs::begin() {
   volume_.begin(&readVolume);
   bpm_.begin(&readBpm);
   ie_.begin(&readIeRatio);
-  ac_.begin(&readTriggerSens);
+  ac_.begin(&readAc);
 }
 
 void Knobs::update() {

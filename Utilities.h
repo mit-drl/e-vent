@@ -46,7 +46,7 @@ inline bool homeSwitchPressed() { return digitalRead(HOME_PIN) == LOW; }
 int readVolume();         // Reads set volume (in mL) from the volume pot
 int readBpm();            // Reads set bpm from the bpm pot
 float readIeRatio();      // Reads set IE ratio from the IE pot
-float readTriggerSens();  // Reads set trigger sensitivity from the trigger pot
+float readAc();           // Reads set AC mode trigger sensitivity from the AC pot
 
 /// Motor ///
 // Read the encoder and return whether the reading is valid
