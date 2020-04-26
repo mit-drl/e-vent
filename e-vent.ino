@@ -95,7 +95,7 @@ void setupLogger();
 
 void setup() {
   // setup serial coms
-  Serial.begin(115200);
+  Serial.begin(SERIAL_BAUD_RATE);
   while(!Serial);
 
   if (DEBUG) {
@@ -164,7 +164,7 @@ void loop() {
       break;
 
     case OFF_STATE: 
-      alarm.turningOFF(now() - tStateTimer < 5.0);
+      alarm.turningOFF(now() - tStateTimer < TURNING_OFF_DURATION);
       if (confirmButton.is_LOW()) {
         setState(PREHOME_STATE);
         alarm.turningOFF(false);
