@@ -77,7 +77,7 @@ const float MIN_PLATEAU_PRESSURE = 5.0; // Trigger low pressure alarm
 const float MAX_RESIST_PRESSURE = 2.0;  // Trigger high-resistance notification
 const float MIN_TIDAL_PRESSURE = 5.0;   // Trigger no-tidal-pressure alarm
 const float VOLUME_ERROR_THRESH = 50.0; // Trigger incomplete breath alarm
-const int MAX_MOTOR_CURRENT = 1000;     // Trigger mechanical failure alarm
+const int MAX_MOTOR_CURRENT = 1000;     // Trigger mechanical failure alarm. Units (10mA)
 const float TURNING_OFF_DURATION = 5.0; // Turning-off alarm is on for this duration (s)
 const float MECHANICAL_TIMEOUT = 1.0;   // Time to wait for the mechanical cycle to finish before alarming
 
@@ -99,6 +99,6 @@ const unsigned long ACC_MAX = 200000;   // Maximum acceleration (clicks/s^2) to 
 // Roboclaw
 const unsigned int ROBOCLAW_ADDR = 0x80;
 const long ROBOCLAW_BAUD = 38400;
-const unsigned long ROBOCLAW_MAX_CURRENT = 2000;    //Safety shutoff at 20A 
+const unsigned long ROBOCLAW_MAX_CURRENT = 2000;    //Safety shutoff in units of 10mA
 
 #endif
