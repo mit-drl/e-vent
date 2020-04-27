@@ -189,6 +189,7 @@ class AlarmManager {
     UNMET_VOLUM,
     NO_TIDAL_PR,
     OVER_CURREN,
+    MECH_FAILUR,
     NOT_CONFIRM,
     TURNING_OFF,
     NUM_ALARMS 
@@ -208,6 +209,7 @@ public:
     alarms_[UNMET_VOLUM] = Alarm(" UNMET TIDAL VOLUME ", 1, 1, EMERGENCY);
     alarms_[NO_TIDAL_PR] = Alarm(" NO TIDAL PRESSURE  ", 2, 1, EMERGENCY);
     alarms_[OVER_CURREN] = Alarm(" OVER CURRENT FAULT ", 1, 2, EMERGENCY);
+    alarms_[MECH_FAILUR] = Alarm(" MECHANICAL FAILURE ", 1, 1, EMERGENCY);
     alarms_[NOT_CONFIRM] = Alarm("      CONFIRM?      ", 1, 1, NOTIFY);
     alarms_[TURNING_OFF] = Alarm("    TURNING OFF     ", 1, 1, OFF_LEVEL);
   }
@@ -251,6 +253,11 @@ public:
     alarms_[OVER_CURREN].setCondition(value, *cycle_count_);
   }
 
+  // Mechanical Failure alarm
+  inline void mechanicalFailure(const bool& value) {
+    alarms_[MECH_FAILUR].setCondition(value, *cycle_count_);
+  }
+
   // Setting not confirmed
   inline void unconfirmedChange(const bool& value, const String& message = "") {
     if (value) {
@@ -270,6 +277,7 @@ public:
   inline const bool& getUnmetVolume()       { return alarms_[UNMET_VOLUM].isON(); }
   inline const bool& getNoTidalPres()       { return alarms_[NO_TIDAL_PR].isON(); }
   inline const bool& getOverCurrent()       { return alarms_[OVER_CURREN].isON(); }
+  inline const bool& getMechanicalFailure() { return alarms_[MECH_FAILUR].isON(); }
   inline const bool& getUnconfirmedChange() { return alarms_[NOT_CONFIRM].isON(); }
   inline const bool& getTurningOFF()        { return alarms_[TURNING_OFF].isON(); }
 

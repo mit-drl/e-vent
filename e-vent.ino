@@ -21,7 +21,6 @@ using namespace utils;
 
 // Cycle parameters
 unsigned long cycleCount = 0;
-float vIn, vEx;        // Inhale/Exhale velocities (clicks/s)
 float tCycleTimer;     // Absolute time (s) at start of each breathing cycle
 float tIn;             // Calculated time (s) since tCycleTimer for end of IN_STATE
 float tHoldIn;         // Calculated time (s) since tCycleTimer for end of HOLD_IN_STATE
@@ -152,7 +151,7 @@ void loop() {
   offButton.update();
 
   if (offButton.wasHeld()) {
-    goToPosition(roboclaw, BAG_CLEAR_POS, HOMING_VEL);
+    goToPositionByDur(roboclaw, BAG_CLEAR_POS, motorPosition, MAX_EX_DURATION);
     setState(OFF_STATE);
     alarm.allOff();
   }
@@ -179,7 +178,7 @@ void loop() {
         const float tNow = now();
         tPeriodActual = tNow - tCycleTimer;
         tCycleTimer = tNow;  // The cycle begins at the start of inspiration
-        goToPosition(roboclaw, volume2ticks(knobs.volume()), vIn);
+        goToPositionByDur(roboclaw, volume2ticks(knobs.volume()), motorPosition, tIn);
         cycleCount++;
       }
 
@@ -201,7 +200,7 @@ void loop() {
     case EX_STATE:
       if (enteringState) {
         enteringState = false;
-        goToPosition(roboclaw, BAG_CLEAR_POS, vEx);
+        goToPositionByDur(roboclaw, BAG_CLEAR_POS, motorPosition, tEx - (now() - tCycleTimer));
       }
 
       if (abs(motorPosition - BAG_CLEAR_POS) < BAG_CLEAR_TOL) {
@@ -306,9 +305,6 @@ void calculateWaveform() {
   tHoldIn = tPeriod / (1 + knobs.ie());
   tIn = tHoldIn - HOLD_IN_DURATION;
   tEx = min(tHoldIn + MAX_EX_DURATION, tPeriod - MIN_PEEP_PAUSE);
-  
-  vIn = (volume2ticks(knobs.volume()) - BAG_CLEAR_POS) / (tIn);
-  vEx = (volume2ticks(knobs.volume()) - BAG_CLEAR_POS) / (tEx - tHoldIn);
 }
 
 void handleErrors() {
@@ -336,6 +332,9 @@ void handleErrors() {
   } else {
     alarm.overCurrent(false);
   }
+
+  // Check if we've gotten stuck in EX_STATE (mechanical cycle didn't finsih)
+  alarm.mechanicalFailure(state == EX_STATE && now() - tCycleTimer > tPeriod + MECHANICAL_TIMEOUT);
 }
 
 void setupLogger() {

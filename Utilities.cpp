@@ -50,15 +50,25 @@ bool readEncoder(const RoboClaw& roboclaw, int& motorPosition) {
   return valid;
 }
 
-void goToPosition(const RoboClaw& roboclaw, const int& pos, const int& vel) {
-  int motor_position;
-  const bool valid = readEncoder(roboclaw, motor_position);
-  const int accel = 10000;
-  const int deccel = 10000;
-  
-  if (valid) {
-    roboclaw.SpeedAccelDeccelPositionM1(ROBOCLAW_ADDR, accel, vel, deccel, pos, 1);
+void goToPosition(const RoboClaw& roboclaw, const long& pos, const long& vel, const long& acc) {
+    roboclaw.SpeedAccelDeccelPositionM1(ROBOCLAW_ADDR, acc, vel, acc, pos, 1); 
+}
+
+void goToPositionByDur(const RoboClaw& roboclaw, const long& goal_pos, const long& cur_pos, const float& dur) {
+  if (dur <= 0) return; // Can't move in negative time
+
+  const long dist = abs(goal_pos - cur_pos);
+  long vel = round(2*dist/dur); // Try bang-bang control
+  long acc = round(2*vel/dur); // Constant acc in and out
+  if (vel > VEL_MAX) {
+    // Must use trapezoidal velocity profile to clip at VEL_MAX
+    vel = VEL_MAX;
+    const float acc_dur = dur - dist/vel;
+    acc = acc_dur > 0 ? round(vel/acc_dur) : ACC_MAX;
+    acc = min(ACC_MAX, acc);
   }
+
+  goToPosition(roboclaw, goal_pos, vel, acc);
 }
 
 bool readMotorCurrent(const RoboClaw& roboclaw, int& motorCurrent) {
