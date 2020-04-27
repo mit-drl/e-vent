@@ -63,9 +63,9 @@ void goToPositionByDur(const RoboClaw& roboclaw, const long& goal_pos, const lon
   if (vel > VEL_MAX) {
     // Must use trapezoidal velocity profile to clip at VEL_MAX
     vel = VEL_MAX;
-    unsigned long acc_dur = dur - dist/vel;
-    acc = acc_dur > 0 ? vel/acc_dur : ACC_MAX;
-    acc = round(min(ACC_MAX, acc));
+    const float acc_dur = dur - dist/vel;
+    acc = acc_dur > 0 ? round(vel/acc_dur) : ACC_MAX;
+    acc = min(ACC_MAX, acc);
   }
 
   goToPosition(roboclaw, goal_pos, vel, acc);
