@@ -28,7 +28,6 @@ const float MIN_PEEP_PAUSE = 0.05;    // Time (s) to pause after exhalation / be
 const float MAX_EX_DURATION = 1.00;   // Maximum exhale duration (s)
 
 // Homing Settings
-const float HOMING_VEL = 300;   // The speed (clicks/s) to use during homing
 const float HOMING_VOLTS = 30;  // The speed (0-255) in volts to use during homing
 const float HOMING_PAUSE = 1.0; // The pause time (s) during homing to ensure stability
 const int BAG_CLEAR_POS = 50;   // The goal position (clicks) to retract to clear the bag
@@ -93,6 +92,8 @@ const unsigned long KI_MAX = 10;
 const unsigned long DEADZONE = 0;
 const unsigned long MIN_POS = 0;
 const unsigned long MAX_POS = 1000;
+const unsigned long VEL_MAX = 1800;     // Maximum velocity (clicks/s) to command
+const unsigned long ACC_MAX = 200000;   // Maximum acceleration (clicks/s^2) to command
 
 // Roboclaw
 const unsigned int ROBOCLAW_ADDR = 0x80;

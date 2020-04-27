@@ -56,7 +56,10 @@ float readAc();           // Reads set AC mode trigger sensitivity from the AC p
 bool readEncoder(const RoboClaw& roboclaw, int& motorPosition);
 
 // Go to a desired position at the given speed
-void goToPosition(const RoboClaw& roboclaw, const int& pos, const int& vel);
+void goToPosition(const RoboClaw& roboclaw, const long& pos, const long& vel, const long& acc);
+
+// Go to a desired position over the specified duration
+void goToPositionByDur(const RoboClaw& roboclaw, const long& goal_pos, const long& cur_pos, const float& dur);
 
 // Read the motor current and return whether the reading is valid
 bool readMotorCurrent(const RoboClaw& roboclaw, int& motorCurrent);
