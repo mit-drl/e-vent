@@ -57,7 +57,7 @@ void goToPosition(const RoboClaw& roboclaw, const long& pos, const long& vel, co
 void goToPositionByDur(const RoboClaw& roboclaw, const long& goal_pos, const long& cur_pos, const float& dur) {
   if (dur <= 0) return; // Can't move in negative time
 
-  long dist = abs(goal_pos - cur_pos);
+  const long dist = abs(goal_pos - cur_pos);
   long vel = round(2*dist/dur); // Try bang-bang control
   long acc = round(2*vel/dur); // Constant acc in and out
   if (vel > VEL_MAX) {
