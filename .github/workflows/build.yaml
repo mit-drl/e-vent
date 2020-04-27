@@ -1,0 +1,39 @@
+# based on https://blog.arduino.cc/2019/11/14/arduino-on-github-actions/
+
+name: build
+
+on: [push, pull_request]
+
+jobs:
+  
+  build-matrix:
+
+    strategy:
+
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+
+        arduino-platform: ["arduino:avr"]
+
+        include:
+          - arduino-platform: "arduino:avr"
+            fqbn: "arduino:avr:mega:cpu=atmega2560"
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@master
+
+      - name: Setup Arduino CLI
+        uses: arduino/setup-arduino-cli@v1.0.0
+
+      - name: Install platform
+        run: |
+          arduino-cli core update-index
+          arduino-cli core install ${{ matrix.arduino-platform }}
+          arduino-cli lib install SD LiquidCrystal
+
+      - name: Compile Sketch
+        run: arduino-cli compile --fqbn ${{ matrix.fqbn }} ./e-vent.ino
+

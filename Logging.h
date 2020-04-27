@@ -1,3 +1,33 @@
+/**
+ * MIT License
+ * 
+ * Copyright (c) 2020 MIT E-Vent
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
+/**
+ * Logging.h
+ * Provides common interface for logging an arbitrary number of variables
+ * to an SD card and/or to serial, e.g. the Serial monitor.
+ */
+
 #ifndef Logging_h
 #define Logging_h
 
@@ -32,12 +62,14 @@ private:
   int float_precision_;
 
   union {
+    bool* b;
     int* i;
     float* f;
     double* d;
   } var_;
 
   enum Type {
+    BOOL,
     INT,
     FLOAT,
     DOUBLE
@@ -45,11 +77,15 @@ private:
 
   String pad(String& s);
 
+  void setPtr(const bool* var);
+
   void setPtr(const int* var);
 
   void setPtr(const float* var);
 
   void setPtr(const double* var);
+
+  String serialize(bool* var) const;
 
   String serialize(int* var) const;
 
@@ -134,13 +170,14 @@ private:
 };
 
 // Instantiation of template methods
-#define ADDVAR(vartype) \
+#define INSTANTIATE_ADDVAR(vartype) \
   template void Logger::addVar(const char var_name[], const vartype* var, \
                                const int& min_digits, const int& float_precision);
-ADDVAR(int)
-ADDVAR(float)
-ADDVAR(double)
-#undef ADDVAR
+INSTANTIATE_ADDVAR(bool)
+INSTANTIATE_ADDVAR(int)
+INSTANTIATE_ADDVAR(float)
+INSTANTIATE_ADDVAR(double)
+#undef INSTANTIATE
 
 
 }  // namespace logging
