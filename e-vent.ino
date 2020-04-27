@@ -334,11 +334,7 @@ void handleErrors() {
   }
 
   // Check if we've gotten stuck in EX_STATE (mechanical cycle didn't finsih)
-  if (state == EX_STATE && now() - tCycleTimer > tPeriod + MECHANICAL_TIMEOUT) {
-    alarm.mechanicalFailure(true);
-  } else {
-    alarm.mechanicalFailure(false);
-  }
+  alarm.mechanicalFailure(state == EX_STATE && now() - tCycleTimer > tPeriod + MECHANICAL_TIMEOUT);
 }
 
 void setupLogger() {
