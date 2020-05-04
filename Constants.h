@@ -83,7 +83,7 @@ const int LCD_D6_PIN = 5;
 const int LCD_D7_PIN = 4;
 
 // Control knob mappings
-const int BPM_MIN = 10;
+const int BPM_MIN = 6;
 const int BPM_MAX = 35;
 const int BPM_RES = 1;
 const float IE_MIN = 1;
@@ -93,8 +93,8 @@ const int VOL_MIN = 100;
 const int VOL_MAX = 800; 
 const int VOL_RES = 25; 
 const float AC_MIN = 2;
-const float AC_MAX = 5;
-const float AC_RES = 0.1;
+const float AC_MAX = 7;
+const float AC_RES = 0.5;
 const int ANALOG_PIN_MAX = 1023; // The maximum count on analog pins
 
 // Bag Calibration for AMBU Adult bag
@@ -103,7 +103,7 @@ const struct {float a, b, c;} COEFFS{1.29083271e-03, 4.72985182e-01, -7.35403067
 // Safety settings
 const float MAX_PRESSURE = 40.0;        // Trigger high pressure alarm
 const float MIN_PLATEAU_PRESSURE = 5.0; // Trigger low pressure alarm
-const float MAX_RESIST_PRESSURE = 2.0;  // Trigger high-resistance notification
+const float MAX_RESIST_PRESSURE = 10.0;  // Trigger high-resistance notification
 const float MIN_TIDAL_PRESSURE = 5.0;   // Trigger no-tidal-pressure alarm
 const float VOLUME_ERROR_THRESH = 50.0; // Trigger incomplete breath alarm
 const int MAX_MOTOR_CURRENT = 1000;     // Trigger mechanical failure alarm. Units (10mA)
@@ -122,8 +122,9 @@ const unsigned long KI_MAX = 10;
 const unsigned long DEADZONE = 0;
 const unsigned long MIN_POS = -100;
 const unsigned long MAX_POS = 700;
-const unsigned long VEL_MAX = 1800;     // Maximum velocity (clicks/s) to command
-const unsigned long ACC_MAX = 200000;   // Maximum acceleration (clicks/s^2) to command
+const unsigned long VEL_MAX = 1800; // Maximum velocity (ticks/s) to command
+                                    // 1 Rev = 5264 ticks (7pulse*4ticks*188 Gear Ratio)
+const unsigned long ACC_MAX = 200000;   // Maximum acceleration (ticks/s^2) to command
 
 // Roboclaw
 const unsigned int ROBOCLAW_ADDR = 0x80;
