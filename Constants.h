@@ -94,7 +94,7 @@ const int VOL_MAX = 800;
 const int VOL_RES = 25; 
 const float AC_MIN = 2;
 const float AC_MAX = 7;
-const float AC_RES = 1;
+const float AC_RES = 0.5;
 const int ANALOG_PIN_MAX = 1023; // The maximum count on analog pins
 
 // Bag Calibration for AMBU Adult bag
