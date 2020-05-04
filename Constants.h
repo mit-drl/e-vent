@@ -123,7 +123,7 @@ const unsigned long DEADZONE = 0;
 const unsigned long MIN_POS = -100;
 const unsigned long MAX_POS = 700;
 const unsigned long VEL_MAX = 1800; // Maximum velocity (ticks/s) to command
-                                    // 1 Rev = 5264 ticks (7pulse*4clicks*188 Gear Ratio)
+                                    // 1 Rev = 5264 ticks (7pulse*4ticks*188 Gear Ratio)
 const unsigned long ACC_MAX = 200000;   // Maximum acceleration (ticks/s^2) to command
 
 // Roboclaw
