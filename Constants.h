@@ -122,7 +122,8 @@ const unsigned long KI_MAX = 10;
 const unsigned long DEADZONE = 0;
 const unsigned long MIN_POS = -100;
 const unsigned long MAX_POS = 700;
-const unsigned long VEL_MAX = 1800;     // Maximum velocity (ticks/s) to command  (this equals approx. 20 motor RPM)
+const unsigned long VEL_MAX = 1800; // Maximum velocity (ticks/s) to command
+                                    // 1 Rev = 5264 ticks (7pulse*4clicks*188 Gear Ratio)
 const unsigned long ACC_MAX = 200000;   // Maximum acceleration (ticks/s^2) to command
 
 // Roboclaw
