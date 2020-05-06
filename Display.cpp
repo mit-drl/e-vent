@@ -121,7 +121,7 @@ void Display::writeVolume(const int& vol) {
 void Display::writeBPM(const int& bpm) {
   const int bpm_c = constrain(bpm, 0, 99);
   char buff[12];
-  sprintf(buff, "%2s=%2s      ", getLabel(BPM).c_str(), toString(VOLUME, bpm_c).c_str());
+  sprintf(buff, "%2s=%2s      ", getLabel(BPM).c_str(), toString(BPM, bpm_c).c_str());
   write(elements_[BPM].row, elements_[BPM].col, buff);
 }
 
