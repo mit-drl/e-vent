@@ -1,7 +1,11 @@
+
 /**
- * MIT License
+ * MIT Emergency Ventilator Controller
  * 
- * Copyright (c) 2020 MIT E-Vent
+ * MIT License:
+ * 
+ 
+* Copyright (c) 2020 MIT
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
