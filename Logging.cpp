@@ -1,3 +1,31 @@
+/**
+ * MIT License
+ * 
+ * Copyright (c) 2020 MIT E-Vent
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
+/**
+ * Logging.cpp
+ */
+
 #include "Logging.h"
 
 
@@ -17,6 +45,8 @@ Var::Var(const String& label, T* var, const int& min_digits, const int& float_pr
 
 String Var::serialize() const {
   switch (type_) {
+    case BOOL:
+      return serialize(var_.b);
     case INT:
       return serialize(var_.i);
     case FLOAT:
@@ -33,6 +63,11 @@ String Var::pad(String& s) {
   return s;
 }
 
+void Var::setPtr(const bool* var) {
+  var_.b = var;
+  type_ = BOOL;
+}
+
 void Var::setPtr(const int* var) {
   var_.i = var;
   type_ = INT;
@@ -46,6 +81,11 @@ void Var::setPtr(const float* var) {
 void Var::setPtr(const double* var) {
   var_.d = var;
   type_ = DOUBLE;
+}
+
+String Var::serialize(bool* var) const {
+  String string_out((int)*var);
+  return pad(string_out);
 }
 
 String Var::serialize(int* var) const {
@@ -138,7 +178,7 @@ void Logger::makeFile() {
   // Open file with number of last saved file
   int num;
   File number_file = SD.open("number.txt", FILE_READ);
-  if(number_file){
+  if (number_file) {
     num = number_file.parseInt();  
     number_file.close();
   }
@@ -146,7 +186,7 @@ void Logger::makeFile() {
   // Replace old number with new number
   SD.remove("number.txt");
   number_file = SD.open("number.txt", FILE_WRITE);
-  if(number_file){
+  if (number_file) {
     number_file.println(num + 1);
     number_file.close();
   }

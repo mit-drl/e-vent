@@ -1,3 +1,32 @@
+/**
+ * MIT License
+ * 
+ * Copyright (c) 2020 MIT E-Vent
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
+/**
+ * Display.h
+ * Handles writing of E-Vent-specific content to the LCD.
+ */
+
 #ifndef Display_h
 #define Display_h
 
@@ -69,7 +98,7 @@ public:
 
 private:
   String text_;
-  utilities::Pulse pulse_;
+  utils::Pulse pulse_;
   unsigned long reset_time_;
 };
 
@@ -96,10 +125,10 @@ enum DisplayKey {
  *              1111111111    
  *    01234567890123456789    
  *    ____________________ 
- * 0 |TV=###mL   P(cmH2O):|
- * 1 |RR=##/min    peak=##|
- * 2 |I:E=1:#.#    plat=##|
- * 3 |AC=#.#cmH20  PEEP=##|
+ * 0 |AC=#.#     Pressure:|
+ * 1 |TV=###       peak=##|
+ * 2 |RR=##        plat=##|
+ * 3 |IE=1:#.#     PEEP=##|
  *    ____________________ 
  */
 class Display {
@@ -125,10 +154,10 @@ public:
       trigger_threshold_(trigger_threshold),
       animation_(1000, 0.5) {
     elements_[HEADER]       = Element{0, 0, 20};
-    elements_[VOLUME]       = Element{0, 0, 11, "TV"};
-    elements_[BPM]          = Element{1, 0, 11, "RR"};
-    elements_[IE_RATIO]     = Element{2, 0, 11, "I:E"};
-    elements_[AC_TRIGGER]   = Element{3, 0, 11, "AC"};
+    elements_[VOLUME]       = Element{1, 0, 11, "TV"};
+    elements_[BPM]          = Element{2, 0, 11, "RR"};
+    elements_[IE_RATIO]     = Element{3, 0, 11, "IE"};
+    elements_[AC_TRIGGER]   = Element{0, 0, 11, "AC"};
     elements_[PRES_LABEL]   = Element{0, 11, 9};
     elements_[PEAK_PRES]    = Element{1, 11, 9, "peak"};
     elements_[PLATEAU_PRES] = Element{2, 11, 9, "plat"};

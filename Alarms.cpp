@@ -1,3 +1,31 @@
+/**
+ * MIT License
+ * 
+ * Copyright (c) 2020 MIT E-Vent
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
+/**
+ * Alarms.cpp
+ */
+
 #include "Alarms.h"
 
 
@@ -22,7 +50,7 @@ void Tone::play() {
     playing_ = true;
   }
   tone_step_ %= length_; // Start again if tone finished
-  if(millis() > tone_timer_){
+  if (millis() > tone_timer_) {
     tone(*pin_, notes_[tone_step_].note, notes_[tone_step_].duration);
     tone_timer_ += notes_[tone_step_].duration + notes_[tone_step_].pause;
     tone_step_ ++;
@@ -86,9 +114,13 @@ void Beeper::stop() {
 Alarm::Alarm(const String& default_text, const int& min_bad_to_trigger,
              const int& min_good_to_clear, const AlarmLevel& alarm_level):
   text_(default_text),
-  alarm_level_(alarm_level),
   min_bad_to_trigger_(min_bad_to_trigger),
-  min_good_to_clear_(min_good_to_clear) {}
+  min_good_to_clear_(min_good_to_clear),
+  alarm_level_(alarm_level) {}
+
+void Alarm::reset() {
+  *this = Alarm::Alarm(text_, min_bad_to_trigger_, min_good_to_clear_, alarm_level_);
+}
 
 void Alarm::setCondition(const bool& bad, const unsigned long& seq) {
   if (bad) {
@@ -128,11 +160,25 @@ void Alarm::setText(const String& text) {
 
 void AlarmManager::begin() {
   beeper_.begin();
+  pinMode(led_pin_, OUTPUT);
 }
 
 void AlarmManager::update() {
   displ_->setAlarmText(getText());
-  beeper_.update(getHighestLevel());
+  AlarmLevel highest_level = getHighestLevel();
+  beeper_.update(highest_level);
+  if (highest_level > NO_ALARM) {
+    digitalWrite(led_pin_, led_pulse_.read() ? HIGH : LOW);
+  }
+  else {
+    digitalWrite(led_pin_, LOW);
+  }
+}
+
+void AlarmManager::allOff() {
+  for (int i = 0; i < NUM_ALARMS; i++) {
+    alarms_[i].reset();
+  }
 }
 
 int AlarmManager::numON() const {

@@ -1,3 +1,31 @@
+/**
+ * MIT License
+ * 
+ * Copyright (c) 2020 MIT E-Vent
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
+/**
+ * Display.cpp
+ */
+
 #include "Display.h"
 
 namespace display {
@@ -16,7 +44,7 @@ void Display::update() {
 }
 
 void Display::setAlarmText(const String& alarm) {
-  if(animation_.text() != alarm) {
+  if (animation_.text() != alarm) {
     animation_.reset(alarm);
   }
 }
@@ -67,7 +95,7 @@ void Display::writeBlank(const DisplayKey& key) {
 }
 
 void Display::writeHeader() {
-  if(!alarmsON()) {
+  if (!alarmsON()) {
     writePresLabel();
   } 
   else {
@@ -82,52 +110,60 @@ void Display::writeHeader() {
 }
 
 void Display::writeVolume(const int& vol) {
-  if(animation_.empty()) {
-    char buff[12];
-    sprintf(buff, "%2s=%3smL   ", getLabel(VOLUME).c_str(), toString(VOLUME, vol).c_str());
-    write(elements_[VOLUME].row, elements_[VOLUME].col, buff);
-  }
+  const int vol_c = constrain(vol, 0, 999);
+  char buff[12];
+  sprintf(buff, "%2s=%3s     ", getLabel(VOLUME).c_str(), toString(VOLUME, vol_c).c_str());
+  write(elements_[VOLUME].row, elements_[VOLUME].col, buff);
 }
 
 void Display::writeBPM(const int& bpm) {
+  const int bpm_c = constrain(bpm, 0, 99);
   char buff[12];
-  sprintf(buff, "%2s=%2s/min  ", getLabel(BPM).c_str(), toString(VOLUME, bpm).c_str());
+  sprintf(buff, "%2s=%2s      ", getLabel(BPM).c_str(), toString(VOLUME, bpm_c).c_str());
   write(elements_[BPM].row, elements_[BPM].col, buff);
 }
 
 void Display::writeIEratio(const float& ie) {
+  const float ie_c = constrain(ie, 0.0, 9.9);
   char buff[12];
-  sprintf(buff, "%3s=1:%3s  ", getLabel(IE_RATIO).c_str(), toString(IE_RATIO, ie).c_str());
+  sprintf(buff, "%2s=1:%3s   ", getLabel(IE_RATIO).c_str(), toString(IE_RATIO, ie_c).c_str());
   write(elements_[IE_RATIO].row, elements_[IE_RATIO].col, buff);
 }
 
 void Display::writeACTrigger(const float& ac_trigger) {
-  char buff[12];
-  const String trigger_str = toString(AC_TRIGGER, ac_trigger);
-  sprintf(buff, "%2s=%3s%5s", getLabel(AC_TRIGGER).c_str(), trigger_str.c_str(),
-          trigger_str == "OFF" ? "     " : "cmH2O");
-  write(elements_[AC_TRIGGER].row, elements_[AC_TRIGGER].col, buff);
+  if (animation_.empty()) {
+    const float ac_trigger_c = constrain(ac_trigger, 0.0, 9.9);
+    char buff[12];
+    const String trigger_str = toString(AC_TRIGGER, ac_trigger_c);
+    sprintf(buff, "%2s=%3s     ", getLabel(AC_TRIGGER).c_str(), trigger_str.c_str());
+    write(elements_[AC_TRIGGER].row, elements_[AC_TRIGGER].col, buff);
+  }
+
 }
 
 void Display::writePresLabel() {
-  write(elements_[PRES_LABEL].row, elements_[PRES_LABEL].col, "P(cmH2O):");
+  write(elements_[PRES_LABEL].row, elements_[PRES_LABEL].col, "Pressure:");
 }
 
 void Display::writePeakP(const int& peak) {
+  const int peak_c = constrain(peak, -9, 99);
   char buff[10];
-  sprintf(buff, "  %4s=%2s", getLabel(PEAK_PRES).c_str(), toString(PEAK_PRES, peak).c_str());
+  sprintf(buff, "  %4s=%2s", getLabel(PEAK_PRES).c_str(), toString(PEAK_PRES, peak_c).c_str());
   write(elements_[PEAK_PRES].row, elements_[PEAK_PRES].col, buff);
 }
 
 void Display::writePlateauP(const int& plat) {
+  const int plat_c = constrain(plat, -9, 99);
   char buff[10];
-  sprintf(buff, "  %4s=%2s", getLabel(PLATEAU_PRES).c_str(), toString(PLATEAU_PRES, plat).c_str());
+  sprintf(buff, "  %4s=%2s", getLabel(PLATEAU_PRES).c_str(),
+          toString(PLATEAU_PRES, plat_c).c_str());
   write(elements_[PLATEAU_PRES].row, elements_[PLATEAU_PRES].col, buff);
 }
 
 void Display::writePEEP(const int& peep) {
+  const int peep_c = constrain(peep, -9, 99);
   char buff[10];
-  sprintf(buff, "  %4s=%2s", getLabel(PEEP_PRES).c_str(), toString(PEEP_PRES, peep).c_str());
+  sprintf(buff, "  %4s=%2s", getLabel(PEEP_PRES).c_str(), toString(PEEP_PRES, peep_c).c_str());
   write(elements_[PEEP_PRES].row, elements_[PEEP_PRES].col, buff);
 }
 
@@ -141,7 +177,7 @@ String Display::toString(const DisplayKey& key, const T& value) const {
     case IE_RATIO:
       return String(value, 1);
     case AC_TRIGGER:
-      return (value > trigger_threshold_) ? String(value, 1) : "OFF";
+      return (value > trigger_threshold_ - 1e-2) ? String(value, 1) : "OFF";
     case PEAK_PRES:
       return String(value);
     case PLATEAU_PRES:
