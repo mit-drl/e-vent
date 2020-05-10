@@ -256,7 +256,7 @@ void loop() {
 
       // Check if patient triggers inhale
       patientTriggered = pressureReader.get() < (pressureReader.peep() - knobs.ac()) 
-          && knobs.ac() > AC_MIN;
+          && (knobs.ac() > AC_MIN - 1e-2f);
 
       if (patientTriggered || now() - tCycleTimer > tPeriod) {
         if (!patientTriggered) pressureReader.set_peep();  // Set peep again if time triggered
