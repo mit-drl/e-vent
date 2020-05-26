@@ -202,7 +202,7 @@ private:
   template void Display::write(const DisplayKey& key, const type& value);
 INSTANTIATE_WRITE(int)
 INSTANTIATE_WRITE(float)
-#undef INSTANTIATE
+#undef INSTANTIATE_WRITE
 
 
 }  // namespace display
