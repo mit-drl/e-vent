@@ -1,7 +1,9 @@
 /**
- * MIT License
+ * MIT Emergency Ventilator Controller
  * 
- * Copyright (c) 2020 MIT E-Vent
+ * MIT License:
+ * 
+ * Copyright (c) 2020 MIT
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -119,7 +121,7 @@ void Display::writeVolume(const int& vol) {
 void Display::writeBPM(const int& bpm) {
   const int bpm_c = constrain(bpm, 0, 99);
   char buff[12];
-  sprintf(buff, "%2s=%2s      ", getLabel(BPM).c_str(), toString(VOLUME, bpm_c).c_str());
+  sprintf(buff, "%2s=%2s      ", getLabel(BPM).c_str(), toString(BPM, bpm_c).c_str());
   write(elements_[BPM].row, elements_[BPM].col, buff);
 }
 
