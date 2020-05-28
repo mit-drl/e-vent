@@ -1,7 +1,9 @@
 /**
- * MIT License
+ * MIT Emergency Ventilator Controller
  * 
- * Copyright (c) 2020 MIT E-Vent
+ * MIT License:
+ * 
+ * Copyright (c) 2020 MIT
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -257,7 +259,7 @@ void loop() {
 
       // Check if patient triggers inhale
       patientTriggered = pressureReader.get() < (pressureReader.peep() - knobs.ac()) 
-          && (knobs.ac() > AC_MIN - 1e-2f);
+          && (knobs.ac() > AC_MIN - 1e-2);
 
       if (patientTriggered || now() - tCycleTimer > tPeriod) {
         if (!patientTriggered) pressureReader.set_peep();  // Set peep again if time triggered
