@@ -232,7 +232,7 @@ void loop() {
       if (enteringState) {
         enteringState = false;
         goToPositionByDur(roboclaw, BAG_CLEAR_POS, motorPosition, tEx - (now() - tCycleTimer));
-        displ.hideIcon(3,11);
+        displ.hideIcon(0,19);
       }
 
       if (abs(motorPosition - BAG_CLEAR_POS) < BAG_CLEAR_TOL) {
@@ -271,9 +271,9 @@ void loop() {
 
         // An indicator that shows patient-triggered or time-triggered cycles
         if(patientTriggered) {
-          displ.showPatientIcon(3,11);
+          displ.showPatientIcon(0,19);
         } else {
-          displ.showTimeIcon(3,11);
+          displ.showTimeIcon(0,19);
         }
       }
       break;

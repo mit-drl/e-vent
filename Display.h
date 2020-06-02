@@ -37,45 +37,12 @@
 
 #include "Utilities.h"
 
+#include "Indicators.h"
 
 namespace display {
 
 static const int kWidth = 20;  // Width of the display
 static const int kHeight = 4;  // Height of the display
-
-// Define indicator icons
-static const byte patientIcon[8] = {
-  	B01110,
-  	B01110,
-  	B00100,
-  	B11111,
-  	B11111,
-  	B11111,
-  	B01010,
-    B01010,
-	};
-
-static const byte timeIcon[8] = {
-    B00000,
-  	B11111,
-  	B11111,
-  	B01110,
-  	B00100,
-  	B01110,
-    B11111,
-    B11111,
-	};
-
-static const byte noIcon[8] = {
-    B00000,
-  	B00000,
-  	B00000,
-  	B00000,
-  	B00000,
-  	B00000,
-    B00000,
-    B00000,
-	};
 
 /**
  * TextAnimation
@@ -156,18 +123,20 @@ public:
       trigger_threshold_(trigger_threshold),
       animation_(1000, 0.5) {
     elements_[HEADER]       = Element{0, 0, 20};
-    elements_[VOLUME]       = Element{1, 0, 11, "TV"};
-    elements_[BPM]          = Element{2, 0, 11, "RR"};
-    elements_[IE_RATIO]     = Element{3, 0, 11, "IE"};
-    elements_[AC_TRIGGER]   = Element{0, 0, 11, "AC"};
-    elements_[PRES_LABEL]   = Element{0, 11, 9};
-    elements_[PEAK_PRES]    = Element{1, 11, 9, "peak"};
-    elements_[PLATEAU_PRES] = Element{2, 11, 9, "plat"};
-    elements_[PEEP_PRES]    = Element{3, 11, 9, "PEEP"};
+    elements_[VOLUME]       = Element{1, 0, 4, "TV"};
+    elements_[BPM]          = Element{1, 4, 3, "RR"};
+    elements_[IE_RATIO]     = Element{1, 7, 5, "IE"};
+    elements_[AC_TRIGGER]   = Element{1, 12, 5, "Ptr"};
+    elements_[PEAK_PRES]    = Element{1, 17, 3, "peak"};
+    elements_[PLATEAU_PRES] = Element{2, 17, 3, "plat"};
+    elements_[PEEP_PRES]    = Element{3, 17, 3, "PEEP"};
   }
 
   // Setup during arduino setup()
   void begin();
+
+  // Add Custom Characters to LCD Display during arduino setup()
+  void addCustomCharacters();
 
   // Update during arduino loop()
   void update();
@@ -197,9 +166,6 @@ public:
   // AC trigger pressure
   void writeACTrigger(const float& ac_trigger);
 
-  // Label for pressure units
-  void writePresLabel();
-
   // Peak pressure in cm of H2O
   void writePeakP(const int& peak);
 
@@ -217,6 +183,25 @@ public:
 
   // Hides icon
   void hideIcon(const int& row, const int& col);
+
+  // This displays the peek icon
+  void showPeekIcon(const int& row, const int& col);
+
+  // This displays a plateau icon
+  void showPlateauIcon(const int& row, const int& col);
+
+  // This displays a PEEP icon
+  void showPEEPIcon(const int& row, const int& col);
+
+  // This displays a I: icon
+  void showIEiIcon(const int& row, const int& col);
+
+  // This displays 1: icon
+  void showIE1Icon(const int& row, const int& col);
+
+  // This displays a bell icon
+  void showBellIcon(const int& row, const int& col);
+
   // Convert value e.g. RR from numeric to string for displaying.
   template <typename T>
   String toString(const DisplayKey& key, const T& value) const;
