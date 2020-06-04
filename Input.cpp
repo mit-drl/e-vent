@@ -109,10 +109,9 @@ void SafeKnob<T>::update() {
 template <typename T>
 String SafeKnob<T>::getConfirmPrompt() const {
   char buff[display::kWidth + 1];
-  sprintf(buff, "Set %s(%s)->%s?", this->getLabel().c_str(), 
-          this->toString(this->set_value_).c_str(), this->toString(unconfirmed_value_).c_str());
+  sprintf(buff, "%s->%s?", this->getLabel().c_str(), this->toString(unconfirmed_value_).c_str());
   String s(buff);
-  while (s.length() < display::kWidth) s += " ";
+  //while (s.length() < display::kWidth) s += " ";
   return s;
 }
 

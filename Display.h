@@ -43,6 +43,8 @@ namespace display {
 
 static const int kWidth = 20;  // Width of the display
 static const int kHeight = 4;  // Height of the display
+static const int kHeaderLength = 19;  // Desired header length
+static const int kFooterLength = 10;  // Desired footer length
 
 /**
  * TextAnimation
@@ -82,6 +84,8 @@ enum DisplayKey {
   PEAK_PRES,
   PLATEAU_PRES,
   PEEP_PRES,
+  SNOOZE,
+  FOOTER,
   NUM_KEYS
 };
 
@@ -121,8 +125,10 @@ public:
   Display(LiquidCrystal* lcd, const float& trigger_threshold):
       lcd_(lcd),
       trigger_threshold_(trigger_threshold),
-      animation_(1000, 0.5) {
-    elements_[HEADER]       = Element{0, 0, 20};
+      animation_(1000, 0.5),
+      animationfooter_(1000, 0.5),
+      snoozecountdown_(0) {
+    elements_[HEADER]       = Element{0, 0, kHeaderLength};
     elements_[VOLUME]       = Element{1, 0, 4, "TV"};
     elements_[BPM]          = Element{1, 4, 3, "RR"};
     elements_[IE_RATIO]     = Element{1, 7, 5, "IE"};
@@ -130,6 +136,8 @@ public:
     elements_[PEAK_PRES]    = Element{1, 17, 3, "peak"};
     elements_[PLATEAU_PRES] = Element{2, 17, 3, "plat"};
     elements_[PEEP_PRES]    = Element{3, 17, 3, "PEEP"};
+    elements_[SNOOZE]       = Element{3, 1, 3};
+    elements_[FOOTER]       = Element{3, 7, kFooterLength};
   }
 
   // Setup during arduino setup()
@@ -141,8 +149,8 @@ public:
   // Update during arduino loop()
   void update();
   
-  // Write arbitrary alarm in the header
-  void setAlarmText(const String& alarm);
+  // Write arbitrary alarm in the header and footer
+  void setAlarmText(const String& alarmH, const String& alarmF, const int& countdown);
 
   // Write value corresponding to key'ed element
   template <typename T>
@@ -153,6 +161,12 @@ public:
 
   // Write current header
   void writeHeader();
+
+  // Write current footer
+  void writeFooter();
+
+  // Display snooze text
+  void writeSnoozeTime();
 
   // Write volume in mL
   void writeVolume(const int& vol);
@@ -213,13 +227,15 @@ private:
   LiquidCrystal* lcd_;
   const float trigger_threshold_;
   TextAnimation animation_;
+  TextAnimation animationfooter_;
+  unsigned long snoozecountdown_;
   Element elements_[NUM_KEYS];
 
   // Write printable starting at (row, col)
   template <typename T>
   void write(const int& row, const int& col, const T& printable);
 
-  inline bool alarmsON() const { return !animation_.empty(); }
+  inline bool alarmsON() const { return (!animation_.empty() || !animationfooter_.empty()); }
 };
 
 

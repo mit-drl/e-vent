@@ -105,8 +105,8 @@ static const byte ie1Icon[8] = {
     B00000};
 
 static const byte bellIcon[8] = {
+    B00000,
     B00100,
-    B01110,
     B01110,
     B01110,
     B01110,

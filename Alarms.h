@@ -140,12 +140,16 @@ public:
   // Update during arduino loop()
   void update(const AlarmLevel& alarm_level);
 
+  // Get snooze time remaining
+  int getRemainingSnoozeTime();
+
 private:
   const int beeper_pin_;
   buttons::DebouncedButton snooze_button_;
   Tone tones_[NUM_LEVELS];
 
   unsigned long snooze_time_ = 0;
+  unsigned long timeRemaining_ = 0;
   bool snoozed_ = false;
 
   bool snoozeButtonPressed() const;
@@ -155,6 +159,7 @@ private:
   void play(const AlarmLevel& alarm_level);
 
   void stop();
+
 };
 
 
@@ -177,7 +182,7 @@ public:
   // for at least `min_good_to_clear_` consecutive calls with different `seq`.   
   void setCondition(const bool& bad, const unsigned long& seq);
 
-  // Set the alarm text (trim or pad to display width)
+  // Set the alarm text (trim or pad to footer width)
   void setText(const String& text);
 
   // Check if this alarm is on
@@ -235,15 +240,15 @@ public:
       led_pin_(led_pin),
       led_pulse_(500, 0.5),
       cycle_count_(cycle_count) {
-    alarms_[HIGH_PRESSU] = Alarm("   HIGH PRESSURE    ", 1, 2, EMERGENCY);
+    alarms_[HIGH_PRESSU] = Alarm("HIGH PRESSURE       ", 1, 2, EMERGENCY);
     alarms_[LOW_PRESSUR] = Alarm("LOW PRES DISCONNECT?", 1, 1, EMERGENCY);
-    alarms_[BAD_PLATEAU] = Alarm("  HIGH RESIST PRES  ", 1, 1, NOTIFY);
-    alarms_[UNMET_VOLUM] = Alarm(" UNMET TIDAL VOLUME ", 1, 1, EMERGENCY);
-    alarms_[NO_TIDAL_PR] = Alarm(" NO TIDAL PRESSURE  ", 2, 1, EMERGENCY);
-    alarms_[OVER_CURREN] = Alarm(" OVER CURRENT FAULT ", 1, 2, EMERGENCY);
-    alarms_[MECH_FAILUR] = Alarm(" MECHANICAL FAILURE ", 1, 1, EMERGENCY);
-    alarms_[NOT_CONFIRM] = Alarm("      CONFIRM?      ", 1, 1, NOTIFY);
-    alarms_[TURNING_OFF] = Alarm("    TURNING OFF     ", 1, 1, OFF_LEVEL);
+    alarms_[BAD_PLATEAU] = Alarm("HIGH RESIST PRES    ", 1, 1, NOTIFY);
+    alarms_[UNMET_VOLUM] = Alarm("UNMET TIDAL VOLUME  ", 1, 1, EMERGENCY);
+    alarms_[NO_TIDAL_PR] = Alarm("NO TIDAL PRESSURE   ", 2, 1, EMERGENCY);
+    alarms_[OVER_CURREN] = Alarm("OVER CURRENT FAULT  ", 1, 2, EMERGENCY);
+    alarms_[MECH_FAILUR] = Alarm("MECHANICAL FAILURE  ", 1, 1, EMERGENCY);
+    alarms_[NOT_CONFIRM] = Alarm("CONFIRM?            ", 1, 1, NOTIFY);
+    alarms_[TURNING_OFF] = Alarm("TURNING OFF         ", 1, 1, OFF_LEVEL);
   }
 
   // Setup during arduino setup()
@@ -324,8 +329,11 @@ private:
   // Get number of alarms that are ON
   int numON() const;
 
-  // Get text to display
-  String getText() const;
+  // Get header text to display
+  String getHeaderText() const;
+
+  // Get footer text to display
+  String getFooterText() const;
 
   // Get highest priority level of the alarms that are ON
   AlarmLevel getHighestLevel() const;

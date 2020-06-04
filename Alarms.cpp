@@ -71,12 +71,15 @@ void Beeper::update(const AlarmLevel& alarm_level) {
   if (snoozeButtonPressed()) {
     toggleSnooze();
   }
+  
   // check if snooze time is up
   if (snoozed_ && millis() - snooze_time_ > kSnoozeTime) {
     snoozed_ = false;
   }
+
   if (snoozed_) {
     stop();
+    timeRemaining_ = (kSnoozeTime - (millis() - snooze_time_)) / 1000UL;
   } else {
     play(alarm_level);
   }
@@ -91,7 +94,7 @@ void Beeper::toggleSnooze() {
     snoozed_ = false;
   } else {
     snoozed_ = true;
-    snooze_time_ = millis();
+    snooze_time_ = millis();    
   }
 }
 
@@ -110,12 +113,15 @@ void Beeper::stop() {
   }
 }
 
+int Beeper::getRemainingSnoozeTime() {
+  return timeRemaining_;
+}
 
 /// Alarm ///
 
 Alarm::Alarm(const String& default_text, const int& min_bad_to_trigger,
              const int& min_good_to_clear, const AlarmLevel& alarm_level):
-  text_(default_text),
+  text_(default_text.substring(0, display::kHeaderLength-1)),
   min_bad_to_trigger_(min_bad_to_trigger),
   min_good_to_clear_(min_good_to_clear),
   alarm_level_(alarm_level) {}
@@ -143,15 +149,15 @@ void Alarm::setCondition(const bool& bad, const unsigned long& seq) {
 }
 
 void Alarm::setText(const String& text) {
-  if (text.length() == display::kWidth) {
+  if (text.length() == display::kFooterLength) {
     text_ = text;
   }
-  else if (text.length() > display::kWidth) {
-    text_ = text.substring(0, display::kWidth);
+  else if (text.length() > display::kFooterLength) {
+    text_ = text.substring(0, display::kFooterLength);
   }
   else {
     text_ = text;
-    while (text_.length() < display::kWidth) {
+    while (text_.length() < display::kFooterLength) {
       text_ += " ";
     }
   }
@@ -166,7 +172,7 @@ void AlarmManager::begin() {
 }
 
 void AlarmManager::update() {
-  displ_->setAlarmText(getText());
+  displ_->setAlarmText(getHeaderText(), getFooterText(), beeper_.getRemainingSnoozeTime());
   AlarmLevel highest_level = getHighestLevel();
   beeper_.update(highest_level);
   if (highest_level > NO_ALARM) {
@@ -191,7 +197,7 @@ int AlarmManager::numON() const {
   return num;
 }
 
-String AlarmManager::getText() const {
+String AlarmManager::getHeaderText() const {
   const int num_on = numON();
   String text = "";
   if (num_on > 0) {
@@ -204,7 +210,17 @@ String AlarmManager::getText() const {
         if (count_on++ == index) break;
       }
     }
-    text = alarms_[i].text();
+    if (i!=NOT_CONFIRM) {
+      text = alarms_[i].text();
+    }    
+  }
+  return text;
+}
+
+String AlarmManager::getFooterText() const {
+  String text = "";
+  if (alarms_[NOT_CONFIRM].isON()) {
+    text = alarms_[NOT_CONFIRM].text();
   }
   return text;
 }

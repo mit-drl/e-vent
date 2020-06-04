@@ -55,11 +55,20 @@ void Display::addCustomCharacters() {
 
 void Display::update() {
   writeHeader();
+  writeFooter();
 }
 
-void Display::setAlarmText(const String& alarm) {
-  if (animation_.text() != alarm) {
-    animation_.reset(alarm);
+void Display::setAlarmText(const String& alarmH, const String& alarmF, const int& countdown) {
+  if (animation_.text() != alarmH) {
+    animation_.reset(alarmH);
+  }
+  if (animationfooter_.text() != alarmF) {
+    animationfooter_.reset(alarmF);
+  }
+  if (alarmF.length() > 0) {
+    snoozecountdown_ = countdown;
+  } else {
+    snoozecountdown_ = 0UL;
   }
 }
 
@@ -107,17 +116,46 @@ void Display::writeBlank(const DisplayKey& key) {
 
 void Display::writeHeader() {
   if (!alarmsON()) {
-    //writePresLabel();
+    write(elements_[HEADER].row, elements_[HEADER].col, "Running...         ");
   } 
   else {
     const String line = animation_.getLine();
     if (line.length() > 0) {
-      write(elements_[HEADER].row, elements_[HEADER].col, animation_.getLine());
+      write(elements_[HEADER].row, elements_[HEADER].col, line);
     }
     else {
       writeBlank(HEADER);
     }
   }
+}
+
+void Display::writeFooter() {
+  if (!alarmsON()) {
+    writeBlank(FOOTER);
+    hideIcon(3,0);
+  } 
+  else {
+    showBellIcon(3, 0);    
+    const String line = animationfooter_.getLine();
+    if (line.length() > 0) {
+      write(elements_[FOOTER].row, elements_[FOOTER].col, line);
+    }
+    else {
+      writeBlank(FOOTER);
+    }
+  }
+  writeSnoozeTime();
+}
+
+void Display::writeSnoozeTime() {
+  char buff[7];
+  if (snoozecountdown_>0){
+    //sprintf(buff, "%3s", toString(SNOOZE, snoozecountdown_).c_str());
+    sprintf(buff, "%3lu%3s", snoozecountdown_, "   ");
+  } else {
+    sprintf(buff, "%6s", "      ");
+  }
+  write(elements_[SNOOZE].row, elements_[SNOOZE].col, buff);
 }
 
 void Display::writeVolume(const int& vol) {
@@ -199,6 +237,8 @@ String Display::toString(const DisplayKey& key, const T& value) const {
     case PLATEAU_PRES:
       return String(value);
     case PEEP_PRES:
+      return String(value);
+    case SNOOZE:
       return String(value);
     default:
       // Not meant to be used for other keys
