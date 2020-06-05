@@ -227,7 +227,10 @@ class AlarmManager {
     NO_TIDAL_PR,
     OVER_CURREN,
     MECH_FAILUR,
-    NOT_CONFIRM,
+    NOT_CONFIRM_TV,
+    NOT_CONFIRM_RR,
+    NOT_CONFIRM_IE,
+    NOT_CONFIRM_AC,
     TURNING_OFF,
     NUM_ALARMS 
   };
@@ -247,7 +250,10 @@ public:
     alarms_[NO_TIDAL_PR] = Alarm("NO TIDAL PRESSURE   ", 2, 1, EMERGENCY);
     alarms_[OVER_CURREN] = Alarm("OVER CURRENT FAULT  ", 1, 2, EMERGENCY);
     alarms_[MECH_FAILUR] = Alarm("MECHANICAL FAILURE  ", 1, 1, EMERGENCY);
-    alarms_[NOT_CONFIRM] = Alarm("CONFIRM?            ", 1, 1, NOTIFY);
+    alarms_[NOT_CONFIRM_TV] = Alarm("CONFIRM?            ", 1, 1, NOTIFY);
+    alarms_[NOT_CONFIRM_RR] = Alarm("CONFIRM?            ", 1, 1, NOTIFY);
+    alarms_[NOT_CONFIRM_IE] = Alarm("CONFIRM?            ", 1, 1, NOTIFY);
+    alarms_[NOT_CONFIRM_AC] = Alarm("CONFIRM?            ", 1, 1, NOTIFY);
     alarms_[TURNING_OFF] = Alarm("TURNING OFF         ", 1, 1, OFF_LEVEL);
   }
 
@@ -296,8 +302,13 @@ public:
   }
 
   // Setting not confirmed
-  inline void unconfirmedChange(const bool& value, const String& message = "") {
-    if (value) {
+  inline void unconfirmedChange(const bool& value, const String& message = "", const display::DisplayKey& key = 0) {
+    Indices NOT_CONFIRM;
+    if (key == display::DisplayKey::VOLUME)      { NOT_CONFIRM = NOT_CONFIRM_TV;}
+    if (key == display::DisplayKey::BPM)         { NOT_CONFIRM = NOT_CONFIRM_RR;}
+    if (key == display::DisplayKey::IE_RATIO)    { NOT_CONFIRM = NOT_CONFIRM_IE;}
+    if (key == display::DisplayKey::AC_TRIGGER)  { NOT_CONFIRM = NOT_CONFIRM_AC;}
+    if (value) {      
       alarms_[NOT_CONFIRM].setText(message);
     }
     alarms_[NOT_CONFIRM].setCondition(value, *cycle_count_);
@@ -315,7 +326,7 @@ public:
   inline const bool& getNoTidalPres()       { return alarms_[NO_TIDAL_PR].isON(); }
   inline const bool& getOverCurrent()       { return alarms_[OVER_CURREN].isON(); }
   inline const bool& getMechanicalFailure() { return alarms_[MECH_FAILUR].isON(); }
-  inline const bool& getUnconfirmedChange() { return alarms_[NOT_CONFIRM].isON(); }
+  //inline const bool& getUnconfirmedChange() { return alarms_[NOT_CONFIRM].isON(); }
   inline const bool& getTurningOFF()        { return alarms_[TURNING_OFF].isON(); }
 
 private:
@@ -324,10 +335,18 @@ private:
   int led_pin_;
   utils::Pulse led_pulse_;
   Alarm alarms_[NUM_ALARMS];
+  Alarm alarmsHeader_[NUM_ALARMS-4];
+  Alarm alarmsFooter_[4];
   unsigned long const* cycle_count_;
 
   // Get number of alarms that are ON
   int numON() const;
+
+  // Get number of knob confirm alarms that are ON
+  int numON_Confirm() const;
+
+  // Get number of nonconfirm alarms that are ON
+  int numON_NonConfirm() const;
 
   // Get header text to display
   String getHeaderText() const;

@@ -87,7 +87,7 @@ void SafeKnob<T>::update() {
     this->display(read());
     if (!confirmed_) {
       confirmed_ = true;
-      alarms_->unconfirmedChange(false);
+      alarms_->unconfirmedChange(false,getConfirmPrompt(),this->disp_key_);
     }
   }
   else if (confirm_button_.is_LOW()) {
@@ -101,7 +101,7 @@ void SafeKnob<T>::update() {
     }
     this->display(unconfirmed_value_, !pulse_.read());
     if (time_now - time_changed_ > kAlarmTime) {
-      alarms_->unconfirmedChange(true, getConfirmPrompt());
+      alarms_->unconfirmedChange(true, getConfirmPrompt(),this->disp_key_);
     }
   }
 }
@@ -111,7 +111,6 @@ String SafeKnob<T>::getConfirmPrompt() const {
   char buff[display::kWidth + 1];
   sprintf(buff, "%s->%s?", this->getLabel().c_str(), this->toString(unconfirmed_value_).c_str());
   String s(buff);
-  //while (s.length() < display::kWidth) s += " ";
   return s;
 }
 

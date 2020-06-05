@@ -204,30 +204,66 @@ int AlarmManager::numON() const {
   return num;
 }
 
+int AlarmManager::numON_Confirm() const {
+  int num = 0;
+  bool aConfirmAlarm;
+  for (int i = 0; i < NUM_ALARMS; i++) {
+    aConfirmAlarm = (i==NOT_CONFIRM_TV || i==NOT_CONFIRM_RR ||
+                     i==NOT_CONFIRM_IE || i==NOT_CONFIRM_AC);
+    num += (int)alarms_[i].isON();
+  }
+  return num;
+}
+
+int AlarmManager::numON_NonConfirm() const {
+  int num = 0;
+  bool aConfirmAlarm;
+  for (int i = 0; i < NUM_ALARMS; i++) {
+    aConfirmAlarm = (i==NOT_CONFIRM_TV || i==NOT_CONFIRM_RR ||
+                     i==NOT_CONFIRM_IE || i==NOT_CONFIRM_AC);
+    num += (int)alarms_[i].isON();
+  }
+  return num;
+}
+
 String AlarmManager::getHeaderText() const {
-  const int num_on = numON();
+  const int num_on = numON_NonConfirm();
   String text = "";
   if (num_on > 0) {
     // determine which of the on alarms to display
     const int index = millis() % (num_on * kDisplayTime) / kDisplayTime;
     int count_on = 0;
     int i;
+    bool aConfirmAlarm;
     for (i = 0; i < NUM_ALARMS; i++) {
-      if (alarms_[i].isON()) {
+      aConfirmAlarm = (i==NOT_CONFIRM_TV || i==NOT_CONFIRM_RR ||
+                       i==NOT_CONFIRM_IE || i==NOT_CONFIRM_AC);
+      if (!aConfirmAlarm && alarms_[i].isON()) {
         if (count_on++ == index) break;
       }
     }
-    if (i!=NOT_CONFIRM) {
-      text = alarms_[i].text();
-    }    
+    text = alarms_[i].text();
   }
   return text;
 }
 
 String AlarmManager::getFooterText() const {
+  const int num_on = numON_Confirm();
   String text = "";
-  if (alarms_[NOT_CONFIRM].isON()) {
-    text = alarms_[NOT_CONFIRM].text();
+  if (num_on > 0) {
+    // determine which of the on alarms to display
+    const int index = millis() % (num_on * kDisplayTime) / kDisplayTime;
+    int count_on = 0;
+    int i;
+    bool aConfirmAlarm;
+    for (i = 0; i < NUM_ALARMS; i++) {
+      aConfirmAlarm = (i==NOT_CONFIRM_TV || i==NOT_CONFIRM_RR ||
+                       i==NOT_CONFIRM_IE || i==NOT_CONFIRM_AC);
+      if (aConfirmAlarm && alarms_[i].isON()) {
+        if (count_on++ == index) break;
+      }
+    }
+    text = alarms_[i].text();
   }
   return text;
 }
