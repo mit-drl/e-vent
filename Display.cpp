@@ -151,7 +151,7 @@ void Display::writeSnoozeTime() {
   char buff[7];
   if (snoozecountdown_>0){
     //sprintf(buff, "%3s", toString(SNOOZE, snoozecountdown_).c_str());
-    sprintf(buff, "%3lu%3s", snoozecountdown_, "   ");
+    sprintf(buff, "%3lu%   ", snoozecountdown_);
   } else {
     sprintf(buff, "%6s", "      ");
   }
@@ -163,7 +163,7 @@ void Display::writeVolume(const int& vol) {
   char buff[5];
   sprintf(buff, "%2s  ", getLabel(VOLUME).c_str());
   write(elements_[VOLUME].row, elements_[VOLUME].col, buff);
-  sprintf(buff, "%3s  ", toString(VOLUME, vol_c).c_str());
+  sprintf(buff, "%3s ", toString(VOLUME, vol_c).c_str());
   write(elements_[VOLUME].row+1, elements_[VOLUME].col, buff);
 }
 
