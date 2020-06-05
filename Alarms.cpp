@@ -83,6 +83,12 @@ void Beeper::update(const AlarmLevel& alarm_level) {
   } else {
     play(alarm_level);
   }
+
+  // Reset snooze timer when alarms are gone
+  if (alarm_level == NO_ALARM) {
+    timeRemaining_ = 0; // Hides timer when snoozed with no alarms
+    snoozed_ = false;   // Ensures beeping as soon a new alarm emerges
+  }
 }
 
 bool Beeper::snoozeButtonPressed() const {
@@ -92,6 +98,7 @@ bool Beeper::snoozeButtonPressed() const {
 void Beeper::toggleSnooze() {
   if (snoozed_) {
     snoozed_ = false;
+    timeRemaining_ = 0; // Hides timer count when beeping
   } else {
     snoozed_ = true;
     snooze_time_ = millis();    
@@ -113,7 +120,7 @@ void Beeper::stop() {
   }
 }
 
-int Beeper::getRemainingSnoozeTime() {
+unsigned long Beeper::getRemainingSnoozeTime() {
   return timeRemaining_;
 }
 

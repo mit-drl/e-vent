@@ -141,7 +141,7 @@ public:
   void update(const AlarmLevel& alarm_level);
 
   // Get snooze time remaining
-  int getRemainingSnoozeTime();
+  unsigned long getRemainingSnoozeTime();
 
 private:
   const int beeper_pin_;

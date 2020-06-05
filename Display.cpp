@@ -65,11 +65,7 @@ void Display::setAlarmText(const String& alarmH, const String& alarmF, const int
   if (animationfooter_.text() != alarmF) {
     animationfooter_.reset(alarmF);
   }
-  if (alarmH.length() > 0 || alarmF.length() > 0) {
-    snoozecountdown_ = countdown;
-  } else {
-    snoozecountdown_ = 0UL;
-  }
+  snoozecountdown_ = countdown;  
 }
 
 template <typename T>
