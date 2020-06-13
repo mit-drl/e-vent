@@ -247,7 +247,7 @@ void loop() {
       
       if (now() - tCycleTimer > tEx + MIN_PEEP_PAUSE) {
         pressureReader.set_peep();
-        
+        displ.writePEEP(round(pressureReader.peep()));
         setState(HOLD_EX_STATE);
       }
       break;
