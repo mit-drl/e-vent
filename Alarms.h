@@ -235,6 +235,9 @@ class AlarmManager {
     NUM_ALARMS 
   };
 
+  // Number of NOT_CONFIRM_XX alarms
+  static const int numConfirmKnob = 4;
+
 public:
   AlarmManager(const int& beeper_pin, const int& snooze_pin, const int& led_pin,
                Display* displ, unsigned long const* cycle_count):
@@ -335,8 +338,8 @@ private:
   int led_pin_;
   utils::Pulse led_pulse_;
   Alarm alarms_[NUM_ALARMS];
-  Alarm alarmsHeader_[NUM_ALARMS-4];
-  Alarm alarmsFooter_[4];
+  Alarm alarmsHeader_[NUM_ALARMS-numConfirmKnob];
+  Alarm alarmsFooter_[numConfirmKnob];
   unsigned long const* cycle_count_;
 
   // Get number of alarms that are ON
@@ -348,11 +351,11 @@ private:
   // Get number of nonconfirm alarms that are ON
   int numON_NonConfirm() const;
 
-  // Get header text to display
-  String getHeaderText() const;
+  // Get general alarm text to display
+  String getGeneralAlarmText() const;
 
-  // Get footer text to display
-  String getFooterText() const;
+  // Get unconfirmed knob alarm text to display
+  String getUnconfirmedKnobText() const;
 
   // Get highest priority level of the alarms that are ON
   AlarmLevel getHighestLevel() const;

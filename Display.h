@@ -76,6 +76,7 @@ private:
 
 enum DisplayKey {
   HEADER,
+  BREATHING,
   VOLUME,
   BPM,
   IE_RATIO,
@@ -85,6 +86,7 @@ enum DisplayKey {
   PLATEAU_PRES,
   PEEP_PRES,
   SNOOZE,
+  BELL,
   FOOTER,
   NUM_KEYS
 };
@@ -129,6 +131,7 @@ public:
       animationfooter_(1000, 0.5),
       snoozecountdown_(0) {
     elements_[HEADER]       = Element{0, 0, kHeaderLength};
+    elements_[BREATHING]    = Element{0, 19, 1};
     elements_[VOLUME]       = Element{1, 0, 4, "TV"};
     elements_[BPM]          = Element{1, 4, 3, "RR"};
     elements_[IE_RATIO]     = Element{1, 7, 5, "IE"};
@@ -137,6 +140,7 @@ public:
     elements_[PLATEAU_PRES] = Element{2, 17, 3, "plat"};
     elements_[PEEP_PRES]    = Element{3, 17, 3, "PEEP"};
     elements_[SNOOZE]       = Element{3, 1, 3};
+    elements_[BELL]         = Element{3, 0, 1};
     elements_[FOOTER]       = Element{3, 7, kFooterLength};
   }
 
@@ -149,8 +153,14 @@ public:
   // Update during arduino loop()
   void update();
   
-  // Write arbitrary alarm in the header and footer
-  void setAlarmText(const String& alarmH, const String& alarmF, const int& countdown);
+  // Set arbitrary alarm text
+  void setAlarmText(const String& alarm);
+
+  // Set unconfirmed knob alarm text
+  void setUnconfirmedKnobAlarmText(const String& alarm);
+
+  // Set snooze time text
+  void setSnoozeText(const int& countdown);
 
   // Write value corresponding to key'ed element
   template <typename T>
@@ -190,16 +200,19 @@ public:
   void writePEEP(const int& peep);
 
   // This displays a patient icon
-  void showPatientIcon(const int& row, const int& col);
+  void showPatientIcon();
 
   // This displays a time icon
-  void showTimeIcon(const int& row, const int& col);
+  void showTimeIcon();
+
+  // Hide time-patient icon
+  void hideTimePatientIcon();
 
   // Hides icon
   void hideIcon(const int& row, const int& col);
 
-  // This displays the peek icon
-  void showPeekIcon(const int& row, const int& col);
+  // This displays the PIP icon
+  void showPeakIcon(const int& row, const int& col);
 
   // This displays a plateau icon
   void showPlateauIcon(const int& row, const int& col);
@@ -214,7 +227,10 @@ public:
   void showIE1Icon(const int& row, const int& col);
 
   // This displays a bell icon
-  void showBellIcon(const int& row, const int& col);
+  void showBellIcon();
+
+  // Hide bell icon
+  void hideBellIcon();
 
   // Convert value e.g. RR from numeric to string for displaying.
   template <typename T>

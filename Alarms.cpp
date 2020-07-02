@@ -179,7 +179,9 @@ void AlarmManager::begin() {
 }
 
 void AlarmManager::update() {
-  displ_->setAlarmText(getHeaderText(), getFooterText(), beeper_.getRemainingSnoozeTime());
+  displ_->setAlarmText(getGeneralAlarmText());
+  displ_->setUnconfirmedKnobAlarmText(getUnconfirmedKnobText());
+  displ_->setSnoozeText(beeper_.getRemainingSnoozeTime());
   AlarmLevel highest_level = getHighestLevel();
   beeper_.update(highest_level);
   if (highest_level > NO_ALARM) {
@@ -210,7 +212,9 @@ int AlarmManager::numON_Confirm() const {
   for (int i = 0; i < NUM_ALARMS; i++) {
     aConfirmAlarm = (i==NOT_CONFIRM_TV || i==NOT_CONFIRM_RR ||
                      i==NOT_CONFIRM_IE || i==NOT_CONFIRM_AC);
-    num += (int)alarms_[i].isON();
+    if(aConfirmAlarm) {
+      num += (int)alarms_[i].isON();
+    }
   }
   return num;
 }
@@ -221,12 +225,14 @@ int AlarmManager::numON_NonConfirm() const {
   for (int i = 0; i < NUM_ALARMS; i++) {
     aConfirmAlarm = (i==NOT_CONFIRM_TV || i==NOT_CONFIRM_RR ||
                      i==NOT_CONFIRM_IE || i==NOT_CONFIRM_AC);
-    num += (int)alarms_[i].isON();
+    if(!aConfirmAlarm) {
+      num += (int)alarms_[i].isON();
+    }
   }
   return num;
 }
 
-String AlarmManager::getHeaderText() const {
+String AlarmManager::getGeneralAlarmText() const {
   const int num_on = numON_NonConfirm();
   String text = "";
   if (num_on > 0) {
@@ -247,7 +253,7 @@ String AlarmManager::getHeaderText() const {
   return text;
 }
 
-String AlarmManager::getFooterText() const {
+String AlarmManager::getUnconfirmedKnobText() const {
   const int num_on = numON_Confirm();
   String text = "";
   if (num_on > 0) {

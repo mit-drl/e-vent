@@ -45,7 +45,7 @@ void Display::begin() {
 void Display::addCustomCharacters() {
   lcd_->createChar(0, patientIcon);
   lcd_->createChar(1, timeIcon);
-  lcd_->createChar(2, peekIcon);
+  lcd_->createChar(2, peakIcon);
   lcd_->createChar(3, plateauIcon);
   lcd_->createChar(4, peepIcon);
   lcd_->createChar(5, ieiIcon);
@@ -58,13 +58,19 @@ void Display::update() {
   writeFooter();
 }
 
-void Display::setAlarmText(const String& alarmH, const String& alarmF, const int& countdown) {
-  if (animation_.text() != alarmH) {
-    animation_.reset(alarmH);
+void Display::setAlarmText(const String& alarm) {
+  if (animation_.text() != alarm) {
+    animation_.reset(alarm);
   }
-  if (animationfooter_.text() != alarmF) {
-    animationfooter_.reset(alarmF);
+}
+
+void Display::setUnconfirmedKnobAlarmText(const String& alarm) {
+  if (animationfooter_.text() != alarm) {
+    animationfooter_.reset(alarm);
   }
+}
+
+void Display::setSnoozeText(const int& countdown) {
   snoozecountdown_ = countdown;  
 }
 
@@ -128,10 +134,10 @@ void Display::writeHeader() {
 void Display::writeFooter() {
   if (!alarmsON()) {
     writeBlank(FOOTER);
-    hideIcon(3,0);
+    hideBellIcon();
   } 
   else {
-    showBellIcon(3, 0);    
+    showBellIcon();
     const String line = animationfooter_.getLine();
     if (line.length() > 0) {
       write(elements_[FOOTER].row, elements_[FOOTER].col, line);
@@ -195,7 +201,7 @@ void Display::writeACTrigger(const float& ac_trigger) {
 
 void Display::writePeakP(const int& peak) {
   const int peak_c = constrain(peak, -9, 99);
-  showPeekIcon(elements_[PEAK_PRES].row, elements_[PEAK_PRES].col);
+  showPeakIcon(elements_[PEAK_PRES].row, elements_[PEAK_PRES].col);
   char buff[3];
   sprintf(buff, "%2s", toString(PEAK_PRES, peak_c).c_str());
   write(elements_[PEAK_PRES].row, elements_[PEAK_PRES].col+1, buff);
@@ -243,15 +249,20 @@ String Display::toString(const DisplayKey& key, const T& value) const {
 }
 
 // This displays a patient icon
-void Display::showPatientIcon(const int& row, const int& col) {
-  lcd_->setCursor(col, row);
+void Display::showPatientIcon() {
+  lcd_->setCursor(elements_[BREATHING].col, elements_[BREATHING].row);
   lcd_->write(byte(0));
 }
 
 // This displays a time icon
-void Display::showTimeIcon(const int& row, const int& col) {
-  lcd_->setCursor(col, row);
+void Display::showTimeIcon() {
+  lcd_->setCursor(elements_[BREATHING].col, elements_[BREATHING].row);
   lcd_->write(byte(1));
+}
+
+// This hides a time-patient icon
+void Display::hideTimePatientIcon() {
+  hideIcon(elements_[BREATHING].row, elements_[BREATHING].col);
 }
 
 // Hides icon
@@ -260,13 +271,13 @@ void Display::hideIcon(const int& row, const int& col) {
   lcd_->write(byte(32));
 }
 
-// This displays the peek icon
-void Display::showPeekIcon(const int& row, const int& col) {
+// This displays the PIP icon
+void Display::showPeakIcon(const int& row, const int& col) {
   lcd_->setCursor(col, row);
   lcd_->write(byte(2));
 }
 
-// This displays a plateau icon
+// This displays a plateau pressure icon
 void Display::showPlateauIcon(const int& row, const int& col) {
   lcd_->setCursor(col, row);
   lcd_->write(byte(3));
@@ -291,9 +302,14 @@ void Display::showIE1Icon(const int& row, const int& col) {
 }
 
 // This displays a bell icon
-void Display::showBellIcon(const int& row, const int& col) {
-  lcd_->setCursor(col, row);
+void Display::showBellIcon() {
+  lcd_->setCursor(elements_[BELL].col, elements_[BELL].row);
   lcd_->write(byte(7));
+}
+
+// This hides the bell icon
+void Display::hideBellIcon() {
+  hideIcon(elements_[BELL].row, elements_[BELL].col);
 }
 
 template <typename T>

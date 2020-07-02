@@ -54,7 +54,7 @@ static const byte timeIcon[8] = {
     B11111,
     B11111};
 
-static const byte peekIcon[8] = {
+static const byte peakIcon[8] = {
     B01111,
     B10000,
     B10000,
